@@ -3,27 +3,27 @@
 
 SET IDENTITY_INSERT [dbo].[Countries] ON;
 
-INSERT INTO [dbo].[Countries] (Id, IsoNumeric, Flag, Name, Region, IsHome, IsVisited, IsDeleted) VALUES
-(1,  826, N'🏴󠁧󠁢󠁳󠁣󠁴󠁿', N'United Kingdom',  N'Europe',           0, 1, 0),
-(2,  620, N'🇵🇹', N'Portugal',           N'Europe',           0, 1, 0),
-(3,  724, N'🇪🇸', N'Spain',              N'Europe',           0, 1, 0),
-(4,  380, N'🇮🇹', N'Italy',              N'Europe',           0, 1, 0),
-(5,  470, N'🇲🇹', N'Malta',              N'Home',             1, 1, 0),
-(6,  756, N'🇨🇭', N'Switzerland',        N'Europe',           0, 1, 0),
-(7,  276, N'🇩🇪', N'Germany',            N'Europe',           0, 1, 0),
-(8,   40, N'🇦🇹', N'Austria',            N'Europe',           0, 1, 0),
-(9,  348, N'🇭🇺', N'Hungary',            N'Europe',           0, 1, 0),
-(10, 642, N'🇷🇴', N'Romania',            N'Europe',           0, 1, 0),
-(11, 100, N'🇧🇬', N'Bulgaria',           N'Europe',           0, 1, 0),
-(12, 191, N'🇭🇷', N'Croatia',            N'Europe',           0, 1, 0),
-(13, 752, N'🇸🇪', N'Sweden',             N'Europe',           0, 1, 0),
-(14, 300, N'🇬🇷', N'Greece',             N'Europe',           0, 1, 0),
-(15, 792, N'🇹🇷', N'Turkey',             N'Europe / Asia',    0, 1, 0),
-(16, 376, N'🇮🇱', N'Israel',             N'Middle East',      0, 1, 0),
-(17, 132, N'🇨🇻', N'Cape Verde',         N'Africa — Atlantic',0, 1, 0),
-(18, 840, N'🇺🇸', N'United States',      N'North America',    0, 1, 0),
-(19,  32, N'🇦🇷', N'Argentina',          N'South America',    0, 1, 0),
-(20,  76, N'🇧🇷', N'Brazil',             N'South America',    0, 1, 0);
+INSERT INTO [dbo].[Countries] (Id, IsoNumeric, IsoAlpha2, Flag, Name, Region, IsHome, IsVisited, IsDeleted) VALUES
+(1,  826, 'GB', N'🏴󠁧󠁢󠁳󠁣󠁴󠁿', N'United Kingdom',  N'Europe',           0, 1, 0),
+(2,  620, 'PT', N'🇵🇹', N'Portugal',           N'Europe',           0, 1, 0),
+(3,  724, 'ES', N'🇪🇸', N'Spain',              N'Europe',           0, 1, 0),
+(4,  380, 'IT', N'🇮🇹', N'Italy',              N'Europe',           0, 1, 0),
+(5,  470, 'MT', N'🇲🇹', N'Malta',              N'Home',             1, 1, 0),
+(6,  756, 'CH', N'🇨🇭', N'Switzerland',        N'Europe',           0, 1, 0),
+(7,  276, 'DE', N'🇩🇪', N'Germany',            N'Europe',           0, 1, 0),
+(8,   40, 'AT', N'🇦🇹', N'Austria',            N'Europe',           0, 1, 0),
+(9,  348, 'HU', N'🇭🇺', N'Hungary',            N'Europe',           0, 1, 0),
+(10, 642, 'RO', N'🇷🇴', N'Romania',            N'Europe',           0, 1, 0),
+(11, 100, 'BG', N'🇧🇬', N'Bulgaria',           N'Europe',           0, 1, 0),
+(12, 191, 'HR', N'🇭🇷', N'Croatia',            N'Europe',           0, 1, 0),
+(13, 752, 'SE', N'🇸🇪', N'Sweden',             N'Europe',           0, 1, 0),
+(14, 300, 'GR', N'🇬🇷', N'Greece',             N'Europe',           0, 1, 0),
+(15, 792, 'TR', N'🇹🇷', N'Turkey',             N'Europe / Asia',    0, 1, 0),
+(16, 376, 'IL', N'🇮🇱', N'Israel',             N'Middle East',      0, 1, 0),
+(17, 132, 'CV', N'🇨🇻', N'Cape Verde',         N'Africa — Atlantic',0, 1, 0),
+(18, 840, 'US', N'🇺🇸', N'United States',      N'North America',    0, 1, 0),
+(19,  32, 'AR', N'🇦🇷', N'Argentina',          N'South America',    0, 1, 0),
+(20,  76, 'BR', N'🇧🇷', N'Brazil',             N'South America',    0, 1, 0);
 
 SET IDENTITY_INSERT [dbo].[Countries] OFF;
 

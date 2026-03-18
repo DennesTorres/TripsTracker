@@ -42,6 +42,10 @@ namespace TripsTracker.Data.Migrations
                     b.Property<bool>("IsVisited")
                         .HasColumnType("bit");
 
+                    b.Property<string>("IsoAlpha2")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("IsoNumeric")
                         .HasColumnType("int");
 

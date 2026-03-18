@@ -11,5 +11,5 @@ public class CountryBusiness : BusinessBase<Country, CountryDto>, ICountryBusine
 
     public Task<List<CountryDto>> GetAllAsync(CancellationToken ct = default)
         => ToListAsync(BuildBaseQuery().Select(c => new CountryDto(
-            c.Id, c.IsoNumeric, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited)), ct);
+            c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited)), ct);
 }
