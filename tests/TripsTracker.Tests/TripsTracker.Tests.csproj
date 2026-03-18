@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TripsTracker.Interfaces\TripsTracker.Interfaces.csproj" />
+    <ProjectReference Include="..\..\src\TripsTracker.Domain\TripsTracker.Domain.csproj" />
+    <ProjectReference Include="..\..\src\TripsTracker.Business\TripsTracker.Business.csproj" />
+    <ProjectReference Include="..\..\src\TripsTracker.Process\TripsTracker.Process.csproj" />
+    <ProjectReference Include="..\..\src\TripsTracker.Tools\TripsTracker.Tools.csproj" />
+  </ItemGroup>
+
+</Project>
