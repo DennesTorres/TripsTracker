@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TripsTracker.Interfaces\TripsTracker.Interfaces.csproj" />
     <ProjectReference Include="..\TripsTracker.Domain\TripsTracker.Domain.csproj" />
+    <ProjectReference Include="..\TripsTracker.Data\TripsTracker.Data.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
