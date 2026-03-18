@@ -5,8 +5,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Castle.Core" Version="5.2.1" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.5" />
