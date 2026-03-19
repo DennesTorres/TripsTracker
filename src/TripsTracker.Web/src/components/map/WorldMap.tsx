@@ -13,84 +13,90 @@ interface Props {
   brazilStatesGeoJson: GeoJSON.FeatureCollection;
 }
 
-// ─── Colour palette ───────────────────────────────────────────────────────────
-// Contrast is achieved by:
-//   • OCEAN vs UNVISITED  : different value (~5× luminance ratio)
-//   • UNVISITED vs VISITED: different value AND saturation
-//   • HOME country        : warm amber — completely different hue from the blue ocean
-const OCEAN_COLOR         = '#0b1628';   // very dark navy   (spec)
-const UNVISITED_COLOR     = '#243447';   // medium dark slate (~5× lum vs ocean)
-const VISITED_COLOR       = '#1a6090';   // clear steel-blue (visited countries)
-const HOME_COLOR          = '#6b4113';   // warm amber        (home country base)
-const HOME_VISITED_STATE  = '#1a6090';   // same as VISITED for visited home states
-const HOME_UNVISITED_STATE = '#7d5020';  // lighter amber for unvisited home states
-const BORDER_COLOR        = '#14243a';
-const PIN_COLOR           = '#e8922a';   // orange  — individual places
-const HOME_PIN_COLOR      = '#d4a017';   // gold    — places inside home country
-const CLUSTER_COLOR       = '#c0392b';   // red     — clusters
-const CLUSTER_TEXT        = '#ffffff';
+// ─── Colours — matched exactly to reference travel-map.html CSS variables ─────
+const OCEAN_COLOR  = '#0b1628';  // --ocean
+const LAND_COLOR   = '#1c2535';  // --land   (unvisited)
+const VIS_COLOR    = '#7a5c1e';  // --vis    (visited countries, dark amber)
+const HOME_COLOR   = '#1a4028';  // --home   (home country, dark green)
+const C1_COLOR     = '#f0b84a';  // --c1     (1 place pin, gold)
+const C2_COLOR     = '#e07830';  // --c2     (2–5 places, orange)
+const C3_COLOR     = '#e8354a';  // --c3     (6+ places, red)
+const CH_COLOR     = '#2a9058';  // --ch     (home-country places, green)
 
-// ─── Clustering ───────────────────────────────────────────────────────────────
-const CLUSTER_THRESHOLD_PX = 28;
+// Brazil state border colours — from reference .br-state CSS
+const BR_STATE_BASE_STROKE  = 'rgba(200,151,58,0.35)';
+const BR_STATE_VIS_STROKE   = 'rgba(240,184,74,0.65)';
+const BR_STATE_VIS_FILL     = 'rgba(200,151,58,0.14)';
+const BR_STATE_BASE_FILL    = 'rgba(0,0,0,0.06)';
 
-// Zoom scale breakpoints at which clusters are recomputed.
-// Between breakpoints the g-transform moves/scales pins; they stay at the last
-// computed radius which may be ≤20% off — imperceptible in practice.
-const ZOOM_BREAKPOINTS = [0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32];
+const CLUSTER_PX  = 28;   // merge threshold in screen pixels
+const BR_ZOOM_MIN = 2.0;  // minimum zoom to show state borders
 
-function nearestBreakpoint(k: number): number {
-  return ZOOM_BREAKPOINTS.reduce((best, bp) =>
-    Math.abs(bp - k) < Math.abs(best - k) ? bp : best
-  );
-}
-
-interface Cluster {
-  key: string;   // stable identity key for D3 join
-  cx: number;
-  cy: number;
+// ─── Clustering — mirrors reference cluster() function exactly ────────────────
+interface ClusterData {
+  x: number;          // SVG x of geographic centroid
+  y: number;          // SVG y of geographic centroid
   places: Place[];
 }
 
-/**
- * Greedy O(n²) within-country clustering.
- * Two points merge only when screen-pixel distance ≤ CLUSTER_THRESHOLD_PX
- * AND they belong to the same country.
- */
 function buildClusters(
   places: Place[],
   projection: d3.GeoProjection,
-  zoomK: number,
-): Cluster[] {
-  const threshold = CLUSTER_THRESHOLD_PX / zoomK;
-
+  currentK: number,
+): ClusterData[] {
+  // Project every place to screen space (SVG coords × zoom scale)
   const pts = places.map(p => {
     const c = projection([p.lon, p.lat]);
-    return { p, x: c?.[0] ?? 0, y: c?.[1] ?? 0, used: false };
+    return {
+      p,
+      lon: p.lon,
+      lat: p.lat,
+      sx: (c?.[0] ?? 0) * currentK,
+      sy: (c?.[1] ?? 0) * currentK,
+      merged: false,
+    };
   });
 
-  const clusters: Cluster[] = [];
+  const clusters: ClusterData[] = [];
 
   for (let i = 0; i < pts.length; i++) {
-    if (pts[i].used) continue;
-    pts[i].used = true;
-    const members = [pts[i]];
+    if (pts[i].merged) continue;
+
+    const c = {
+      places: [pts[i]],
+      sx: pts[i].sx,
+      sy: pts[i].sy,
+      country: pts[i].p.countryName,
+    };
 
     for (let j = i + 1; j < pts.length; j++) {
-      if (pts[j].used) continue;
-      if (pts[j].p.countryName !== pts[i].p.countryName) continue;
-      const dx = pts[j].x - pts[i].x;
-      const dy = pts[j].y - pts[i].y;
-      if (Math.sqrt(dx * dx + dy * dy) <= threshold) {
-        pts[j].used = true;
-        members.push(pts[j]);
+      if (pts[j].merged) continue;
+      const dx = pts[j].sx - c.sx;
+      const dy = pts[j].sy - c.sy;
+      if (
+        pts[j].p.countryName === c.country &&
+        Math.sqrt(dx * dx + dy * dy) < CLUSTER_PX
+      ) {
+        c.places.push(pts[j]);
+        pts[j].merged = true;
+        // Update centroid in screen space (matching reference)
+        c.sx = c.places.reduce((s, m) => s + m.sx, 0) / c.places.length;
+        c.sy = c.places.reduce((s, m) => s + m.sy, 0) / c.places.length;
       }
     }
+    pts[i].merged = true;
+
+    // Pin position: project the geographic centroid (matching reference)
+    // proj([avgLon, avgLat]) ≠ avg(proj(lon, lat)) for non-linear projections
+    const n = c.places.length;
+    const avgLon = c.places.reduce((s, m) => s + m.lon, 0) / n;
+    const avgLat = c.places.reduce((s, m) => s + m.lat, 0) / n;
+    const projected = projection([avgLon, avgLat]);
 
     clusters.push({
-      key: members.map(m => m.p.id).sort((a, b) => a - b).join(','),
-      cx: members.reduce((s, m) => s + m.x, 0) / members.length,
-      cy: members.reduce((s, m) => s + m.y, 0) / members.length,
-      places: members.map(m => m.p),
+      x: projected?.[0] ?? 0,
+      y: projected?.[1] ?? 0,
+      places: c.places.map(m => m.p),
     });
   }
 
@@ -106,90 +112,100 @@ export default function WorldMap({
   usStatesGeoJson,
   brazilStatesGeoJson,
 }: Props) {
-  const svgRef       = useRef<SVGSVGElement>(null);
-  const tooltipRef   = useRef<HTMLDivElement>(null);
-  const projectionRef = useRef<d3.GeoProjection | null>(null);
-  const pinsLayerRef  = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
-  const lastBpRef     = useRef<number>(1);  // last breakpoint at which pins were drawn
+  const svgRef      = useRef<SVGSVGElement>(null);
+  const tooltipRef  = useRef<HTMLDivElement>(null);
 
-  // ── renderPins ──────────────────────────────────────────────────────────────
-  // Uses a D3 data-join keyed by cluster identity so elements are UPDATED
-  // in-place rather than removed and recreated.  This eliminates the 1-frame
-  // flicker that occurred when pinsLayer.selectAll('*').remove() fired before
-  // the replacement elements were ready.
-  const renderPins = (
-    clusters: Cluster[],
-    pinsLayer: d3.Selection<SVGGElement, unknown, null, undefined>,
-    k: number,
-  ) => {
+  // Mutable refs used inside zoom handler (never trigger re-render)
+  const projRef     = useRef<d3.GeoProjection | null>(null);
+  const currentKRef = useRef<number>(1);
+  const pinsGRef    = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const brStatesGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+
+  // ── recluster — mirrors reference recluster() ──────────────────────────────
+  const recluster = () => {
+    if (!projRef.current || !pinsGRef.current) return;
+    const proj = projRef.current;
+    const pinsG = pinsGRef.current;
+    const k = currentKRef.current;
     const tooltip = d3.select(tooltipRef.current);
 
-    // ── group-level join (one <g> per cluster) ──────────────────────────────
-    const groups = pinsLayer
-      .selectAll<SVGGElement, Cluster>('.pin-group')
-      .data(clusters, (d: Cluster) => d.key);
+    pinsG.selectAll('.mg').remove();
 
-    groups.exit().remove();
+    const clusters = buildClusters(places, proj, k);
+    const s = 1 / k; // counter-scale so dots stay 4px on screen
 
-    const entered = groups.enter()
-      .append('g')
-      .attr('class', 'pin-group');
+    clusters.forEach(c => {
+      const n = c.places.length;
+      const hasHome = c.places.some(p => p.isHome);
 
-    entered.append('circle').attr('class', 'pin-circle');
-    entered.append('text').attr('class', 'pin-label');
+      // Pin colour class — matching reference: home > 6+ > 2-5 > 1
+      const dotColor = hasHome ? CH_COLOR : n >= 6 ? C3_COLOR : n >= 2 ? C2_COLOR : C1_COLOR;
+      const strokeColor = hasHome ? CH_COLOR : n >= 6 ? C3_COLOR : n >= 2 ? C2_COLOR : C1_COLOR;
 
-    const merged = entered.merge(groups);
+      // Group: translate to SVG position, counter-scale (reference pattern)
+      const mg = pinsG.append('g')
+        .attr('class', 'mg')
+        .attr('transform', `translate(${c.x},${c.y}) scale(${s})`);
 
-    // ── update each group ───────────────────────────────────────────────────
-    merged.each(function (cluster) {
-      const grp      = d3.select(this);
-      const isCluster = cluster.places.length > 1;
-      const r         = (isCluster ? 7 : 4) / k;
-      const fill      = isCluster
-        ? CLUSTER_COLOR
-        : (cluster.places[0].isHome ? HOME_PIN_COLOR : PIN_COLOR);
+      // Dot — fixed 4px radius in screen space
+      mg.append('circle')
+        .attr('r', 4)
+        .attr('fill', dotColor)
+        .attr('stroke', 'rgba(255,255,255,0.3)')
+        .attr('stroke-width', 0.4);
 
-      // Circle
-      grp.select<SVGCircleElement>('.pin-circle')
-        .attr('cx', cluster.cx)
-        .attr('cy', cluster.cy)
-        .attr('r', r)
-        .attr('fill', fill)
-        .attr('stroke', '#fff')
-        .attr('stroke-width', 0.8 / k)
+      // Cluster count label (when >1)
+      if (n > 1) {
+        mg.append('text')
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('font-size', '5px')
+          .attr('fill', '#fff')
+          .attr('pointer-events', 'none')
+          .text(n);
+      }
+
+      // Hit area for hover (reference uses r=12)
+      mg.append('circle')
+        .attr('r', 12)
+        .attr('fill', 'transparent')
         .style('cursor', 'pointer')
         .on('mouseover', (event: MouseEvent) => {
-          const html = isCluster
-            ? `<strong>${cluster.places.length} places in ${cluster.places[0].countryName}</strong><br/>${
-                cluster.places.map(p => `${p.flag} ${p.city}`).join('<br/>')
-              }`
-            : `<strong>${cluster.places[0].flag} ${cluster.places[0].city}</strong><br/>${cluster.places[0].countryName}`;
-
+          const p0 = c.places[0];
+          const html = n === 1
+            ? `<strong>${p0.flag} ${p0.city}</strong><br/>${p0.countryName}`
+            : `<strong>${n} places in ${p0.countryName}</strong><br/>${
+                c.places.map(p => `${p.flag} ${p.city}`).join('<br/>')
+              }`;
           tooltip.style('display', 'block').html(html);
           const rect = svgRef.current!.getBoundingClientRect();
           tooltip
-            .style('left', `${event.clientX - rect.left + 12}px`)
-            .style('top',  `${event.clientY - rect.top  - 28}px`);
+            .style('left', `${event.clientX - rect.left + 14}px`)
+            .style('top', `${event.clientY - rect.top - 32}px`);
         })
         .on('mousemove', (event: MouseEvent) => {
           const rect = svgRef.current!.getBoundingClientRect();
           tooltip
-            .style('left', `${event.clientX - rect.left + 12}px`)
-            .style('top',  `${event.clientY - rect.top  - 28}px`);
+            .style('left', `${event.clientX - rect.left + 14}px`)
+            .style('top', `${event.clientY - rect.top - 32}px`);
         })
         .on('mouseout', () => tooltip.style('display', 'none'));
 
-      // Label (only for clusters)
-      grp.select<SVGTextElement>('.pin-label')
-        .attr('x', cluster.cx)
-        .attr('y', cluster.cy)
-        .attr('text-anchor', 'middle')
-        .attr('dominant-baseline', 'central')
-        .attr('font-size', `${10 / k}px`)
-        .attr('fill', CLUSTER_TEXT)
-        .attr('pointer-events', 'none')
-        .text(isCluster ? cluster.places.length : '');
+      // Store colour on stroke for rescale (unused here but matches reference shape)
+      void strokeColor;
     });
+  };
+
+  // ── updateBrStates — show/hide state borders based on zoom ────────────────
+  const updateBrStates = () => {
+    if (!brStatesGRef.current) return;
+    const show = currentKRef.current >= BR_ZOOM_MIN;
+    brStatesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs')
+      .style('display', () => show ? null : 'none')
+      .attr('stroke-width', show
+        ? `${0.5 / currentKRef.current}`
+        : '0.5'
+      );
   };
 
   // ── main effect ─────────────────────────────────────────────────────────────
@@ -202,12 +218,13 @@ export default function WorldMap({
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
+    // Projection — reference formula: Math.min(w/6.1, h/3.2)
     const projection = d3.geoNaturalEarth1()
-      .scale(width / 6.3)
+      .scale(Math.min(width / 6.1, height / 3.2))
       .translate([width / 2, height / 2]);
 
-    projectionRef.current = projection;
-    lastBpRef.current     = 1;
+    projRef.current    = projection;
+    currentKRef.current = 1;
 
     const pathGenerator = d3.geoPath().projection(projection);
 
@@ -217,17 +234,15 @@ export default function WorldMap({
 
     const g = svg.append('g');
 
-    // Ocean fill — oversized rect inside the zoom group so panning never
-    // reveals the SVG background behind it
-    g.append('rect')
-      .attr('x', -width * 3)
-      .attr('y', -height * 3)
-      .attr('width', width * 7)
-      .attr('height', height * 7)
-      .attr('fill', OCEAN_COLOR);
+    // Ocean sphere — matches reference: draw actual sphere shape as ocean fill
+    g.append('path')
+      .datum({ type: 'Sphere' } as unknown as GeoJSON.GeoJsonObject)
+      .attr('fill', OCEAN_COLOR)
+      .attr('d', pathGenerator as unknown as string);
 
-    // World countries
-    g.selectAll<SVGPathElement, GeoJSON.Feature>('.country')
+    // Countries
+    const countriesG = g.append('g');
+    countriesG.selectAll<SVGPathElement, GeoJSON.Feature>('.country')
       .data(geoJson.features)
       .join('path')
       .attr('class', 'country')
@@ -235,69 +250,58 @@ export default function WorldMap({
       .attr('fill', f => {
         const a2: string = f.properties?.['ISO3166-1-Alpha-2'] ?? '';
         if (a2 && homeAlpha2Set.has(a2))    return HOME_COLOR;
-        if (a2 && visitedAlpha2Set.has(a2)) return VISITED_COLOR;
-        return UNVISITED_COLOR;
+        if (a2 && visitedAlpha2Set.has(a2)) return VIS_COLOR;
+        return LAND_COLOR;
       })
-      .attr('stroke', BORDER_COLOR)
-      .attr('stroke-width', 0.5);
+      .attr('stroke', 'rgba(0,0,0,0.4)')
+      .attr('stroke-width', 0.35);
 
-    // Brazil states
+    // Brazil state borders (hidden until zoom >= BR_ZOOM_MIN)
+    const brStatesG = g.append('g');
+    brStatesGRef.current = brStatesG;
+
     if (brazilStatesGeoJson) {
-      g.selectAll<SVGPathElement, GeoJSON.Feature>('.br-state')
+      brStatesG.selectAll<SVGPathElement, GeoJSON.Feature>('.brs')
         .data(brazilStatesGeoJson.features)
         .join('path')
-        .attr('class', 'br-state')
+        .attr('class', 'brs')
         .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
         .attr('fill', f => {
           const abbr: string = (f.properties?.['sigla'] as string) ?? '';
-          return visitedBrStates.has(abbr) ? HOME_VISITED_STATE : HOME_UNVISITED_STATE;
+          return visitedBrStates.has(abbr) ? BR_STATE_VIS_FILL : BR_STATE_BASE_FILL;
         })
-        .attr('stroke', BORDER_COLOR)
-        .attr('stroke-width', 0.3)
-        .attr('opacity', 0.9);
+        .attr('stroke', f => {
+          const abbr: string = (f.properties?.['sigla'] as string) ?? '';
+          return visitedBrStates.has(abbr) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
+        })
+        .attr('stroke-width', 0.5)
+        .attr('pointer-events', 'none')
+        .style('display', 'none');  // hidden until zoom threshold
     }
 
-    // US states
-    if (usStatesGeoJson && visitedAlpha2Set.has('US')) {
-      g.selectAll<SVGPathElement, GeoJSON.Feature>('.us-state')
-        .data(usStatesGeoJson.features)
-        .join('path')
-        .attr('class', 'us-state')
-        .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
-        .attr('fill', VISITED_COLOR)
-        .attr('stroke', BORDER_COLOR)
-        .attr('stroke-width', 0.3)
-        .attr('opacity', 0.9);
-    }
+    // Sphere outline (reference draws this on top of countries)
+    g.append('path')
+      .datum({ type: 'Sphere' } as unknown as GeoJSON.GeoJsonObject)
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.1)')
+      .attr('stroke-width', 0.7)
+      .attr('d', pathGenerator as unknown as string);
 
-    // Pins layer — inside the zoom group so panning moves pins for free
-    const pinsLayer = g.append('g').attr('class', 'pins-layer');
-    pinsLayerRef.current = pinsLayer;
+    // Pins layer (topmost)
+    const pinsG = g.append('g');
+    pinsGRef.current = pinsG;
 
-    renderPins(buildClusters(places, projection, 1), pinsLayer, 1);
+    // Initial pin render
+    recluster();
 
-    // ── zoom ────────────────────────────────────────────────────────────────
+    // ── zoom — reference calls recluster() synchronously on every event ──────
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 32])
+      .scaleExtent([0.8, 32])
       .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
-        // Always apply the transform immediately — this is what makes pan/zoom
-        // feel instantaneous (no computation on the critical path).
+        currentKRef.current = event.transform.k;
         g.attr('transform', event.transform.toString());
-
-        const k  = event.transform.k;
-        const bp = nearestBreakpoint(k);
-
-        // Only recompute clusters when zoom scale crosses a breakpoint.
-        // Pure panning (same k, different x/y) is handled entirely by the
-        // g-transform above — no pin update needed.
-        if (bp !== lastBpRef.current && projectionRef.current && pinsLayerRef.current) {
-          lastBpRef.current = bp;
-          renderPins(
-            buildClusters(places, projectionRef.current, k),
-            pinsLayerRef.current,
-            k,
-          );
-        }
+        recluster();
+        updateBrStates();
       });
 
     svg.call(zoom);
