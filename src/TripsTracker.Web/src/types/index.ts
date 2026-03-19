@@ -19,6 +19,15 @@ export interface Country {
   isVisited: boolean;
 }
 
+export interface SavePlace {
+  lon: number;
+  lat: number;
+  flag: string;
+  countryName: string;
+  city: string;
+  isHome: boolean;
+}
+
 export interface VisitedState {
   id: number;
   countryCode: string;

@@ -1,11 +1,36 @@
-import { useQuery } from '@tanstack/react-query';
-import type { Country, Place, VisitedState } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Country, Place, SavePlace, VisitedState } from '@/types';
 import apiClient from './client';
 
 export function usePlaces() {
   return useQuery<Place[]>({
     queryKey: ['places'],
     queryFn: () => apiClient.get<Place[]>('/api/places').then(r => r.data),
+  });
+}
+
+export function useCreatePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SavePlace) => apiClient.post<Place>('/api/places', dto).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
+  });
+}
+
+export function useUpdatePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: SavePlace }) =>
+      apiClient.put<Place>(`/api/places/${id}`, dto).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
+  });
+}
+
+export function useDeletePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/api/places/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
   });
 }
 
