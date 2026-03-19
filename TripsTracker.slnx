@@ -7,7 +7,10 @@
     <Project Path="src/TripsTracker.Interfaces/TripsTracker.Interfaces.csproj" />
     <Project Path="src/TripsTracker.Process/TripsTracker.Process.csproj" />
     <Project Path="src/TripsTracker.Tools/TripsTracker.Tools.csproj" />
-    <Project Path="src/TripsTracker.Web/TripsTracker.Web.esproj" />
+    <Project Path="src/TripsTracker.Web/TripsTracker.Web.esproj">
+      <Build />
+      <Deploy />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TripsTracker.Tests/TripsTracker.Tests.csproj" />
