@@ -296,7 +296,7 @@ export default function WorldMap({
 
     // ── zoom — recluster only when k changes (pan-only events skip rebuild) ──
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.8, 32])
+      .scaleExtent([0.8, 500])
       .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
         const kChanged = event.transform.k !== currentKRef.current;
         currentKRef.current = event.transform.k;
