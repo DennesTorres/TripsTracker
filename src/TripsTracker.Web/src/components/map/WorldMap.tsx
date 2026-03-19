@@ -294,14 +294,17 @@ export default function WorldMap({
     // Initial pin render
     recluster();
 
-    // ── zoom — reference calls recluster() synchronously on every event ──────
+    // ── zoom — recluster only when k changes (pan-only events skip rebuild) ──
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.8, 32])
       .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+        const kChanged = event.transform.k !== currentKRef.current;
         currentKRef.current = event.transform.k;
         g.attr('transform', event.transform.toString());
-        recluster();
-        updateBrStates();
+        if (kChanged) {
+          recluster();
+          updateBrStates();
+        }
       });
 
     svg.call(zoom);
