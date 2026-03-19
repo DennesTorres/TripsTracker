@@ -41,9 +41,45 @@ export function useCountries() {
   });
 }
 
+export function useSetCountryVisited() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isVisited }: { id: number; isVisited: boolean }) =>
+      apiClient.put<Country>(`/api/countries/${id}/visited?value=${isVisited}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+  });
+}
+
+export function useSetCountryHome() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiClient.put<Country>(`/api/countries/${id}/home`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+  });
+}
+
 export function useVisitedStates() {
   return useQuery<VisitedState[]>({
     queryKey: ['visited-states'],
     queryFn: () => apiClient.get<VisitedState[]>('/api/visited-states').then(r => r.data),
+  });
+}
+
+export function useSetVisitedState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ countryCode, stateAbbr }: { countryCode: string; stateAbbr: string }) =>
+      apiClient.put<VisitedState>(`/api/visited-states/${countryCode}/${stateAbbr}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['visited-states'] }),
+  });
+}
+
+export function useClearVisitedState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ countryCode, stateAbbr }: { countryCode: string; stateAbbr: string }) =>
+      apiClient.delete(`/api/visited-states/${countryCode}/${stateAbbr}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['visited-states'] }),
   });
 }
