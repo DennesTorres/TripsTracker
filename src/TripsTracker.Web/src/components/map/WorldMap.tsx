@@ -248,7 +248,7 @@ export default function WorldMap({
       .attr('class', 'country')
       .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
       .attr('fill', f => {
-        const a2: string = f.properties?.['ISO3166-1-Alpha-2'] ?? '';
+        const a2: string = f.properties?.['ISO_A2'] ?? '';
         if (a2 && homeAlpha2Set.has(a2))    return HOME_COLOR;
         if (a2 && visitedAlpha2Set.has(a2)) return VIS_COLOR;
         return LAND_COLOR;
