@@ -200,12 +200,12 @@ export default function WorldMap({
   const updateBrStates = () => {
     if (!brStatesGRef.current) return;
     const show = currentKRef.current >= BR_ZOOM_MIN;
-    brStatesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs')
-      .style('display', () => show ? null : 'none')
-      .attr('stroke-width', show
-        ? `${0.5 / currentKRef.current}`
-        : '0.5'
-      );
+    const brPaths = brStatesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs');
+    if (show) {
+      brPaths.style('display', null);
+    } else {
+      brPaths.style('display', 'none');
+    }
   };
 
   // ── main effect ─────────────────────────────────────────────────────────────
@@ -235,10 +235,10 @@ export default function WorldMap({
     const g = svg.append('g');
 
     // Ocean sphere — matches reference: draw actual sphere shape as ocean fill
+    const sphereD = pathGenerator({ type: 'Sphere' as const }) ?? '';
     g.append('path')
-      .datum({ type: 'Sphere' } as unknown as GeoJSON.GeoJsonObject)
       .attr('fill', OCEAN_COLOR)
-      .attr('d', pathGenerator as unknown as string);
+      .attr('d', sphereD);
 
     // Countries
     const countriesG = g.append('g');
@@ -254,7 +254,8 @@ export default function WorldMap({
         return LAND_COLOR;
       })
       .attr('stroke', 'rgba(0,0,0,0.4)')
-      .attr('stroke-width', 0.35);
+      .attr('stroke-width', 0.35)
+      .attr('vector-effect', 'non-scaling-stroke');
 
     // Brazil state borders (hidden until zoom >= BR_ZOOM_MIN)
     const brStatesG = g.append('g');
@@ -275,17 +276,18 @@ export default function WorldMap({
           return visitedBrStates.has(abbr) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
         })
         .attr('stroke-width', 0.5)
+        .attr('vector-effect', 'non-scaling-stroke')
         .attr('pointer-events', 'none')
         .style('display', 'none');  // hidden until zoom threshold
     }
 
     // Sphere outline (reference draws this on top of countries)
     g.append('path')
-      .datum({ type: 'Sphere' } as unknown as GeoJSON.GeoJsonObject)
       .attr('fill', 'none')
       .attr('stroke', 'rgba(255,255,255,0.1)')
       .attr('stroke-width', 0.7)
-      .attr('d', pathGenerator as unknown as string);
+      .attr('vector-effect', 'non-scaling-stroke')
+      .attr('d', sphereD);
 
     // Pins layer (topmost)
     const pinsG = g.append('g');
