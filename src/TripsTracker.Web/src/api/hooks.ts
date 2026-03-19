@@ -1,11 +1,36 @@
-import { useQuery } from '@tanstack/react-query';
-import type { Country, Place, VisitedState } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Country, Place, SavePlace, VisitedState } from '@/types';
 import apiClient from './client';
 
 export function usePlaces() {
   return useQuery<Place[]>({
     queryKey: ['places'],
     queryFn: () => apiClient.get<Place[]>('/api/places').then(r => r.data),
+  });
+}
+
+export function useCreatePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SavePlace) => apiClient.post<Place>('/api/places', dto).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
+  });
+}
+
+export function useUpdatePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: number; dto: SavePlace }) =>
+      apiClient.put<Place>(`/api/places/${id}`, dto).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
+  });
+}
+
+export function useDeletePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/api/places/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
   });
 }
 
@@ -16,9 +41,45 @@ export function useCountries() {
   });
 }
 
+export function useSetCountryVisited() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isVisited }: { id: number; isVisited: boolean }) =>
+      apiClient.put<Country>(`/api/countries/${id}/visited?value=${isVisited}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+  });
+}
+
+export function useSetCountryHome() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiClient.put<Country>(`/api/countries/${id}/home`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+  });
+}
+
 export function useVisitedStates() {
   return useQuery<VisitedState[]>({
     queryKey: ['visited-states'],
     queryFn: () => apiClient.get<VisitedState[]>('/api/visited-states').then(r => r.data),
+  });
+}
+
+export function useSetVisitedState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ countryCode, stateAbbr }: { countryCode: string; stateAbbr: string }) =>
+      apiClient.put<VisitedState>(`/api/visited-states/${countryCode}/${stateAbbr}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['visited-states'] }),
+  });
+}
+
+export function useClearVisitedState() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ countryCode, stateAbbr }: { countryCode: string; stateAbbr: string }) =>
+      apiClient.delete(`/api/visited-states/${countryCode}/${stateAbbr}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['visited-states'] }),
   });
 }
