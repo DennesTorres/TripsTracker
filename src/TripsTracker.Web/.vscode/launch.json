@@ -29,7 +29,7 @@
       "name": "Launch Node and Browser",
       "configurations": [
         "Launch TripsTracker.Web",
-        "localhost (Edge)"
+        "localhost (Chrome)"
       ]
     }
   ]
