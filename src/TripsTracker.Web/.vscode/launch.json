@@ -5,29 +5,30 @@
       "name": "localhost (Edge)",
       "type": "edge",
       "request": "launch",
-      "url": "http://localhost:5173",
+      "url": "http://localhost:4173",
       "webRoot": "${workspaceFolder}\\public"
     },
     {
       "name": "localhost (Chrome)",
       "type": "chrome",
       "request": "launch",
-      "url": "http://localhost:5173",
+      "url": "http://localhost:4173",
       "webRoot": "${workspaceFolder}\\public"
     },
     {
-      "name": "Launch Vite Dev Server",
+      "name": "Launch Vite Preview",
       "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/node_modules/.bin/vite",
+      "args": ["preview"],
       "stopOnEntry": false
     }
   ],
   "compounds": [
     {
-      "name": "Launch Vite and Browser",
+      "name": "Launch Preview and Browser",
       "configurations": [
-        "Launch Vite Dev Server",
+        "Launch Vite Preview",
         "localhost (Edge)"
       ]
     }
