@@ -28,7 +28,9 @@ public static class ServiceRegistrationExtensions
         services.Scan(scan => scan
             .FromApplicationDependencies(a => prefixes.Any(p => a.GetName().Name?.StartsWith(p) == true))
             .AddClasses(classes => classes
-                .Where(type => !type.IsAbstract && !type.IsGenericTypeDefinition))
+                .Where(type => !type.IsAbstract
+                    && !type.IsGenericTypeDefinition
+                    && type.GetInterfaces().Any(i => i.Namespace?.StartsWith("TripsTracker.") == true)))
             .UsingRegistrationStrategy(Scrutor.RegistrationStrategy.Skip)
             .AsImplementedInterfaces()
             .WithLifetime(lifetime));

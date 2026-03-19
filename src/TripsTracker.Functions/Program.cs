@@ -12,9 +12,6 @@ var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.ConfigureFunctionsWebApplication();
 
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
 
 // Register strongly-typed configuration options
 builder.Services.AddApplicationOptions(builder.Configuration);
