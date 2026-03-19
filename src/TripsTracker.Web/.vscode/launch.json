@@ -16,19 +16,19 @@
       "webRoot": "${workspaceFolder}\\public"
     },
     {
-      "name": "Launch Vite Preview",
+      "name": "Launch TripsTracker.Web",
       "type": "node",
       "request": "launch",
-      "program": "${workspaceFolder}/node_modules/.bin/vite",
-      "args": ["preview"],
+      "cwd": "${workspaceFolder}/bin",
+      "program": "${workspaceFolder}/bin/www",
       "stopOnEntry": false
     }
   ],
   "compounds": [
     {
-      "name": "Launch Preview and Browser",
+      "name": "Launch Node and Browser",
       "configurations": [
-        "Launch Vite Preview",
+        "Launch TripsTracker.Web",
         "localhost (Edge)"
       ]
     }

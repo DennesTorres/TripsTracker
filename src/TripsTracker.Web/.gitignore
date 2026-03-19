@@ -1,3 +1,6 @@
+# Allow the Express server entry point (root .gitignore excludes **/[Bb]in/*)
+!bin/www
+
 # Logs
 logs
 *.log
