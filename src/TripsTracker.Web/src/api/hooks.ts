@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Country, Place, SavePlace, VisitedState } from '@/types';
+import { decodeStrings } from '@/lib/cp1252';
 import apiClient from './client';
 
 export function usePlaces() {
   return useQuery<Place[]>({
     queryKey: ['places'],
-    queryFn: () => apiClient.get<Place[]>('/api/places').then(r => r.data),
+    queryFn: () =>
+      apiClient.get<Place[]>('/api/places').then(r => r.data.map(p => decodeStrings(p))),
   });
 }
 
@@ -37,7 +39,8 @@ export function useDeletePlace() {
 export function useCountries() {
   return useQuery<Country[]>({
     queryKey: ['countries'],
-    queryFn: () => apiClient.get<Country[]>('/api/countries').then(r => r.data),
+    queryFn: () =>
+      apiClient.get<Country[]>('/api/countries').then(r => r.data.map(c => decodeStrings(c))),
   });
 }
 
