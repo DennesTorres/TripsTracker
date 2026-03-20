@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TripsTracker — Database Schema</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; margin: 0; padding: 32px; }
+  h1 { font-size: 20px; font-weight: 600; color: #94a3b8; margin-bottom: 4px; letter-spacing: 0.05em; text-transform: uppercase; }
+  h2 { font-size: 13px; color: #475569; margin-top: 0; margin-bottom: 32px; font-weight: 400; }
+  .diagram-wrap { background: #1e2533; border-radius: 12px; padding: 40px; display: inline-block; min-width: 700px; }
+  .legend { margin-top: 28px; display: flex; gap: 24px; font-size: 12px; color: #64748b; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 12px; height: 3px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<h1>TripsTracker — Database Schema</h1>
+<h2>Tables, fields, types and relationships &nbsp;·&nbsp; Snapshot 2026-03-20</h2>
+<div class="diagram-wrap">
+  <div class="mermaid">
+erDiagram
+    Countries {
+        int Id PK
+        int IsoNumeric
+        nvarchar IsoAlpha2
+        nvarchar Flag
+        nvarchar Name
+        nvarchar Region
+        bit IsHome
+        bit IsVisited
+        bit IsDeleted
+    }
+
+    Places {
+        int Id PK
+        float Lon
+        float Lat
+        nvarchar Flag
+        nvarchar CountryName
+        nvarchar City
+        bit IsHome
+        bit IsDeleted
+    }
+
+    VisitedStates {
+        int Id PK
+        nvarchar CountryCode
+        nvarchar StateAbbr
+        bit IsDeleted
+    }
+
+    Countries ||--o{ Places : "Name → CountryName (soft)"
+    Countries ||--o{ VisitedStates : "IsoAlpha2 → CountryCode (soft)"
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#6366f1;border:none;width:32px;height:2px;border-top:2px dashed #6366f1;"></div><span>Soft reference — no FK constraint enforced by database</span></div>
+    <div class="legend-item"><span style="color:#94a3b8">PK = Identity column &nbsp;|&nbsp; All IsDeleted columns implement soft-delete pattern</span></div>
+  </div>
+</div>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    er: { diagramPadding: 30, entityPadding: 15, useMaxWidth: false },
+    themeVariables: {
+      background: '#1e2533',
+      primaryColor: '#1e3a5f',
+      primaryTextColor: '#e2e8f0',
+      lineColor: '#6366f1',
+      edgeLabelBackground: '#1e2533',
+      attributeBackgroundColorOdd: '#1a2236',
+      attributeBackgroundColorEven: '#1e2a40',
+      fontFamily: 'Segoe UI, sans-serif',
+      fontSize: '14px'
+    }
+  });
+</script>
+</body>
+</html>
