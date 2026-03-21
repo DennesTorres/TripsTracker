@@ -14,6 +14,12 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
         => BuildBaseQuery().Select(c => new CountryDto(
             c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited)).ToListAsync(ct);
 
+    public Task<CountryDto?> GetByIsoAlpha2Async(string isoAlpha2, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(c => c.IsoAlpha2 == isoAlpha2)
+            .Select(c => new CountryDto(c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited))
+            .FirstOrDefaultAsync(ct);
+
     public async Task<CountryDto?> SetVisitedAsync(int id, bool isVisited, CancellationToken ct = default)
     {
         var rows = await ExecuteUpdateAsync(

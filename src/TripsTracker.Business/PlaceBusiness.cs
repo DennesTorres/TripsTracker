@@ -10,6 +10,22 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 {
     public PlaceBusiness(TripsTrackerDbContext context) : base(context) { }
 
+    public async Task<PlaceDto> CreateAsync(CreatePlaceDto dto, CancellationToken ct = default)
+    {
+        var place = new Place
+        {
+            Lon = dto.Lon,
+            Lat = dto.Lat,
+            CountryId = dto.CountryId,
+            City = dto.City,
+            StateAbbr = dto.StateAbbr,
+            IsHome = dto.IsHome
+        };
+        await InsertAsync(place, ct);
+        return await GetByIdAsync(place.Id, ct)
+            ?? throw new InvalidOperationException($"Failed to retrieve created place {place.Id}.");
+    }
+
     public Task<List<PlaceDto>> GetAllAsync(CancellationToken ct = default)
         => BuildBaseQuery()
             .Join(Context.Set<Country>().AsNoTracking(),
