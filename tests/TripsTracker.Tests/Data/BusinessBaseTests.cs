@@ -24,7 +24,7 @@ public class BusinessBaseTests
         public DbSet<TripEntity> Trips => Set<TripEntity>();
     }
 
-    private class TripBusiness : BusinessBase<TripEntity, TripDomain>
+    private class TripBusiness : BusinessBase<TripEntity>
     {
         public TripBusiness(TestDbContext context) : base(context) { }
 
@@ -35,10 +35,13 @@ public class BusinessBaseTests
             => InsertAsync(entity, ct);
 
         public Task<TripDomain?> GetTripByIdAsync(int id, CancellationToken ct = default)
-            => GetByIdAsync(t => t.Id == id, t => new TripDomain(t.Id, t.Name), ct);
+            => BuildBaseQuery()
+                .Where(t => t.Id == id)
+                .Select(t => new TripDomain(t.Id, t.Name))
+                .FirstOrDefaultAsync(ct);
 
         public Task<List<TripDomain>> GetAllTripsAsync(CancellationToken ct = default)
-            => ToListAsync(BuildBaseQuery().Select(t => new TripDomain(t.Id, t.Name)), ct);
+            => BuildBaseQuery().Select(t => new TripDomain(t.Id, t.Name)).ToListAsync(ct);
 
         public Task<int> UpdateTripNameAsync(int id, string newName, CancellationToken ct = default)
             => ExecuteUpdateAsync(t => t.Id == id, s => s.SetProperty(t => t.Name, newName), ct);
@@ -47,7 +50,10 @@ public class BusinessBaseTests
             => ExecuteDeleteAsync(t => t.Id == id, ct);
 
         public Task<TripDomain?> FindByNameAsync(string name, CancellationToken ct = default)
-            => FirstOrDefaultAsync(ApplyFilter(t => t.Name == name, t => new TripDomain(t.Id, t.Name)), ct);
+            => BuildBaseQuery()
+                .Where(t => t.Name == name)
+                .Select(t => new TripDomain(t.Id, t.Name))
+                .FirstOrDefaultAsync(ct);
     }
 
     /// <summary>
@@ -107,7 +113,7 @@ public class BusinessBaseTests
 
     #endregion
 
-    #region GetByIdAsync
+    #region GetTripByIdAsync
 
     [TestMethod]
     public async Task GetByIdAsync_ReturnsMatchingDomainProjection()
@@ -205,7 +211,7 @@ public class BusinessBaseTests
 
     #endregion
 
-    #region BuildBaseQuery + ApplyFilter
+    #region BuildBaseQuery
 
     [TestMethod]
     public async Task BuildBaseQuery_ExcludesSoftDeletedEntities()
@@ -223,7 +229,7 @@ public class BusinessBaseTests
     }
 
     [TestMethod]
-    public async Task ApplyFilter_CombinesPredicateAndProjection()
+    public async Task BuildBaseQuery_WithFilter_ReturnsMatchingDomain()
     {
         await using var f = new Fixture();
         f.Ctx.Trips.AddRange(
