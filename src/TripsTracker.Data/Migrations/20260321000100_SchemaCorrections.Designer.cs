@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripsTracker.Data;
 
@@ -10,9 +11,11 @@ using TripsTracker.Data;
 namespace TripsTracker.Data.Migrations
 {
     [DbContext(typeof(TripsTrackerDbContext))]
-    partial class TripsTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260321000100_SchemaCorrections")]
+    partial class SchemaCorrections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

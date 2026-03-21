@@ -11,40 +11,28 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
     public PlaceBusiness(TripsTrackerDbContext context) : base(context) { }
 
     public Task<List<PlaceDto>> GetAllAsync(CancellationToken ct = default)
-        => BuildBaseQuery().Select(p => new PlaceDto(
-            p.Id, p.Lon, p.Lat, p.Flag, p.CountryName, p.City, p.IsHome)).ToListAsync(ct);
+        => BuildBaseQuery()
+            .Join(Context.Set<Country>().AsNoTracking(),
+                p => p.CountryId,
+                c => c.Id,
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.IsHome))
+            .ToListAsync(ct);
 
     public Task<PlaceDto?> GetByIdAsync(int id, CancellationToken ct = default)
         => BuildBaseQuery()
             .Where(p => p.Id == id)
-            .Select(p => new PlaceDto(p.Id, p.Lon, p.Lat, p.Flag, p.CountryName, p.City, p.IsHome))
+            .Join(Context.Set<Country>().AsNoTracking(),
+                p => p.CountryId,
+                c => c.Id,
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.IsHome))
             .FirstOrDefaultAsync(ct);
 
-    public async Task<PlaceDto> CreateAsync(SavePlaceDto dto, CancellationToken ct = default)
-    {
-        var entity = new Place
-        {
-            Lon = dto.Lon,
-            Lat = dto.Lat,
-            Flag = dto.Flag,
-            CountryName = dto.CountryName,
-            City = dto.City,
-            IsHome = dto.IsHome
-        };
-        await InsertAsync(entity, ct);
-        return new PlaceDto(entity.Id, entity.Lon, entity.Lat, entity.Flag, entity.CountryName, entity.City, entity.IsHome);
-    }
-
-    public async Task<PlaceDto?> UpdateAsync(int id, SavePlaceDto dto, CancellationToken ct = default)
+    public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
         var rows = await ExecuteUpdateAsync(
             p => p.Id == id && !p.IsDeleted,
             s =>
             {
-                s.SetProperty(p => p.Lon, dto.Lon);
-                s.SetProperty(p => p.Lat, dto.Lat);
-                s.SetProperty(p => p.Flag, dto.Flag);
-                s.SetProperty(p => p.CountryName, dto.CountryName);
                 s.SetProperty(p => p.City, dto.City);
                 s.SetProperty(p => p.IsHome, dto.IsHome);
             },

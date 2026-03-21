@@ -11,16 +11,7 @@ public class PlaceFunctions(IPlaceBusiness places)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    [Function("CreatePlace")]
-    public async Task<IActionResult> CreatePlace(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "places")] HttpRequest req,
-        CancellationToken ct)
-    {
-        var dto = await JsonSerializer.DeserializeAsync<SavePlaceDto>(req.Body, JsonOptions, ct);
-        if (dto is null) return new BadRequestObjectResult("Invalid request body.");
-        var result = await places.CreateAsync(dto, ct);
-        return new CreatedAtRouteResult(null, new { id = result.Id }, result);
-    }
+    // POST /places is handled by AddPlaceProcess (Group 6 — geocoding-driven creation)
 
     [Function("UpdatePlace")]
     public async Task<IActionResult> UpdatePlace(
@@ -28,7 +19,7 @@ public class PlaceFunctions(IPlaceBusiness places)
         int id,
         CancellationToken ct)
     {
-        var dto = await JsonSerializer.DeserializeAsync<SavePlaceDto>(req.Body, JsonOptions, ct);
+        var dto = await JsonSerializer.DeserializeAsync<UpdatePlaceDto>(req.Body, JsonOptions, ct);
         if (dto is null) return new BadRequestObjectResult("Invalid request body.");
         var result = await places.UpdateAsync(id, dto, ct);
         return result is null ? new NotFoundResult() : new OkObjectResult(result);

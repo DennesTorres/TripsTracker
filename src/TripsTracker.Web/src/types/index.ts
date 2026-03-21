@@ -2,9 +2,11 @@ export interface Place {
   id: number;
   lon: number;
   lat: number;
-  flag: string;
+  countryId: number;
   countryName: string;
+  countryFlag: string;
   city: string;
+  stateAbbr?: string;
   isHome: boolean;
 }
 
@@ -19,17 +21,13 @@ export interface Country {
   isVisited: boolean;
 }
 
-export interface SavePlace {
-  lon: number;
-  lat: number;
-  flag: string;
-  countryName: string;
+export interface UpdatePlace {
   city: string;
   isHome: boolean;
 }
 
 export interface VisitedState {
   id: number;
-  countryCode: string;
+  countryId: number;
   stateAbbr: string;
 }

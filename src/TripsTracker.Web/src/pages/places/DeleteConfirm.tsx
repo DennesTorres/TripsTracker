@@ -13,7 +13,7 @@ export default function DeleteConfirm({ place, onConfirm, onCancel }: Props) {
       <div className={styles.modal}>
         <h3>Delete place</h3>
         <p>
-          Delete <strong>{place.flag} {place.city}</strong> ({place.countryName})?
+          Delete <strong>{place.countryFlag} {place.city}</strong> ({place.countryName})?
           This cannot be undone.
         </p>
         <div className={styles.actions}>
