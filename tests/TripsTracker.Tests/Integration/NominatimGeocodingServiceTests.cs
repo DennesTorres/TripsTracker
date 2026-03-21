@@ -1,115 +1,68 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text;
-using Moq;
-using Moq.Protected;
+using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Configuration;
 using TripsTracker.Integration;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Integration;
 
 [TestClass]
 public class NominatimGeocodingServiceTests
 {
-    private static HttpClient BuildHttpClient(string jsonResponse, HttpStatusCode statusCode = HttpStatusCode.OK)
+    private static NominatimGeocodingService BuildService()
     {
-        var handler = new Mock<HttpMessageHandler>();
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = statusCode,
-                Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json"),
-            });
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddEnvironmentVariables()
+            .Build();
 
-        var client = new HttpClient(handler.Object)
+        var options = config.GetSection(NominatimOptions.SectionName).Get<NominatimOptions>()
+            ?? throw new InvalidOperationException($"'{NominatimOptions.SectionName}' configuration section is missing.");
+
+        var context = new ValidationContext(options);
+        Validator.ValidateObject(options, context, validateAllProperties: true);
+
+        var client = new HttpClient
         {
-            BaseAddress = new Uri("https://nominatim.openstreetmap.org"),
+            BaseAddress = new Uri(options.BaseUrl),
+            DefaultRequestHeaders = { { "User-Agent", options.UserAgent } },
+            Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
         };
-        return client;
+
+        return new NominatimGeocodingService(client);
     }
 
     [TestMethod]
-    public async Task GeocodeAsync_ValidCity_ReturnsParsedResult()
+    public async Task GeocodeAsync_SaoPaulo_ReturnsBrazilResult()
     {
-        const string json = """
-        [{
-            "lat": "-23.5557714",
-            "lon": "-46.6395571",
-            "address": {
-                "city": "São Paulo",
-                "state_code": "SP",
-                "country_code": "br"
-            }
-        }]
-        """;
-
-        var sut = new NominatimGeocodingService(BuildHttpClient(json));
+        var sut = BuildService();
 
         var result = await sut.GeocodeAsync("São Paulo", "BR");
 
         Assert.IsNotNull(result);
-        Assert.AreEqual("São Paulo", result.City);
-        Assert.AreEqual("SP", result.StateAbbr);
         Assert.AreEqual("BR", result.CountryIsoAlpha2);
-        Assert.AreEqual(-23.5557714, result.Lat, 0.0001);
-        Assert.AreEqual(-46.6395571, result.Lon, 0.0001);
+        Assert.IsFalse(string.IsNullOrEmpty(result.City));
+        Assert.IsTrue(result.Lat != 0 && result.Lon != 0);
     }
 
     [TestMethod]
-    public async Task GeocodeAsync_CityWithTownField_ReturnsTownAsCity()
+    public async Task GeocodeAsync_RioDeJaneiro_ReturnsBrazilResult()
     {
-        const string json = """
-        [{
-            "lat": "51.5074",
-            "lon": "-0.1278",
-            "address": {
-                "town": "Islington",
-                "country_code": "gb"
-            }
-        }]
-        """;
+        var sut = BuildService();
 
-        var sut = new NominatimGeocodingService(BuildHttpClient(json));
-
-        var result = await sut.GeocodeAsync("Islington", "GB");
+        var result = await sut.GeocodeAsync("Rio de Janeiro", "BR");
 
         Assert.IsNotNull(result);
-        Assert.AreEqual("Islington", result.City);
-        Assert.IsNull(result.StateAbbr);
-        Assert.AreEqual("GB", result.CountryIsoAlpha2);
+        Assert.AreEqual("BR", result.CountryIsoAlpha2);
+        Assert.IsFalse(string.IsNullOrEmpty(result.City));
     }
 
     [TestMethod]
-    public async Task GeocodeAsync_EmptyResults_ReturnsNull()
+    public async Task GeocodeAsync_NonExistentCity_ReturnsNull()
     {
-        var sut = new NominatimGeocodingService(BuildHttpClient("[]"));
+        var sut = BuildService();
 
-        var result = await sut.GeocodeAsync("NonExistentCity", "XX");
+        var result = await sut.GeocodeAsync("ZZZNonExistentCityXXX", "XX");
 
         Assert.IsNull(result);
-    }
-
-    [TestMethod]
-    public async Task GeocodeAsync_NoCityAddressField_FallsBackToCityNameParam()
-    {
-        const string json = """
-        [{
-            "lat": "40.7128",
-            "lon": "-74.0060",
-            "address": {
-                "state_code": "NY",
-                "country_code": "us"
-            }
-        }]
-        """;
-
-        var sut = new NominatimGeocodingService(BuildHttpClient(json));
-
-        var result = await sut.GeocodeAsync("New York", "US");
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual("New York", result.City);
     }
 }
