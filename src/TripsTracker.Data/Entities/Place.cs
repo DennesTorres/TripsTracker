@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TripsTracker.Data.Entities;
 
 public class Place
@@ -7,7 +9,7 @@ public class Place
     public double Lat { get; set; }
     public int CountryId { get; set; }
     public string City { get; set; } = string.Empty;
-    public string? StateAbbr { get; set; }
+    [MaxLength(10)] public string? StateAbbr { get; set; }
     public bool IsHome { get; set; }
     public bool IsDeleted { get; set; }
 }
