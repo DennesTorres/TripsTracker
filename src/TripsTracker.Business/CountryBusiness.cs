@@ -6,13 +6,13 @@ using TripsTracker.Interfaces.Business;
 
 namespace TripsTracker.Business;
 
-public class CountryBusiness : BusinessBase<Country, CountryDto>, ICountryBusiness
+public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
 {
     public CountryBusiness(TripsTrackerDbContext context) : base(context) { }
 
     public Task<List<CountryDto>> GetAllAsync(CancellationToken ct = default)
-        => ToListAsync(BuildBaseQuery().Select(c => new CountryDto(
-            c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited)), ct);
+        => BuildBaseQuery().Select(c => new CountryDto(
+            c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited)).ToListAsync(ct);
 
     public async Task<CountryDto?> SetVisitedAsync(int id, bool isVisited, CancellationToken ct = default)
     {
@@ -21,10 +21,10 @@ public class CountryBusiness : BusinessBase<Country, CountryDto>, ICountryBusine
             s => s.SetProperty(c => c.IsVisited, isVisited),
             ct);
         if (rows == 0) return null;
-        return await GetByIdAsync(
-            c => c.Id == id,
-            c => new CountryDto(c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited),
-            ct);
+        return await BuildBaseQuery()
+            .Where(c => c.Id == id)
+            .Select(c => new CountryDto(c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited))
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<CountryDto?> SetHomeAsync(int id, CancellationToken ct = default)
@@ -43,9 +43,9 @@ public class CountryBusiness : BusinessBase<Country, CountryDto>, ICountryBusine
             },
             ct);
         if (rows == 0) return null;
-        return await GetByIdAsync(
-            c => c.Id == id,
-            c => new CountryDto(c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited),
-            ct);
+        return await BuildBaseQuery()
+            .Where(c => c.Id == id)
+            .Select(c => new CountryDto(c.Id, c.IsoNumeric, c.IsoAlpha2, c.Flag, c.Name, c.Region, c.IsHome, c.IsVisited))
+            .FirstOrDefaultAsync(ct);
     }
 }

@@ -11,10 +11,8 @@ namespace TripsTracker.Data;
 /// preventing cross-contamination between sequential business calls in the same scope.
 /// </summary>
 /// <typeparam name="TEntity">The EF Core entity type.</typeparam>
-/// <typeparam name="TDomain">The domain projection type.</typeparam>
-public abstract class CrudBase<TEntity, TDomain> : QueryBase<TEntity, TDomain>
+public abstract class CrudBase<TEntity> : QueryBase<TEntity>
     where TEntity : class
-    where TDomain : class
 {
     protected CrudBase(DbContext context) : base(context) { }
 
@@ -26,20 +24,6 @@ public abstract class CrudBase<TEntity, TDomain> : QueryBase<TEntity, TDomain>
         Context.Set<TEntity>().Add(entity);
         await Context.SaveChangesAsync(ct);
     }
-
-    /// <summary>
-    /// Returns a single matching domain projection, or null if not found.
-    /// Uses <see cref="QueryBase{TEntity,TDomain}.BuildBaseQuery"/> as the base — all common
-    /// filters (soft-delete etc.) are automatically applied.
-    /// </summary>
-    protected async Task<TDomain?> GetByIdAsync(
-        Expression<Func<TEntity, bool>> predicate,
-        Expression<Func<TEntity, TDomain>> projection,
-        CancellationToken ct = default)
-        => await BuildBaseQuery()
-            .Where(predicate)
-            .Select(projection)
-            .FirstOrDefaultAsync(ct);
 
     /// <summary>
     /// Updates specific fields on all rows matching the predicate without loading any records.
