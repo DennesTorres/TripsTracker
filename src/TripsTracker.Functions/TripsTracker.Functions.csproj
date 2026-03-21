@@ -24,6 +24,7 @@
     <ProjectReference Include="..\TripsTracker.Interfaces\TripsTracker.Interfaces.csproj" />
     <ProjectReference Include="..\TripsTracker.Data\TripsTracker.Data.csproj" />
     <ProjectReference Include="..\TripsTracker.Business\TripsTracker.Business.csproj" />
+    <ProjectReference Include="..\TripsTracker.Integration\TripsTracker.Integration.csproj" />
     <ProjectReference Include="..\TripsTracker.Process\TripsTracker.Process.csproj" />
     <ProjectReference Include="..\TripsTracker.Tools\TripsTracker.Tools.csproj" />
   </ItemGroup>

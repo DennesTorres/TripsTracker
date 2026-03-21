@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripsTracker.Data;
 
@@ -10,9 +11,11 @@ using TripsTracker.Data;
 namespace TripsTracker.Data.Migrations
 {
     [DbContext(typeof(TripsTrackerDbContext))]
-    partial class TripsTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260321000000_SeedAllCountries")]
+    partial class SeedAllCountries
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -79,8 +82,13 @@ namespace TripsTracker.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("CountryId")
-                        .HasColumnType("int");
+                    b.Property<string>("CountryName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Flag")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -94,12 +102,9 @@ namespace TripsTracker.Data.Migrations
                     b.Property<double>("Lon")
                         .HasColumnType("float");
 
-                    b.Property<string>("StateAbbr")
-                        .HasColumnType("nvarchar(10)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CountryId");
+                    b.HasIndex("CountryName");
 
                     b.ToTable("Places");
                 });
@@ -112,8 +117,9 @@ namespace TripsTracker.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CountryId")
-                        .HasColumnType("int");
+                    b.Property<string>("CountryCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -124,9 +130,8 @@ namespace TripsTracker.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CountryId", "StateAbbr")
-                        .IsUnique()
-                        .HasFilter("[IsDeleted] = 0");
+                    b.HasIndex("CountryCode", "StateAbbr")
+                        .IsUnique();
 
                     b.ToTable("VisitedStates");
                 });

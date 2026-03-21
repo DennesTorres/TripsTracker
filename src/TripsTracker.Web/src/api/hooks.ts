@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Country, Place, SavePlace, VisitedState } from '@/types';
+import type { Country, Place, UpdatePlace, VisitedState } from '@/types';
+// VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 import { decodeStrings } from '@/lib/cp1252';
 import apiClient from './client';
 
@@ -11,18 +12,10 @@ export function usePlaces() {
   });
 }
 
-export function useCreatePlace() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (dto: SavePlace) => apiClient.post<Place>('/api/places', dto).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
-  });
-}
-
 export function useUpdatePlace() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: number; dto: SavePlace }) =>
+    mutationFn: ({ id, dto }: { id: number; dto: UpdatePlace }) =>
       apiClient.put<Place>(`/api/places/${id}`, dto).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
   });
@@ -66,23 +59,5 @@ export function useVisitedStates() {
   return useQuery<VisitedState[]>({
     queryKey: ['visited-states'],
     queryFn: () => apiClient.get<VisitedState[]>('/api/visited-states').then(r => r.data),
-  });
-}
-
-export function useSetVisitedState() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ countryCode, stateAbbr }: { countryCode: string; stateAbbr: string }) =>
-      apiClient.put<VisitedState>(`/api/visited-states/${countryCode}/${stateAbbr}`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['visited-states'] }),
-  });
-}
-
-export function useClearVisitedState() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ countryCode, stateAbbr }: { countryCode: string; stateAbbr: string }) =>
-      apiClient.delete(`/api/visited-states/${countryCode}/${stateAbbr}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['visited-states'] }),
   });
 }

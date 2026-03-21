@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using TripsTracker.Data;
 using TripsTracker.Data.Registration;
+using TripsTracker.Integration.Registration;
 using TripsTracker.Interfaces.Configuration;
 using TripsTracker.Tools.Registration;
 
@@ -21,6 +22,9 @@ var dbOptions = builder.Configuration
     .GetSection(DatabaseOptions.SectionName)
     .Get<DatabaseOptions>() ?? new DatabaseOptions();
 builder.Services.AddDatabaseContext<TripsTrackerDbContext>(dbOptions);
+
+// Register typed HTTP clients for integration services (before Scrutor so TryAdd skips them)
+builder.Services.AddIntegrationHttpClients();
 
 // Auto-register all application services against their interfaces
 builder.Services.AddScopedApplicationServices("TripsTracker.");
