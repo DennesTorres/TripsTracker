@@ -30,8 +30,7 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
 
         modelBuilder.Entity<VisitedState>(e =>
         {
-            e.HasIndex(vs => new { vs.CountryId, vs.StateAbbr }).IsUnique().HasFilter("[IsDeleted] = 0");
-            e.HasQueryFilter(vs => !vs.IsDeleted);
+            e.ToView("VisitedStates");
         });
     }
 }
