@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs",
+      "runtimeExecutable": "C:/Program Files/nodejs/node.exe",
+      "runtimeArgs": ["-e", "const h=require('http'),fs=require('fs'),p=require('path'),port=process.env.PORT||5500;h.createServer((q,r)=>{const f=p.join('C:/GitHub/TripsTracker/docs',q.url==='/'?'/db-diagram.html':q.url);try{r.writeHead(200,{'Content-Type':'text/html'});r.end(fs.readFileSync(f));}catch(e){r.writeHead(404);r.end();}}).listen(port)"],
+      "port": 5500,
+      "autoPort": true
+    }
+  ]
+}

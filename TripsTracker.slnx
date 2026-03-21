@@ -1,5 +1,6 @@
 <Solution>
     <Project Path="src/TripsTracker.Business/TripsTracker.Business.csproj" />
+    <Project Path="src/TripsTracker.Integration/TripsTracker.Integration.csproj" />
     <Project Path="src/TripsTracker.Data/TripsTracker.Data.csproj" />
     <Project Path="src/TripsTracker.Domain/TripsTracker.Domain.csproj" />
     <Project Path="src/TripsTracker.Functions/TripsTracker.Functions.csproj" />
