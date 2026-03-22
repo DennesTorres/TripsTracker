@@ -26,8 +26,15 @@ public class AddPlaceProcess : IAddPlaceProcess
 
         var geocoded = await _nominatim.GeocodeAsync(dto.CityName, dto.CountryIsoAlpha2, ct)
             ?? throw new BusinessRuleException(
-                $"Could not geocode '{dto.CityName}' in {country.Name}. Try a different city name.",
+                $"No city matching '{dto.CityName}' found in {country.Name}. Try a different city name.",
                 "GEOCODING_FAILED");
+
+        var inputWords = dto.CityName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var cityMatches = inputWords.Any(w => geocoded.City.Contains(w, StringComparison.OrdinalIgnoreCase));
+        if (!cityMatches)
+            throw new BusinessRuleException(
+                $"No city matching '{dto.CityName}' found in {country.Name}. Try a different city name.",
+                "GEOCODING_MISMATCH");
 
         var place = await _places.CreateAsync(
             new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, dto.IsHome),

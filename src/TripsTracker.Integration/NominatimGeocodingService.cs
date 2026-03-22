@@ -31,7 +31,10 @@ public class NominatimGeocodingService : INominatimService
             ?? address?.Municipality
             ?? cityName;
 
-        var stateAbbr = address?.StateCode?.ToUpperInvariant();
+        var rawState = address?.StateCode ?? address?.Iso3166Lvl4;
+        var stateAbbr = rawState?.ToUpperInvariant() is { } s
+            ? (s.Contains('-') ? s[(s.IndexOf('-') + 1)..] : s)
+            : null;
         var countryCode = address?.CountryCode?.ToUpperInvariant() ?? countryIsoAlpha2Hint.ToUpperInvariant();
 
         return new GeocodingResult(
@@ -57,7 +60,8 @@ public class NominatimGeocodingService : INominatimService
         [JsonPropertyName("town")]         public string? Town         { get; set; }
         [JsonPropertyName("village")]      public string? Village      { get; set; }
         [JsonPropertyName("municipality")] public string? Municipality { get; set; }
-        [JsonPropertyName("state_code")]   public string? StateCode    { get; set; }
-        [JsonPropertyName("country_code")] public string? CountryCode  { get; set; }
+        [JsonPropertyName("state_code")]        public string? StateCode    { get; set; }
+        [JsonPropertyName("ISO3166-2-lvl4")]    public string? Iso3166Lvl4  { get; set; }
+        [JsonPropertyName("country_code")]      public string? CountryCode  { get; set; }
     }
 }

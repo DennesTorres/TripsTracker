@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { useCreatePlace, useCountries } from '@/api/hooks';
 import styles from './AddPlaceForm.module.scss';
 
@@ -24,7 +25,9 @@ export default function AddPlaceForm({ onClose }: Props) {
       {
         onSuccess: onClose,
         onError: (err: unknown) => {
-          const msg = err instanceof Error ? err.message : 'Failed to add place.';
+          const msg = axios.isAxiosError(err)
+            ? (typeof err.response?.data === 'string' ? err.response.data : 'Could not add place.')
+            : err instanceof Error ? err.message : 'Could not add place.';
           setError(msg);
         },
       }
