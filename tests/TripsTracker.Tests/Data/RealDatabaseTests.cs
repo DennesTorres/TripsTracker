@@ -72,7 +72,7 @@ public class RealDatabaseTests
 
         var countries = await f.Countries.GetAllAsync();
 
-        Assert.IsGreaterThanOrEqualTo(countries.Count, 195, $"Expected >= 195 countries, got {countries.Count}.");
+        Assert.IsGreaterThanOrEqualTo(195, countries.Count, $"Expected >= 195 countries, got {countries.Count}.");
     }
 
     [TestMethod]
@@ -161,6 +161,30 @@ public class RealDatabaseTests
         Assert.IsNotEmpty(states, "VisitedStates view must return at least one row when places have StateAbbr.");
         Assert.IsTrue(states.All(s => s.CountryId > 0), "All view rows must have a valid CountryId.");
         Assert.IsTrue(states.All(s => !string.IsNullOrEmpty(s.StateAbbr)), "All view rows must have a StateAbbr.");
+
+        // Every state in the view must correspond to at least one place with that StateAbbr+CountryId
+        foreach (var state in states)
+        {
+            var match = placesWithState.Any(p => p.CountryId == state.CountryId && p.StateAbbr == state.StateAbbr);
+            Assert.IsTrue(match,
+                $"VisitedStates view row (CountryId={state.CountryId}, StateAbbr={state.StateAbbr}) has no matching Place.");
+        }
+    }
+
+    [TestMethod]
+    public async Task VisitedStateBusiness_GetAllAsync_BrazilHasStates()
+    {
+        await using var f = new Fixture();
+
+        var brazil = f.Context.Set<TripsTracker.Data.Entities.Country>()
+            .First(c => c.IsoAlpha2 == "BR");
+
+        var states = await f.States.GetAllAsync();
+        var brazilStates = states.Where(s => s.CountryId == brazil.Id).ToList();
+
+        Assert.IsNotEmpty(brazilStates,
+            "Brazil must have at least one state in the VisitedStates view. " +
+            "If this fails, Brazilian places are missing StateAbbr — check migration data extraction.");
     }
 
     #endregion
