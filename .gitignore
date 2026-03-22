@@ -424,3 +424,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 .claude/worktrees/
+
+# Test local configuration (connection strings)
+**/appsettings.local.json

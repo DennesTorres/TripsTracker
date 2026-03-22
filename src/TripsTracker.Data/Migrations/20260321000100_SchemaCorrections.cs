@@ -13,6 +13,9 @@ namespace TripsTracker.Data.Migrations
             // ── Places: add CountryId FK ───────────────────────────────────────────
             migrationBuilder.Sql("ALTER TABLE Places ADD CountryId int NULL");
 
+            // Normalise known country name aliases before resolving CountryId
+            migrationBuilder.Sql("UPDATE Places SET CountryName = 'United States' WHERE CountryName = 'USA'");
+
             migrationBuilder.Sql(@"
 UPDATE p SET p.CountryId = c.Id
 FROM Places p
@@ -25,12 +28,14 @@ WHERE p.CountryId IS NULL");
             migrationBuilder.Sql(@"
 UPDATE Places
 SET StateAbbr = SUBSTRING(City, CHARINDEX('(', City)+1, CHARINDEX(')', City) - CHARINDEX('(', City) - 1)
-WHERE City LIKE '%(%)%'");
+WHERE City LIKE '%(%)%'
+AND LEN(SUBSTRING(City, CHARINDEX('(', City)+1, CHARINDEX(')', City) - CHARINDEX('(', City) - 1)) <= 3");
 
             migrationBuilder.Sql(@"
 UPDATE Places
 SET City = RTRIM(SUBSTRING(City, 1, CHARINDEX('(', City)-1))
-WHERE City LIKE '%(%)%'");
+WHERE City LIKE '%(%)%'
+AND LEN(SUBSTRING(City, CHARINDEX('(', City)+1, CHARINDEX(')', City) - CHARINDEX('(', City) - 1)) <= 3");
 
             // ── Places: drop old string columns ───────────────────────────────────
             migrationBuilder.DropIndex(name: "IX_Places_CountryName", table: "Places");
