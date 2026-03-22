@@ -1,3 +1,3 @@
 namespace TripsTracker.Domain;
 
-public record PlaceDto(int Id, double Lon, double Lat, string Flag, string CountryName, string City, bool IsHome);
+public record PlaceDto(int Id, double Lon, double Lat, int CountryId, string CountryName, string CountryFlag, string City, string? StateAbbr, bool IsHome);

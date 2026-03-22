@@ -7,7 +7,7 @@ import styles from './PlacesPage.module.scss';
 
 export default function PlacesPage() {
   const { data: places = [], isLoading } = usePlaces();
-  const [editing, setEditing] = useState<Place | null | 'new'>(null);
+  const [editing, setEditing] = useState<Place | null>(null);
   const [deleting, setDeleting] = useState<Place | null>(null);
   const deletePlace = useDeletePlace();
 
@@ -17,9 +17,6 @@ export default function PlacesPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h2>Places</h2>
-        <button className={styles.addBtn} onClick={() => setEditing('new')}>
-          + Add place
-        </button>
       </div>
 
       <div className={styles.tableWrapper}>
@@ -29,6 +26,7 @@ export default function PlacesPage() {
               <th></th>
               <th>City</th>
               <th>Country</th>
+              <th>State</th>
               <th>Lon</th>
               <th>Lat</th>
               <th>Home</th>
@@ -38,9 +36,10 @@ export default function PlacesPage() {
           <tbody>
             {places.map(p => (
               <tr key={p.id}>
-                <td className={styles.flag}>{p.flag}</td>
+                <td className={styles.flag}>{p.countryFlag}</td>
                 <td>{p.city}</td>
                 <td>{p.countryName}</td>
+                <td>{p.stateAbbr ?? ''}</td>
                 <td>{p.lon.toFixed(4)}</td>
                 <td>{p.lat.toFixed(4)}</td>
                 <td>{p.isHome ? '✓' : ''}</td>
@@ -56,7 +55,7 @@ export default function PlacesPage() {
 
       {editing !== null && (
         <PlaceForm
-          place={editing === 'new' ? null : editing}
+          place={editing}
           onClose={() => setEditing(null)}
         />
       )}

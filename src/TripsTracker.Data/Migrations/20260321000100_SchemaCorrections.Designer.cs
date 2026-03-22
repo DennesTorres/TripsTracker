@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripsTracker.Data;
 
@@ -10,9 +11,11 @@ using TripsTracker.Data;
 namespace TripsTracker.Data.Migrations
 {
     [DbContext(typeof(TripsTrackerDbContext))]
-    partial class TripsTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260321000100_SchemaCorrections")]
+    partial class SchemaCorrections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -107,10 +110,16 @@ namespace TripsTracker.Data.Migrations
             modelBuilder.Entity("TripsTracker.Data.Entities.VisitedState", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("CountryId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("StateAbbr")
                         .IsRequired()
@@ -118,7 +127,11 @@ namespace TripsTracker.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToView("VisitedStates");
+                    b.HasIndex("CountryId", "StateAbbr")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("VisitedStates");
                 });
 #pragma warning restore 612, 618
         }

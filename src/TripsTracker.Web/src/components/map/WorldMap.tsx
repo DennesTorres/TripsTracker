@@ -173,9 +173,9 @@ export default function WorldMap({
         .on('mouseover', (event: MouseEvent) => {
           const p0 = c.places[0];
           const html = n === 1
-            ? `<strong>${p0.flag} ${p0.city}</strong><br/>${p0.countryName}`
+            ? `<strong>${p0.countryFlag} ${p0.city}</strong><br/>${p0.countryName}`
             : `<strong>${n} places in ${p0.countryName}</strong><br/>${
-                c.places.map(p => `${p.flag} ${p.city}`).join('<br/>')
+                c.places.map(p => `${p.countryFlag} ${p.city}`).join('<br/>')
               }`;
           tooltip.style('display', 'block').html(html);
           const rect = svgRef.current!.getBoundingClientRect();
@@ -230,7 +230,8 @@ export default function WorldMap({
 
     const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
     const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
-    const visitedBrStates  = new Set(visitedStates.filter(s => s.countryCode === 'BR').map(s => s.stateAbbr));
+    const brCountry = countries.find(c => c.isoAlpha2 === 'BR');
+    const visitedBrStates  = new Set(visitedStates.filter(s => s.countryId === brCountry?.id).map(s => s.stateAbbr));
 
     const g = svg.append('g');
 

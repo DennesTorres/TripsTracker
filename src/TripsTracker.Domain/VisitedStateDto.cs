@@ -1,3 +1,3 @@
 namespace TripsTracker.Domain;
 
-public record VisitedStateDto(int Id, string CountryCode, string StateAbbr);
+public record VisitedStateDto(int Id, int CountryId, string StateAbbr);

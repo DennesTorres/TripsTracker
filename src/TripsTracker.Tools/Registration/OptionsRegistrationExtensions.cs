@@ -28,6 +28,12 @@ public static class OptionsRegistrationExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services
+            .AddOptions<NominatimOptions>()
+            .Bind(configuration.GetSection(NominatimOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         return services;
     }
 }
