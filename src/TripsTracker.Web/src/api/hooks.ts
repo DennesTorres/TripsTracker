@@ -39,7 +39,7 @@ export function useDeletePlace() {
       apiClient.delete<DeletePlaceResult>(`/api/places/${id}`).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['places'] });
-      qc.invalidateQueries({ queryKey: ['countries'] });
+      qc.invalidateQueries({ queryKey: ['countries'], refetchType: 'all' });
     },
   });
 }
