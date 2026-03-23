@@ -47,7 +47,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
         var rows = await ExecuteUpdateAsync(
-            p => p.Id == id && !p.IsDeleted,
+            p => p.Id == id,
             s =>
             {
                 s.SetProperty(p => p.City, dto.City);
@@ -60,10 +60,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var rows = await ExecuteUpdateAsync(
-            p => p.Id == id && !p.IsDeleted,
-            s => s.SetProperty(p => p.IsDeleted, true),
-            ct);
+        var rows = await ExecuteDeleteAsync(p => p.Id == id, ct);
         return rows > 0;
     }
 }

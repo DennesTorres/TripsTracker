@@ -10,5 +10,4 @@ public class Country
     public string Region { get; set; } = string.Empty;
     public bool IsHome { get; set; }
     public bool IsVisited { get; set; }
-    public bool IsDeleted { get; set; }
 }

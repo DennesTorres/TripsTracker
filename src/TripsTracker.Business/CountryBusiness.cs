@@ -23,7 +23,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
     public async Task<CountryDto?> SetVisitedAsync(int id, bool isVisited, CancellationToken ct = default)
     {
         var rows = await ExecuteUpdateAsync(
-            c => c.Id == id && !c.IsDeleted,
+            c => c.Id == id,
             s => s.SetProperty(c => c.IsVisited, isVisited),
             ct);
         if (rows == 0) return null;
@@ -37,11 +37,11 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
     {
         // Clear existing home flag, then set on requested country
         await Context.Set<Country>()
-            .Where(c => c.IsHome && !c.IsDeleted)
+            .Where(c => c.IsHome)
             .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsHome, false), ct);
 
         var rows = await ExecuteUpdateAsync(
-            c => c.Id == id && !c.IsDeleted,
+            c => c.Id == id,
             s =>
             {
                 s.SetProperty(c => c.IsHome, true);
