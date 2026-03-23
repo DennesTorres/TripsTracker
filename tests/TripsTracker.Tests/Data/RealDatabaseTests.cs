@@ -130,7 +130,6 @@ public class RealDatabaseTests
             Lat = -23.5,
             Lon = -46.6,
             IsHome = false,
-            IsDeleted = false,
         };
         f.Context.Set<Place>().Add(testPlace);
         await f.Context.SaveChangesAsync();

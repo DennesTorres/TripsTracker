@@ -18,14 +18,12 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         modelBuilder.Entity<Place>(e =>
         {
             e.HasIndex(p => p.CountryId);
-            e.HasQueryFilter(p => !p.IsDeleted);
         });
 
         modelBuilder.Entity<Country>(e =>
         {
             e.HasIndex(c => c.IsoNumeric).IsUnique();
             e.HasIndex(c => c.Name);
-            e.HasQueryFilter(c => !c.IsDeleted);
         });
 
         modelBuilder.Entity<VisitedState>(e =>

@@ -12,5 +12,5 @@ public class VisitedStateBusiness : BusinessBase<VisitedState>, IVisitedStateBus
 
     public Task<List<VisitedStateDto>> GetAllAsync(CancellationToken ct = default)
         => BuildBaseQuery().Select(vs => new VisitedStateDto(
-            vs.Id, vs.CountryId, vs.StateAbbr)).ToListAsync(ct);
+            vs.Id, vs.CountryId, vs.StateAbbr, vs.StateName)).ToListAsync(ct);
 }

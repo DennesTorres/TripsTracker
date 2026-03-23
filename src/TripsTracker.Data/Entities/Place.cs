@@ -10,6 +10,6 @@ public class Place
     public int CountryId { get; set; }
     public string City { get; set; } = string.Empty;
     [MaxLength(10)] public string? StateAbbr { get; set; }
+    public string? StateName { get; set; }
     public bool IsHome { get; set; }
-    public bool IsDeleted { get; set; }
 }

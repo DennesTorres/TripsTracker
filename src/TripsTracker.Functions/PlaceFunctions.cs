@@ -9,7 +9,7 @@ using TripsTracker.Interfaces.Process;
 
 namespace TripsTracker.Functions;
 
-public class PlaceFunctions(IPlaceBusiness places, IAddPlaceProcess addPlace)
+public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -22,7 +22,7 @@ public class PlaceFunctions(IPlaceBusiness places, IAddPlaceProcess addPlace)
         if (dto is null) return new BadRequestObjectResult("Invalid request body.");
         try
         {
-            var result = await addPlace.ExecuteAsync(dto, ct);
+            var result = await placesProcess.AddAsync(dto, ct);
             return new CreatedResult($"/api/places/{result.Id}", result);
         }
         catch (NotFoundException ex)
@@ -53,7 +53,14 @@ public class PlaceFunctions(IPlaceBusiness places, IAddPlaceProcess addPlace)
         int id,
         CancellationToken ct)
     {
-        var deleted = await places.DeleteAsync(id, ct);
-        return deleted ? new NoContentResult() : new NotFoundResult();
+        try
+        {
+            var result = await placesProcess.DeleteAsync(id, ct);
+            return new OkObjectResult(result);
+        }
+        catch (NotFoundException)
+        {
+            return new NotFoundResult();
+        }
     }
 }

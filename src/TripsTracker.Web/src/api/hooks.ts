@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, Country, Place, UpdatePlace, VisitedState } from '@/types';
+import type { AddPlace, Country, DeletePlaceResult, Place, UpdatePlace, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 import { decodeStrings } from '@/lib/cp1252';
 import apiClient from './client';
@@ -35,8 +35,12 @@ export function useUpdatePlace() {
 export function useDeletePlace() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => apiClient.delete(`/api/places/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
+    mutationFn: (id: number) =>
+      apiClient.delete<DeletePlaceResult>(`/api/places/${id}`).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['places'] });
+      qc.invalidateQueries({ queryKey: ['countries'], refetchType: 'all' });
+    },
   });
 }
 
@@ -60,8 +64,8 @@ export function useSetCountryVisited() {
 export function useSetCountryHome() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) =>
-      apiClient.put<Country>(`/api/countries/${id}/home`).then(r => r.data),
+    mutationFn: ({ id, isHome = true }: { id: number; isHome?: boolean }) =>
+      apiClient.put<Country>(`/api/countries/${id}/home?value=${isHome}`).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
   });
 }

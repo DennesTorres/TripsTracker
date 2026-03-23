@@ -24,7 +24,8 @@ public class CountryFunctions(ICountryBusiness countries)
         int id,
         CancellationToken ct)
     {
-        var result = await countries.SetHomeAsync(id, ct);
+        bool isHome = req.Query["value"] != "false";
+        var result = await countries.SetHomeAsync(id, isHome, ct);
         return result is null ? new NotFoundResult() : new OkObjectResult(result);
     }
 }

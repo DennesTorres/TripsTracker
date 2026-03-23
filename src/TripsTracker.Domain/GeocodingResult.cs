@@ -5,4 +5,5 @@ public record GeocodingResult(
     double Lon,
     string City,
     string? StateAbbr,
+    string? StateName,
     string CountryIsoAlpha2);
