@@ -26,7 +26,7 @@ public class AddPlaceProcess : IAddPlaceProcess
         var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
 
         var place = await _places.CreateAsync(
-            new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, dto.IsHome),
+            new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
             ct);
 
         if (!country.IsVisited && !country.IsHome)

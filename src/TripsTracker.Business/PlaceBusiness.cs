@@ -19,6 +19,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             CountryId = dto.CountryId,
             City = dto.City,
             StateAbbr = dto.StateAbbr,
+            StateName = dto.StateName,
             IsHome = dto.IsHome
         };
         await InsertAsync(place, ct);
@@ -31,7 +32,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             .Join(Context.Set<Country>().AsNoTracking(),
                 p => p.CountryId,
                 c => c.Id,
-                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.IsHome))
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
             .ToListAsync(ct);
 
     public Task<PlaceDto?> GetByIdAsync(int id, CancellationToken ct = default)
@@ -40,7 +41,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             .Join(Context.Set<Country>().AsNoTracking(),
                 p => p.CountryId,
                 c => c.Id,
-                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.IsHome))
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
             .FirstOrDefaultAsync(ct);
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
