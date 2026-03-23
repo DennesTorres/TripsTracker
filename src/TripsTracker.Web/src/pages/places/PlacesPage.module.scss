@@ -68,9 +68,28 @@
   }
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: #e2e8f0;
+  }
+}
+
+.sortArrow {
+  color: #4ade80;
+}
+
 .flag {
   font-size: 18px;
   width: 36px;
+}
+
+.coord {
+  color: #64748b;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .actions {

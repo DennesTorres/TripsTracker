@@ -6,16 +6,44 @@ import PlaceForm from './PlaceForm';
 import DeleteConfirm from './DeleteConfirm';
 import styles from './PlacesPage.module.scss';
 
+type SortKey = 'city' | 'countryName' | 'stateAbbr' | 'lon' | 'lat';
+type SortDir = 'asc' | 'desc';
+
+function sortPlaces(places: Place[], key: SortKey, dir: SortDir): Place[] {
+  return [...places].sort((a, b) => {
+    const av = a[key] ?? '';
+    const bv = b[key] ?? '';
+    const cmp = typeof av === 'number' && typeof bv === 'number'
+      ? av - bv
+      : String(av).localeCompare(String(bv));
+    return dir === 'asc' ? cmp : -cmp;
+  });
+}
+
 export default function PlacesPage() {
   const { data: places = [], isLoading } = usePlaces();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Place | null>(null);
   const [deleting, setDeleting] = useState<Place | null>(null);
   const [homePrompt, setHomePrompt] = useState<DeletePlaceResult | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('city');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const deletePlace = useDeletePlace();
   const setHome = useSetCountryHome();
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>;
+
+  const sorted = sortPlaces(places, sortKey, sortDir);
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('asc'); }
+  }
+
+  function sortIndicator(key: SortKey) {
+    if (key !== sortKey) return null;
+    return <span className={styles.sortArrow}>{sortDir === 'asc' ? ' ▲' : ' ▼'}</span>;
+  }
 
   return (
     <div className={styles.page}>
@@ -29,24 +57,24 @@ export default function PlacesPage() {
           <thead>
             <tr>
               <th></th>
-              <th>City</th>
-              <th>Country</th>
-              <th>State</th>
-              <th>Lon</th>
-              <th>Lat</th>
+              <th className={styles.sortable} onClick={() => handleSort('city')}>City{sortIndicator('city')}</th>
+              <th className={styles.sortable} onClick={() => handleSort('countryName')}>Country{sortIndicator('countryName')}</th>
+              <th className={styles.sortable} onClick={() => handleSort('stateAbbr')}>State{sortIndicator('stateAbbr')}</th>
+              <th className={styles.sortable} onClick={() => handleSort('lon')}>Lon{sortIndicator('lon')}</th>
+              <th className={styles.sortable} onClick={() => handleSort('lat')}>Lat{sortIndicator('lat')}</th>
               <th>Home</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {places.map(p => (
+            {sorted.map(p => (
               <tr key={p.id}>
                 <td className={styles.flag}>{p.countryFlag}</td>
                 <td>{p.city}</td>
                 <td>{p.countryName}</td>
                 <td>{p.stateAbbr ?? ''}</td>
-                <td>{p.lon.toFixed(4)}</td>
-                <td>{p.lat.toFixed(4)}</td>
+                <td className={styles.coord}>{p.lon.toFixed(4)}</td>
+                <td className={styles.coord}>{p.lat.toFixed(4)}</td>
                 <td>{p.isHome ? '✓' : ''}</td>
                 <td className={styles.actions}>
                   <button onClick={() => setEditing(p)}>Edit</button>
