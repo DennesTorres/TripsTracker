@@ -24,9 +24,7 @@ public class GeocodingBusiness : IGeocodingBusiness
         var inputWords = cityName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var cityMatches = inputWords.Any(w => result.City.Contains(w, StringComparison.OrdinalIgnoreCase));
         if (!cityMatches)
-            throw new BusinessRuleException(
-                $"No city matching '{cityName}' found in {country.Name}. Try a different city name.",
-                "GEOCODING_MISMATCH");
+            throw new GeocodingMismatchException(cityName, result.City, country.Name);
 
         return result;
     }

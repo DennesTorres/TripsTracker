@@ -18,6 +18,7 @@ public static class IntegrationRegistrationExtensions
             var options = sp.GetRequiredService<IOptions<NominatimOptions>>().Value;
             client.BaseAddress = new Uri(options.BaseUrl);
             client.DefaultRequestHeaders.Add("User-Agent", options.UserAgent);
+            client.DefaultRequestHeaders.Add("Accept-Language", "en");
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });
 
