@@ -1,440 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>TripsTracker — Backend Call Flow</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: #0d1117;
-      color: #c9d1d9;
-      font-family: 'Segoe UI', Consolas, sans-serif;
-      padding: 24px;
-      min-width: 960px;
-    }
-
-    h1 { color: #58a6ff; text-align: center; margin-bottom: 4px; font-size: 1.35rem; letter-spacing: 0.5px; }
-    h2 { color: #8b949e; text-align: center; font-size: 0.85rem; font-weight: 400; margin-bottom: 6px; }
-    .subtitle { text-align: center; color: #8b949e; font-size: 0.8rem; margin-bottom: 20px; }
-    .section-title {
-      font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px;
-      text-transform: uppercase; color: #8b949e; margin: 20px 0 8px;
-      padding-bottom: 4px; border-bottom: 1px solid #21262d;
-    }
-
-    /* ── Layer wrapper ───────────────────────── */
-    .layer { border-radius: 8px; padding: 10px 14px 12px; margin-bottom: 4px; }
-    .layer-label {
-      font-size: 0.66rem; font-weight: 700; letter-spacing: 1.8px;
-      text-transform: uppercase; margin-bottom: 8px;
-    }
-
-    /* ── Layer themes ────────────────────────── */
-    .frontend    { background: #161b22; border: 1px solid #30363d; }
-    .frontend    .layer-label { color: #f0883e; }
-    .functions   { background: #161b22; border: 1px solid #30363d; }
-    .functions   .layer-label { color: #d2a8ff; }
-    .process     { background: #1a1428; border: 2px solid #6e40c9; }
-    .process     .layer-label { color: #d2a8ff; font-size: 0.75rem; }
-    .integration { background: #0d1a2a; border: 1px dashed #1f6feb; }
-    .integration .layer-label { color: #79c0ff; }
-    .business    { background: #091d36; border: 2px solid #1f6feb; }
-    .business    .layer-label { color: #58a6ff; font-size: 0.75rem; }
-    .base        { background: #161b22; border: 1px solid #21262d; }
-    .base        .layer-label { color: #6e7681; }
-    .db          { background: #161b22; border: 1px solid #30363d; }
-    .db          .layer-label { color: #3fb950; }
-
-    /* ── Grids ───────────────────────────────── */
-    .cols2  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .cols3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .cols3w { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
-
-    /* ── Boxes ───────────────────────────────── */
-    .box      { background: #1c2128; border: 1px solid #30363d; border-radius: 6px; padding: 9px 11px; }
-    .box.hi   { background: #0a2040; border-color: #1f6feb; }
-    .box.proc { background: #1a1428; border: 1px solid #6e40c9; }
-    .box.ext  { background: #0a1520; border: 1px dashed #1f6feb; }
-    .box.dim  { background: #161b22; border-color: #21262d; opacity: 0.85; }
-    .box.ro   { background: #0d1a0d; border: 1px solid #2d5c2d; }
-
-    /* ── Add Place flow ──────────────────────── */
-    .flow-box {
-      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
-      padding: 16px 20px; margin-bottom: 4px;
-    }
-    .flow-step {
-      display: flex; align-items: flex-start; gap: 14px; margin-bottom: 10px;
-    }
-    .step-num {
-      background: #1f6feb; color: #fff; border-radius: 50%;
-      width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-      font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 1px;
-    }
-    .step-num.ext { background: #6e40c9; }
-    .step-num.db  { background: #238636; }
-    .step-body { flex: 1; }
-    .step-layer {
-      font-size: 0.64rem; font-weight: 700; letter-spacing: 1.2px;
-      text-transform: uppercase; color: #484f58; margin-bottom: 2px;
-    }
-    .step-desc { font-size: 0.82rem; color: #c9d1d9; margin-bottom: 3px; }
-    .step-code {
-      font-family: Consolas, monospace; font-size: 0.75rem;
-      color: #8b949e; line-height: 1.5;
-    }
-    .step-code .cls  { color: #e3b341; }
-    .step-code .mth  { color: #7ee787; }
-    .step-code .err  { color: #f85149; }
-    .step-code .ret  { color: #56d364; }
-    .step-arrow {
-      text-align: center; color: #30363d; font-size: 1rem;
-      margin: 2px 0 2px 36px; line-height: 1;
-    }
-
-    /* ── Dividers ────────────────────────────── */
-    .flow-divider {
-      display: flex; align-items: center; gap: 10px;
-      margin: 6px 0 4px;
-    }
-    .flow-divider .label {
-      font-size: 0.63rem; font-weight: 700; letter-spacing: 1.5px;
-      text-transform: uppercase; white-space: nowrap; padding: 2px 8px;
-      border-radius: 3px;
-    }
-    .label-read  { color: #7ee787; background: #0d2a1a; border: 1px solid #2d5c2d; }
-    .label-write { color: #d2a8ff; background: #1a1428; border: 1px dashed #6e40c9; }
-    .label-ro    { color: #5ca87e; background: #0a1a0a; border: 1px dashed #2d5c2d; }
-    .flow-divider .line { flex: 1; height: 1px; background: #21262d; }
-
-    /* ── Class names ─────────────────────────── */
-    .cname     { color: #e3b341; font-weight: 600; font-size: 0.9rem; margin-bottom: 1px; }
-    .cname.dim { color: #8b949e; }
-    .csuper    { color: #6e7681; font-size: 0.7rem; font-style: italic; margin-bottom: 7px; }
-
-    /* ── Methods ─────────────────────────────── */
-    .m {
-      font-family: Consolas, monospace; font-size: 0.76rem;
-      padding: 3px 7px; border-radius: 3px; margin-bottom: 3px;
-    }
-    .m-pub  { background: #0d2a1a; color: #7ee787; border-left: 2px solid #3fb950; }
-    .m-prot { background: #0d1e33; color: #79c0ff; border-left: 2px solid #1f6feb; }
-    .m-inh  { background: #1c2128; color: #6e7681; border-left: 2px solid #30363d; }
-    .m-proc { background: #1a1428; color: #d2a8ff; border-left: 2px solid #6e40c9; }
-    .calls  {
-      font-family: Consolas, monospace; font-size: 0.71rem;
-      color: #8b949e; padding-left: 12px; margin-bottom: 3px; line-height: 1.45;
-    }
-    .ret     { font-family: Consolas, monospace; font-size: 0.7rem; color: #56d364; padding-left: 7px; margin-bottom: 4px; }
-
-    /* ── API endpoint rows ───────────────────── */
-    .ep    { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; flex-wrap: wrap; }
-    .verb  { padding: 2px 6px; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.7rem; font-weight: 700; }
-    .v-get    { background: #0d2a1a; color: #7ee787; }
-    .v-post   { background: #1a1a0a; color: #e3b341; }
-    .v-put    { background: #1a1020; color: #d2a8ff; }
-    .v-delete { background: #2a0a0a; color: #f85149; }
-    .path  { color: #79c0ff; font-family: Consolas, monospace; font-size: 0.78rem; }
-    .hook  { color: #f0883e; font-family: Consolas, monospace; font-size: 0.78rem; }
-    .hook-w { color: #d2a8ff; font-family: Consolas, monospace; font-size: 0.78rem; }
-    .arr   { color: #484f58; font-size: 0.75rem; }
-
-    /* ── Connectors ──────────────────────────── */
-    .connector {
-      text-align: center; color: #30363d; font-size: 1.1rem; line-height: 1; margin: 3px 0;
-    }
-    .connector span { font-size: 0.68rem; color: #6e7681; font-family: 'Segoe UI', sans-serif; }
-
-    /* ── AOP banner ──────────────────────────── */
-    .aop {
-      background: #1a1428; border: 1px dashed #6e40c9; border-radius: 6px;
-      padding: 8px 16px; margin-bottom: 12px; text-align: center;
-      font-size: 0.72rem; color: #8b7cc8; line-height: 1.6;
-    }
-    .aop strong { color: #d2a8ff; }
-
-    /* ── Legend ──────────────────────────────── */
-    .legend {
-      display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px;
-      padding: 9px 14px; background: #161b22; border-radius: 6px;
-      font-size: 0.7rem; color: #8b949e;
-    }
-    .li { display: flex; align-items: center; gap: 6px; }
-    .ld { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-  </style>
+<meta charset="UTF-8">
+<title>TripsTracker — Architecture Overview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; padding: 28px; font-family: 'Segoe UI', sans-serif; }
+  h1 { color: #94a3b8; font-size: 1.15rem; font-weight: 600; text-align: center;
+       letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+  h2 { color: #475569; font-size: 0.78rem; font-weight: 400; text-align: center; margin-bottom: 20px; }
+  svg { display: block; margin: 0 auto; width: 100%; max-width: 1130px; }
+  .leg { display:flex; flex-wrap:wrap; gap:10px 22px; max-width:1130px; margin:12px auto 0;
+         padding:10px 14px; background:#1e2533; border-radius:8px;
+         font-size:0.7rem; color:#64748b; align-items:center; }
+  .li  { display:flex; align-items:center; gap:7px; }
+  .lc  { flex-shrink:0; width:26px; height:3px; border-radius:2px; }
+</style>
 </head>
 <body>
+<h1>TripsTracker — Architecture Overview</h1>
+<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-03-23 (Groups 1–6, 2.5b)</h2>
 
-  <h1>TripsTracker — Backend Call Flow</h1>
-  <p class="subtitle">Updated 2026-03-23 · Groups 1–6, 2.5b · Process layer active · Integration layer active</p>
+<svg viewBox="0 0 1130 555" xmlns="http://www.w3.org/2000/svg"
+     font-family="'Segoe UI', Consolas, sans-serif">
+  <defs>
+    <marker id="ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
+    <marker id="ag" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3fb950"/></marker>
+    <marker id="ao" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f0883e"/></marker>
+    <marker id="ae" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#79c0ff"/></marker>
+  </defs>
 
-  <!-- AOP ─────────────────────────────────────────────────────── -->
-  <div class="aop">
-    <strong>AOP — cross-cutting, wraps all Business calls (Castle DynamicProxy)</strong><br>
-    LoggingInterceptor · ExceptionInterceptor · TransactionInterceptor ·
-    ValidationInterceptor · PerformanceInterceptor · CachingInterceptor
-  </div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- LAYER BANDS                                          -->
+  <!-- ═══════════════════════════════════════════════════ -->
 
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="section-title">Primary flow — Add Place (UI → Process → Integration → Business → DB)</div>
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Frontend  y=15  h=100 -->
+  <rect x="120" y="15"  width="750" height="100" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
+  <text x="137" y="33" font-size="10" font-weight="700" letter-spacing="1.8" fill="#f0883e">FRONTEND · React + React Query</text>
 
-  <div class="flow-box">
+  <!-- Functions  y=128  h=78 -->
+  <rect x="120" y="128" width="750" height="78"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
+  <text x="137" y="146" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">AZURE FUNCTIONS · HTTP Triggers</text>
 
-    <div class="flow-step">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <div class="step-layer">Frontend · AddPlaceForm.tsx</div>
-        <div class="step-desc">User selects country and types city name. Clicks "Add place."</div>
-        <div class="step-code">
-          <span class="mth">useCreatePlace()</span>.mutate(<span class="cls">{ cityName, countryIsoAlpha2, isHome }</span>)
-        </div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- Process  y=220  h=95 -->
+  <rect x="120" y="220" width="750" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
+  <text x="137" y="238" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">PROCESS · TripsTracker.Process</text>
 
-    <div class="flow-step">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <div class="step-layer">Frontend · API Client</div>
-        <div class="step-code">POST /api/places &nbsp;·&nbsp; body: <span class="cls">AddPlaceDto</span> { cityName, countryIsoAlpha2, isHome }</div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- External  x=886  aligned with Process -->
+  <rect x="886" y="220" width="232" height="95"  rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
+  <text x="902" y="238" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
 
-    <div class="flow-step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <div class="step-layer">Functions · PlaceFunctions.CreatePlace</div>
-        <div class="step-desc">Deserializes body. Delegates to process. Maps exceptions to HTTP codes.</div>
-        <div class="step-code">
-          await <span class="cls">IAddPlaceProcess</span>.<span class="mth">ExecuteAsync</span>(dto, ct)<br>
-          <span class="err">NotFoundException</span> → 404 &nbsp;|&nbsp; <span class="err">BusinessRuleException</span> → 422
-        </div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- Business  y=330  h=100 -->
+  <rect x="120" y="330" width="750" height="100" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
+  <text x="137" y="348" font-size="10" font-weight="700" letter-spacing="1.8" fill="#58a6ff">BUSINESS · TripsTracker.Business · AOP wraps all calls</text>
 
-    <div class="flow-step">
-      <div class="step-num">4</div>
-      <div class="step-body">
-        <div class="step-layer">Process · AddPlaceProcess.ExecuteAsync — orchestrates the full operation</div>
-        <div class="step-code">
-          <span class="cls">CountryBusiness</span>.<span class="mth">GetByIsoAlpha2Async</span>(countryIsoAlpha2) &nbsp;→ <span class="err">NotFoundException</span> if not found<br>
-          <span class="cls">NominatimGeocodingService</span>.<span class="mth">GeocodeAsync</span>(cityName, countryIsoAlpha2) &nbsp;→ step 5<br>
-          validate: geocoded city name must contain words from input &nbsp;→ <span class="err">BusinessRuleException</span> if mismatch<br>
-          <span class="cls">PlaceBusiness</span>.<span class="mth">CreateAsync</span>(lon, lat, countryId, city, stateAbbr, isHome) &nbsp;→ step 6<br>
-          if country not yet visited: <span class="cls">CountryBusiness</span>.<span class="mth">SetVisitedAsync</span>(countryId, true) &nbsp;→ step 7
-        </div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- Database  y=445  h=80 -->
+  <rect x="120" y="445" width="750" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
+  <text x="137" y="463" font-size="10" font-weight="700" letter-spacing="1.8" fill="#3fb950">DATABASE · Azure SQL · EF Core 10</text>
 
-    <div class="flow-step">
-      <div class="step-num ext">5</div>
-      <div class="step-body">
-        <div class="step-layer">Integration · NominatimGeocodingService.GeocodeAsync — external HTTP call</div>
-        <div class="step-desc">Calls Nominatim OpenStreetMap API. Returns coordinates, canonical city name, state abbreviation.</div>
-        <div class="step-code">
-          GET nominatim.openstreetmap.org/search?q={city}&amp;countrycodes={country}&amp;addressdetails=1&amp;limit=1<br>
-          extracts: lat, lon, city (city → town → village → municipality → input fallback)<br>
-          extracts state: <span class="cls">ISO3166-2-lvl4</span> ?? state_code &nbsp;→ strips prefix (BR-PR → PR)<br>
-          <span class="ret">returns GeocodingResult or null</span>
-        </div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- USER ACTOR                                           -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <ellipse cx="58" cy="292" rx="50" ry="26" fill="#1e2533" stroke="#475569" stroke-width="1.5"/>
+  <text x="58" y="288" text-anchor="middle" font-size="12" font-weight="600" fill="#94a3b8">User</text>
+  <text x="58" y="303" text-anchor="middle" font-size="9"  fill="#475569">(browser)</text>
 
-    <div class="flow-step">
-      <div class="step-num db">6</div>
-      <div class="step-body">
-        <div class="step-layer">Business · PlaceBusiness.CreateAsync</div>
-        <div class="step-code">
-          <span class="cls">InsertAsync</span>(new Place { Lon, Lat, CountryId, City, StateAbbr, IsHome })<br>
-          <span class="ret">→ PlaceDto</span>
-        </div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- User → Frontend components (thin gray connectors) -->
+  <line x1="107" y1="278" x2="145" y2="79"  stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="287" x2="393" y2="79"  stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="297" x2="559" y2="79"  stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="307" x2="716" y2="79"  stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
 
-    <div class="flow-step">
-      <div class="step-num db">7</div>
-      <div class="step-body">
-        <div class="step-layer">Business · CountryBusiness.SetVisitedAsync (only if country was unvisited)</div>
-        <div class="step-code">
-          <span class="cls">ExecuteUpdateAsync</span>(c =&gt; c.Id == countryId, IsVisited = true)
-        </div>
-      </div>
-    </div>
-    <div class="step-arrow">↓</div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- COMPONENT OVALS                                      -->
+  <!-- ═══════════════════════════════════════════════════ -->
 
-    <div class="flow-step">
-      <div class="step-num">8</div>
-      <div class="step-body">
-        <div class="step-layer">Frontend · React Query</div>
-        <div class="step-desc">201 Created → modal closes. Cache invalidated → places list and countries refresh automatically.</div>
-        <div class="step-code">
-          invalidateQueries(['places']) &nbsp;·&nbsp; invalidateQueries(['countries'])
-        </div>
-      </div>
-    </div>
+  <!-- Frontend -->
+  <ellipse cx="228" cy="70" rx="86"  ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="228" y="66" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">AddPlaceForm</text>
+  <text x="228" y="80" text-anchor="middle" font-size="9"  fill="#a87040">useCreatePlace()</text>
 
-  </div>
+  <ellipse cx="452" cy="70" rx="60"  ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="452" y="66" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">World Map</text>
+  <text x="452" y="80" text-anchor="middle" font-size="9"  fill="#a87040">WorldMap.tsx</text>
 
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="section-title">Read flows — Frontend hooks → Functions → Business</div>
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <ellipse cx="620" cy="70" rx="62"  ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="620" y="66" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">Places List</text>
+  <text x="620" y="80" text-anchor="middle" font-size="9"  fill="#a87040">PlacesPage.tsx</text>
 
-  <!-- FRONTEND reads -->
-  <div class="layer frontend">
-    <div class="layer-label">Frontend · React + Axios + React Query</div>
-    <div class="cols3">
-      <div class="ep"><span class="hook">usePlaces()</span><span class="arr">→</span><span class="verb v-get">GET</span><span class="path">/api/places</span></div>
-      <div class="ep"><span class="hook">useCountries()</span><span class="arr">→</span><span class="verb v-get">GET</span><span class="path">/api/countries</span></div>
-      <div class="ep"><span class="hook">useVisitedStates()</span><span class="arr">→</span><span class="verb v-get">GET</span><span class="path">/api/visited-states</span></div>
-    </div>
-  </div>
+  <ellipse cx="793" cy="70" rx="74"  ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="793" y="66" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">Countries Page</text>
+  <text x="793" y="80" text-anchor="middle" font-size="9"  fill="#a87040">CountriesPage.tsx</text>
 
-  <div class="connector">↓</div>
+  <!-- Functions -->
+  <ellipse cx="228" cy="167" rx="84"  ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="228" y="163" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">POST /api/places</text>
+  <text x="228" y="176" text-anchor="middle" font-size="9"  fill="#8a6fef">PlaceFunctions</text>
 
-  <div class="layer functions">
-    <div class="layer-label">Functions · PlaceFunctions · CountryFunctions · VisitedStateFunctions</div>
-    <div class="cols3">
-      <div class="box">
-        <div class="m m-pub">GetPlaces(req, ct)</div>
-        <div class="calls">→ places.GetAllAsync(ct)</div>
-        <div class="ret">→ OkObjectResult(List&lt;PlaceDto&gt;)</div>
-      </div>
-      <div class="box">
-        <div class="m m-pub">GetCountries(req, ct)</div>
-        <div class="calls">→ countries.GetAllAsync(ct)</div>
-        <div class="ret">→ OkObjectResult(List&lt;CountryDto&gt;)</div>
-      </div>
-      <div class="box">
-        <div class="m m-pub">GetVisitedStates(req, ct)</div>
-        <div class="calls">→ states.GetAllAsync(ct)</div>
-        <div class="ret">→ OkObjectResult(List&lt;VisitedStateDto&gt;)</div>
-      </div>
-    </div>
-  </div>
+  <ellipse cx="543" cy="167" rx="126" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="543" y="163" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">GET /api/places · /countries · /visited-states</text>
+  <text x="543" y="176" text-anchor="middle" font-size="9"  fill="#8a6fef">PlaceFunctions · CountryFunctions · VisitedStateFunctions</text>
 
-  <div class="connector">↓ <span>DI via interfaces · AOP wraps all Business calls</span></div>
+  <ellipse cx="793" cy="167" rx="74"  ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="793" y="163" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">PUT /api/countries</text>
+  <text x="793" y="176" text-anchor="middle" font-size="9"  fill="#8a6fef">CountryFunctions</text>
 
-  <div class="layer business">
-    <div class="layer-label">Business · TripsTracker.Business</div>
-    <div class="cols3">
-      <div class="box hi">
-        <div class="cname">PlaceBusiness</div>
-        <div class="csuper">: BusinessBase&lt;Place&gt; · IPlaceBusiness</div>
-        <div class="m m-pub">GetAllAsync(ct)</div>
-        <div class="calls">→ BuildBaseQuery().Select(PlaceDto).ToListAsync</div>
-        <div class="ret">→ Task&lt;List&lt;PlaceDto&gt;&gt;</div>
-      </div>
-      <div class="box hi">
-        <div class="cname">CountryBusiness</div>
-        <div class="csuper">: BusinessBase&lt;Country&gt; · ICountryBusiness</div>
-        <div class="m m-pub">GetAllAsync(ct)</div>
-        <div class="calls">→ BuildBaseQuery().Select(CountryDto).ToListAsync</div>
-        <div class="ret">→ Task&lt;List&lt;CountryDto&gt;&gt;</div>
-      </div>
-      <div class="box ro">
-        <div class="cname">VisitedStateBusiness</div>
-        <div class="csuper">: BusinessBase&lt;VisitedState&gt; · IVisitedStateBusiness</div>
-        <div class="m m-pub">GetAllAsync(ct)</div>
-        <div class="calls">→ SQL VIEW — read-only<br>→ BuildBaseQuery().Select(VisitedStateDto).ToListAsync</div>
-        <div class="ret">→ Task&lt;List&lt;VisitedStateDto&gt;&gt;</div>
-        <div style="font-size:0.68rem;color:#3f7a4a;margin-top:6px;">No write methods — VisitedStates is derived from Places.StateAbbr</div>
-      </div>
-    </div>
-  </div>
+  <!-- Process -->
+  <ellipse cx="310" cy="268" rx="145" ry="30" fill="#19153a" stroke="#8a6fef" stroke-width="1.5"/>
+  <text x="310" y="263" text-anchor="middle" font-size="11" font-weight="600" fill="#d2a8ff">AddPlaceProcess</text>
+  <text x="310" y="277" text-anchor="middle" font-size="9"  fill="#8a6fef">lookup · geocode · validate · create · mark visited</text>
 
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="section-title">Other write flows — Country flags</div>
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Integration (external) -->
+  <ellipse cx="1002" cy="268" rx="104" ry="30" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="1002" y="263" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
+  <text x="1002" y="277" text-anchor="middle" font-size="9"  fill="#4a80b0">openstreetmap.org</text>
 
-  <div class="layer frontend">
-    <div class="layer-label">Frontend</div>
-    <div class="cols3">
-      <div class="ep"><span class="hook-w">useSetCountryVisited()</span><span class="arr">→</span><span class="verb v-put">PUT</span><span class="path">/api/countries/{id}/visited</span></div>
-      <div class="ep"><span class="hook-w">useSetCountryHome()</span><span class="arr">→</span><span class="verb v-put">PUT</span><span class="path">/api/countries/{id}/home</span></div>
-      <div class="ep"><span class="hook-w">useDeletePlace()</span><span class="arr">→</span><span class="verb v-delete">DELETE</span><span class="path">/api/places/{id}</span></div>
-    </div>
-  </div>
+  <!-- Business -->
+  <ellipse cx="282" cy="380" rx="108" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="282" y="375" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">PlaceBusiness</text>
+  <text x="282" y="389" text-anchor="middle" font-size="9"  fill="#4a80b0">GetAllAsync · CreateAsync · DeleteAsync</text>
 
-  <div class="connector">↓ <span>Functions → Business directly (no Process layer for simple flag toggles)</span></div>
+  <ellipse cx="591" cy="380" rx="116" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="591" y="375" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">CountryBusiness</text>
+  <text x="591" y="389" text-anchor="middle" font-size="9"  fill="#4a80b0">GetAllAsync · SetVisitedAsync · SetHomeAsync</text>
 
-  <div class="layer business" style="padding-bottom:10px;">
-    <div class="layer-label">Business</div>
-    <div class="cols3">
-      <div class="box hi">
-        <div class="m m-pub">SetVisitedAsync(id, value, ct)</div>
-        <div class="calls">→ ExecuteUpdateAsync(IsVisited = value)</div>
-      </div>
-      <div class="box hi">
-        <div class="m m-pub">SetHomeAsync(id, ct)</div>
-        <div class="calls">→ ExecuteUpdateAsync(IsHome = true)</div>
-      </div>
-      <div class="box hi">
-        <div class="m m-pub">DeleteAsync(id, ct)</div>
-        <div class="calls">→ ExecuteUpdateAsync(IsDeleted = true)</div>
-      </div>
-    </div>
-  </div>
+  <ellipse cx="813" cy="380" rx="82"  ry="28" fill="#071a07" stroke="#2d5c2d" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="813" y="375" text-anchor="middle" font-size="11" font-weight="600" fill="#5ca87e">VisitedStateBusiness</text>
+  <text x="813" y="389" text-anchor="middle" font-size="9"  fill="#3a7a3a">GetAllAsync (VIEW — read-only)</text>
 
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <div class="section-title">Base classes · TripsTracker.Data</div>
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- Database -->
+  <ellipse cx="282" cy="485" rx="75"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="282" y="480" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Places</text>
+  <text x="282" y="494" text-anchor="middle" font-size="9"  fill="#3a7a3a">CountryId FK · StateAbbr</text>
 
-  <div class="layer base">
-    <div class="layer-label">Base Classes · TripsTracker.Data · secondary</div>
-    <div class="cols3">
-      <div class="box dim">
-        <div class="cname dim">QueryBase&lt;TEntity&gt;</div>
-        <div class="m m-prot">BuildBaseQuery()</div>
-        <div class="calls">→ Context.Set&lt;T&gt;().AsNoTracking().Where(!IsDeleted)</div>
-        <div class="m m-prot">ToListAsync(query, ct)</div>
-        <div class="m m-prot">FirstOrDefaultAsync(query, ct)</div>
-      </div>
-      <div class="box dim">
-        <div class="cname dim">CrudBase&lt;TEntity&gt;</div>
-        <div class="csuper">: QueryBase&lt;TEntity&gt;</div>
-        <div class="m m-prot">InsertAsync(entity, ct)</div>
-        <div class="calls">→ Set&lt;T&gt;().Add · SaveChangesAsync</div>
-        <div class="m m-prot">GetByIdAsync(pred, proj, ct)</div>
-        <div class="m m-prot">ExecuteUpdateAsync(pred, setters, ct)</div>
-        <div class="m m-prot">ExecuteDeleteAsync(pred, ct)</div>
-      </div>
-      <div class="box dim">
-        <div class="cname dim">BusinessBase&lt;TEntity&gt;</div>
-        <div class="csuper">: CrudBase&lt;TEntity&gt;</div>
-        <div style="font-size:0.72rem;color:#484f58;margin-top:6px;line-height:1.5;">
-          Thin combiner. Public extension point for all business classes.
-          TDomain generic removed — projection is Business responsibility.
-        </div>
-      </div>
-    </div>
-  </div>
+  <ellipse cx="591" cy="485" rx="82"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="591" y="480" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Countries</text>
+  <text x="591" y="494" text-anchor="middle" font-size="9"  fill="#3a7a3a">IsVisited · IsHome · Flag</text>
 
-  <div class="connector">↓ <span>EF Core · TripsTrackerDbContext : BaseContext</span></div>
+  <ellipse cx="813" cy="485" rx="96"  ry="26" fill="#071a07" stroke="#2d5c2d" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="813" y="480" text-anchor="middle" font-size="12" font-weight="600" fill="#5ca87e">VisitedStates</text>
+  <text x="813" y="494" text-anchor="middle" font-size="9"  fill="#3a7a3a">SQL VIEW — derived from Places</text>
 
-  <div class="layer db">
-    <div class="layer-label">Data · TripsTrackerDbContext · EF Core 10</div>
-    <div class="cols3">
-      <div class="box"><div class="m m-inh">DbSet&lt;Place&gt; &nbsp;·&nbsp; CountryId FK · StateAbbr</div></div>
-      <div class="box"><div class="m m-inh">DbSet&lt;Country&gt; &nbsp;·&nbsp; IsVisited · IsHome</div></div>
-      <div class="box"><div class="m m-inh">VisitedStates &nbsp;·&nbsp; SQL VIEW (read-only projection)</div></div>
-    </div>
-  </div>
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- OPERATION FLOWS                                      -->
+  <!-- ═══════════════════════════════════════════════════ -->
 
-  <div class="legend">
-    <div class="li"><div class="ld" style="background:#3fb950;"></div> public method</div>
-    <div class="li"><div class="ld" style="background:#1f6feb;"></div> protected base class method</div>
-    <div class="li"><div class="ld" style="background:#6e40c9;"></div> process step (Add Place flow)</div>
-    <div class="li"><div class="ld" style="background:#238636;"></div> external call (Nominatim)</div>
-    <div class="li"><div class="ld" style="background:#2d5c2d;border:1px dashed #3fb950;"></div> read-only (VisitedStates VIEW)</div>
-    <div class="li"><div class="ld" style="background:#484f58;"></div> inherited / no override</div>
-    <div class="li"><div class="ld" style="background:#6e40c9;"></div> AOP wraps all Business calls</div>
-  </div>
+  <!-- ── BLUE: Add Place (numbered 1–5) ── -->
+
+  <!-- ① AddPlaceForm → POST /api/places -->
+  <line x1="222" y1="96"  x2="222" y2="143" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#ab)"/>
+  <circle cx="222" cy="118" r="10" fill="#58a6ff"/>
+  <text x="222" y="122" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">1</text>
+
+  <!-- ② POST → AddPlaceProcess -->
+  <line x1="226" y1="191" x2="255" y2="237" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#ab)"/>
+  <circle cx="236" cy="210" r="10" fill="#58a6ff"/>
+  <text x="236" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">2</text>
+
+  <!-- ③ AddPlaceProcess → Nominatim (geocode) -->
+  <line x1="456" y1="260" x2="896" y2="260" stroke="#79c0ff" stroke-width="2" marker-end="url(#ae)"/>
+  <text x="676" y="252" text-anchor="middle" font-size="9" fill="#79c0ff">geocode(city, country)</text>
+  <circle cx="476" cy="260" r="10" fill="#79c0ff"/>
+  <text x="476" y="264" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">3</text>
+
+  <!-- ④ AddPlaceProcess → PlaceBusiness -->
+  <line x1="276" y1="297" x2="264" y2="351" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#ab)"/>
+  <circle cx="269" cy="322" r="10" fill="#58a6ff"/>
+  <text x="269" y="326" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">4</text>
+
+  <!-- ④b AddPlaceProcess → CountryBusiness (conditional, dashed) -->
+  <line x1="348" y1="296" x2="532" y2="352" stroke="#58a6ff" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ab)"/>
+  <text x="454" y="315" text-anchor="middle" font-size="9" fill="#58a6ff">if unvisited</text>
+
+  <!-- ⑤ PlaceBusiness → Places -->
+  <line x1="272" y1="408" x2="272" y2="458" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#ab)"/>
+  <circle cx="272" cy="431" r="10" fill="#58a6ff"/>
+  <text x="272" y="435" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">5</text>
+
+  <!-- CountryBusiness → Countries (blue, conditional) -->
+  <line x1="560" y1="408" x2="560" y2="458" stroke="#58a6ff" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#ab)"/>
+
+  <!-- ── GREEN: Read flows ── -->
+
+  <!-- WorldMap → GET -->
+  <line x1="447" y1="96"  x2="478" y2="143" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+  <!-- PlacesList → GET -->
+  <line x1="588" y1="96"  x2="552" y2="143" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+  <!-- CountriesPage → GET -->
+  <line x1="761" y1="96"  x2="646" y2="143" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+
+  <!-- GET → PlaceBusiness -->
+  <line x1="466" y1="191" x2="316" y2="352" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+  <!-- GET → CountryBusiness -->
+  <line x1="543" y1="191" x2="574" y2="352" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+  <!-- GET → VisitedStateBusiness -->
+  <line x1="616" y1="191" x2="746" y2="352" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+
+  <!-- PlaceBusiness → Places (read, offset right) -->
+  <line x1="294" y1="408" x2="294" y2="458" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+  <!-- CountryBusiness → Countries (read, offset right) -->
+  <line x1="605" y1="408" x2="605" y2="458" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+  <!-- VisitedStateBusiness → VisitedStates VIEW -->
+  <line x1="813" y1="408" x2="813" y2="458" stroke="#3fb950" stroke-width="2" marker-end="url(#ag)"/>
+
+  <!-- ── ORANGE: Update country flags ── -->
+
+  <!-- CountriesPage → PUT /api/countries -->
+  <line x1="795" y1="96"  x2="795" y2="143" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
+  <!-- PUT → CountryBusiness -->
+  <line x1="787" y1="191" x2="644" y2="352" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
+  <!-- CountryBusiness → Countries (write, offset left) -->
+  <line x1="580" y1="408" x2="580" y2="458" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
+
+</svg>
+
+<div class="leg">
+  <div class="li"><div class="lc" style="background:#58a6ff"></div> Add Place — numbered steps 1–5</div>
+  <div class="li"><div class="lc" style="background:#79c0ff"></div> Geocoding · external (step 3)</div>
+  <div class="li"><div class="lc" style="background:#3fb950"></div> Read data — GET endpoints</div>
+  <div class="li"><div class="lc" style="background:#f0883e"></div> Update country flags — PUT</div>
+  <div class="li" style="color:#475569">- - - dashed arrow: conditional (only if country was not yet visited)</div>
+  <div class="li" style="color:#475569">- - - dashed oval: SQL VIEW — derived from Places, no write API</div>
+</div>
 
 </body>
 </html>
