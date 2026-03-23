@@ -26,6 +26,12 @@ export interface UpdatePlace {
   isHome: boolean;
 }
 
+export interface AddPlace {
+  cityName: string;
+  countryIsoAlpha2: string;
+  isHome: boolean;
+}
+
 export interface VisitedState {
   id: number;
   countryId: number;

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Country, Place, UpdatePlace, VisitedState } from '@/types';
+import type { AddPlace, Country, Place, UpdatePlace, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 import { decodeStrings } from '@/lib/cp1252';
 import apiClient from './client';
@@ -9,6 +9,17 @@ export function usePlaces() {
     queryKey: ['places'],
     queryFn: () =>
       apiClient.get<Place[]>('/api/places').then(r => r.data.map(p => decodeStrings(p))),
+  });
+}
+
+export function useCreatePlace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: AddPlace) => apiClient.post<Place>('/api/places', dto).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['places'] });
+      qc.invalidateQueries({ queryKey: ['countries'] });
+    },
   });
 }
 

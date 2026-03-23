@@ -103,6 +103,33 @@ function buildClusters(
   return clusters;
 }
 
+// ─── Separate collocated clusters from different countries ────────────────────
+// When two clusters land within OVERLAP_PX screen pixels of each other they are
+// pushed apart so both dots remain visible.
+function separateCollocatedClusters(clusters: ClusterData[], k: number): ClusterData[] {
+  const OVERLAP_PX = 8;
+  const PUSH_PX    = 5;
+  const positions  = clusters.map(c => ({ x: c.x, y: c.y }));
+
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      const dx = positions[j].x - positions[i].x;
+      const dy = positions[j].y - positions[i].y;
+      const screenDist = Math.sqrt(dx * dx + dy * dy) * k;
+      if (screenDist < OVERLAP_PX) {
+        const svgPush = PUSH_PX / k;
+        const angle   = screenDist < 0.01 ? Math.PI / 2 : Math.atan2(dy, dx);
+        positions[i].x -= Math.cos(angle) * svgPush;
+        positions[i].y -= Math.sin(angle) * svgPush;
+        positions[j].x += Math.cos(angle) * svgPush;
+        positions[j].y += Math.sin(angle) * svgPush;
+      }
+    }
+  }
+
+  return clusters.map((c, i) => ({ ...c, x: positions[i].x, y: positions[i].y }));
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function WorldMap({
   countries,
@@ -131,7 +158,7 @@ export default function WorldMap({
 
     pinsG.selectAll('.mg').remove();
 
-    const clusters = buildClusters(places, proj, k);
+    const clusters = separateCollocatedClusters(buildClusters(places, proj, k), k);
     const s = 1 / k; // counter-scale so dots stay 4px on screen
 
     clusters.forEach(c => {

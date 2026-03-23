@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { usePlaces, useDeletePlace } from '@/api/hooks';
 import type { Place } from '@/types';
+import AddPlaceForm from './AddPlaceForm';
 import PlaceForm from './PlaceForm';
 import DeleteConfirm from './DeleteConfirm';
 import styles from './PlacesPage.module.scss';
 
 export default function PlacesPage() {
   const { data: places = [], isLoading } = usePlaces();
+  const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Place | null>(null);
   const [deleting, setDeleting] = useState<Place | null>(null);
   const deletePlace = useDeletePlace();
@@ -17,6 +19,7 @@ export default function PlacesPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h2>Places</h2>
+        <button className={styles.addBtn} onClick={() => setAdding(true)}>+ Add place</button>
       </div>
 
       <div className={styles.tableWrapper}>
@@ -52,6 +55,8 @@ export default function PlacesPage() {
           </tbody>
         </table>
       </div>
+
+      {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
 
       {editing !== null && (
         <PlaceForm
