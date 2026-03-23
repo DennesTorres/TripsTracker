@@ -21,6 +21,38 @@
   }
 }
 
+.filters {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  margin: 0 12px;
+}
+
+.searchInput {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 5px 10px;
+  width: 160px;
+
+  &::placeholder { color: #475569; }
+  &:focus { outline: none; border-color: #4ade80; }
+}
+
+.countrySelect {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 5px 8px;
+  cursor: pointer;
+
+  &:focus { outline: none; border-color: #4ade80; }
+}
+
 .addBtn {
   padding: 6px 14px;
   background: #4ade80;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePlaces, useDeletePlace, useSetCountryHome } from '@/api/hooks';
 import type { Place, DeletePlaceResult } from '@/types';
 import AddPlaceForm from './AddPlaceForm';
@@ -28,12 +28,22 @@ export default function PlacesPage() {
   const [homePrompt, setHomePrompt] = useState<DeletePlaceResult | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('city');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [search, setSearch] = useState('');
+  const [countryFilter, setCountryFilter] = useState('');
   const deletePlace = useDeletePlace();
   const setHome = useSetCountryHome();
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>;
 
-  const sorted = sortPlaces(places, sortKey, sortDir);
+  const countryOptions = useMemo(() =>
+    [...new Set(places.map(p => p.countryName))].sort(),
+    [places]);
+
+  const filtered = places
+    .filter(p => !search || p.city.toLowerCase().includes(search.toLowerCase()))
+    .filter(p => !countryFilter || p.countryName === countryFilter);
+
+  const sorted = sortPlaces(filtered, sortKey, sortDir);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -49,6 +59,23 @@ export default function PlacesPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h2>Places</h2>
+        <div className={styles.filters}>
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="Search city…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <select
+            className={styles.countrySelect}
+            value={countryFilter}
+            onChange={e => setCountryFilter(e.target.value)}
+          >
+            <option value="">All countries</option>
+            {countryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
         <button className={styles.addBtn} onClick={() => setAdding(true)}>+ Add place</button>
       </div>
 
