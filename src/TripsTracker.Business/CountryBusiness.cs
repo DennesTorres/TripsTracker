@@ -33,21 +33,31 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<CountryDto?> SetHomeAsync(int id, CancellationToken ct = default)
+    public async Task<CountryDto?> SetHomeAsync(int id, bool isHome = true, CancellationToken ct = default)
     {
-        // Clear existing home flag, then set on requested country
-        await Context.Set<Country>()
-            .Where(c => c.IsHome)
-            .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsHome, false), ct);
-
-        var rows = await ExecuteUpdateAsync(
-            c => c.Id == id,
-            s =>
-            {
-                s.SetProperty(c => c.IsHome, true);
-                s.SetProperty(c => c.IsVisited, true);
-            },
-            ct);
+        int rows;
+        if (isHome)
+        {
+            // Clear existing home flag across all countries, then set on requested country
+            await Context.Set<Country>()
+                .Where(c => c.IsHome)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsHome, false), ct);
+            rows = await ExecuteUpdateAsync(
+                c => c.Id == id,
+                s =>
+                {
+                    s.SetProperty(c => c.IsHome, true);
+                    s.SetProperty(c => c.IsVisited, true);
+                },
+                ct);
+        }
+        else
+        {
+            rows = await ExecuteUpdateAsync(
+                c => c.Id == id,
+                s => s.SetProperty(c => c.IsHome, false),
+                ct);
+        }
         if (rows == 0) return null;
         return await BuildBaseQuery()
             .Where(c => c.Id == id)

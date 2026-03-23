@@ -55,7 +55,7 @@ export default function CountriesPage() {
                     type="radio"
                     name="home"
                     checked={c.isHome}
-                    onChange={() => setHome.mutate(c.id)}
+                    onChange={() => setHome.mutate({ id: c.id })}
                   />
                 </td>
               </tr>

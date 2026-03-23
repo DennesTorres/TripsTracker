@@ -7,7 +7,14 @@ export interface Place {
   countryFlag: string;
   city: string;
   stateAbbr?: string;
+  stateName?: string;
   isHome: boolean;
+}
+
+export interface DeletePlaceResult {
+  promptHomeCountry: boolean;
+  countryId?: number;
+  countryName?: string;
 }
 
 export interface Country {
@@ -36,4 +43,5 @@ export interface VisitedState {
   id: number;
   countryId: number;
   stateAbbr: string;
+  stateName?: string;
 }

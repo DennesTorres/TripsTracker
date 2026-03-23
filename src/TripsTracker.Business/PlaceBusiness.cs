@@ -63,4 +63,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
         var rows = await ExecuteDeleteAsync(p => p.Id == id, ct);
         return rows > 0;
     }
+
+    public Task<bool> HasAnyInCountryAsync(int countryId, CancellationToken ct = default)
+        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId, ct);
 }

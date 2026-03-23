@@ -6,10 +6,11 @@ using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Exceptions;
 using TripsTracker.Interfaces.Process;
+using TripsTracker.Domain;
 
 namespace TripsTracker.Functions;
 
-public class PlaceFunctions(IPlaceBusiness places, IAddPlaceProcess addPlace)
+public class PlaceFunctions(IPlaceBusiness places, IAddPlaceProcess addPlace, IDeletePlaceProcess deletePlace)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -53,7 +54,14 @@ public class PlaceFunctions(IPlaceBusiness places, IAddPlaceProcess addPlace)
         int id,
         CancellationToken ct)
     {
-        var deleted = await places.DeleteAsync(id, ct);
-        return deleted ? new NoContentResult() : new NotFoundResult();
+        try
+        {
+            var result = await deletePlace.ExecuteAsync(id, ct);
+            return new OkObjectResult(result);
+        }
+        catch (NotFoundException)
+        {
+            return new NotFoundResult();
+        }
     }
 }
