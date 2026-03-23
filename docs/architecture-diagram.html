@@ -15,7 +15,7 @@
 </head>
 <body>
 <h1>TripsTracker — Backend Architecture</h1>
-<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-03-23</h2>
+<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-03-23 (after arch-review-fixes #132–#135)</h2>
 <div class="diagram-wrap">
   <div class="mermaid">
 flowchart TB
@@ -27,7 +27,7 @@ flowchart TB
 
     subgraph PROCESS["⚙️ Process Layer — TripsTracker.Process"]
         direction LR
-        P1["AddPlaceProcess\n(geocode → create → mark visited)"]
+        P1["AddPlaceProcess\n(geocode → create → mark visited)\nDeletePlaceProcess\n(delete → unset IsVisited if last place)"]
         P2["IQueryable composition\nacross Business classes\nTransactionScope(Required)"]
     end
 
@@ -40,7 +40,7 @@ flowchart TB
     subgraph BUSINESS["🧠 Business Layer — TripsTracker.Business"]
         direction LR
         B1["BusinessBase&lt;TEntity&gt;\nCrudBase&lt;TEntity&gt;\nQueryBase&lt;TEntity&gt;"]
-        B2["PlaceBusiness · PlaceQuery\nCountryBusiness · CountryQuery\nVisitedStateBusiness · VisitedStateQuery"]
+        B2["PlaceBusiness · PlaceQuery\nCountryBusiness · CountryQuery\nVisitedStateBusiness · VisitedStateQuery\nGeocodingBusiness (wraps INominatimService)"]
     end
 
     subgraph DATA["🗄️ Data Layer — TripsTracker.Data"]
@@ -59,7 +59,7 @@ flowchart TB
     end
 
     subgraph DOMAIN["📦 Domain — TripsTracker.Domain"]
-        D0["Projection DTOs\nPlaceDto · CountryDto\nVisitedStateDto · GeocodingResult\nAddPlaceDto · CreatePlaceDto"]
+        D0["Projection DTOs\nPlaceDto · CountryDto\nVisitedStateDto · GeocodingResult\nAddPlaceDto · CreatePlaceDto\nDeletePlaceResult"]
     end
 
     subgraph TOOLS["🔧 Tools — TripsTracker.Tools"]
@@ -74,10 +74,9 @@ flowchart TB
 
     ENTRY -->|"calls via interfaces"| PROCESS
     ENTRY -->|"calls via interfaces"| BUSINESS
-    ENTRY -->|"calls via interfaces"| INTEGRATION
     ENTRY --- TOOLS
-    PROCESS -->|"IQueryable composition"| BUSINESS
-    PROCESS -->|"INominatimService"| INTEGRATION
+    PROCESS -->|"IPlaceBusiness · ICountryBusiness\nIGeocodingBusiness"| BUSINESS
+    BUSINESS -->|"IGeocodingBusiness →\nINominatimService"| INTEGRATION
     BUSINESS -->|"DbContext (Scoped)"| DATA
     DATA --> INTERFACES
     DATA --> DOMAIN
@@ -99,8 +98,8 @@ flowchart TB
     <div class="legend-item">Scrutor scans Business, Process, Integration assemblies at startup; registers interceptors via Castle DynamicProxy</div>
     <div class="legend-item">DbContext registered as Scoped — one per Function invocation; enables IQueryable composition + safe sequential writes</div>
     <div class="legend-item">Base classes (BusinessBase / CrudBase / QueryBase) live in Data project — Business references Data for inheritance. TDomain generic removed; projection is Business responsibility.</div>
-    <div class="legend-item">Process layer never references Data directly — composes IQueryable via Business class interfaces only</div>
-    <div class="legend-item">Integration layer holds all external HTTP calls. NominatimGeocodingService called only by AddPlaceProcess via INominatimService interface.</div>
+    <div class="legend-item">Process layer never references Data or Integration directly — composes Business interfaces only</div>
+    <div class="legend-item">Integration layer holds all external HTTP calls. NominatimGeocodingService is wrapped by GeocodingBusiness (Business layer). Process calls IGeocodingBusiness, never INominatimService directly.</div>
     <div class="legend-item">VisitedStates is a SQL VIEW — no entity class, no write API. VisitedStateBusiness reads it via a raw SQL query projection.</div>
   </div>
 </div>
