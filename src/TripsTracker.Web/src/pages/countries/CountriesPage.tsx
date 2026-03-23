@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   useCountries, useVisitedStates,
   useSetCountryHome,
@@ -9,20 +10,54 @@ export default function CountriesPage() {
   const { data: countries = [], isLoading } = useCountries();
   const { data: visitedStates = [] } = useVisitedStates();
   const setHome = useSetCountryHome();
+  const [visitedOnly, setVisitedOnly] = useState(false);
+  const [regionFilter, setRegionFilter] = useState('');
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>;
-
-  const sorted = [...countries].sort((a, b) => a.name.localeCompare(b.name));
 
   const statesByCountry = visitedStates.reduce<Record<number, string[]>>((acc, vs) => {
     (acc[vs.countryId] ??= []).push(vs.stateAbbr);
     return acc;
   }, {});
 
+  const regions = [...new Set(countries.map(c => c.region))].sort();
+  const visitedCount = countries.filter(c => c.isVisited).length;
+  const stateCount = visitedStates.length;
+
+  const filtered = countries
+    .filter(c => !visitedOnly || c.isVisited)
+    .filter(c => !regionFilter || c.region === regionFilter)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <div className={styles.page}>
       <div className={styles.section}>
-        <h2>Countries</h2>
+        <div className={styles.toolbar}>
+          <h2>Countries</h2>
+          <div className={styles.stats}>
+            <span>{visitedCount} / {countries.length} countries visited</span>
+            {stateCount > 0 && <span>·</span>}
+            {stateCount > 0 && <span>{stateCount} states</span>}
+          </div>
+          <div className={styles.filters}>
+            <label className={styles.checkLabel}>
+              <input
+                type="checkbox"
+                checked={visitedOnly}
+                onChange={e => setVisitedOnly(e.target.checked)}
+              />
+              Visited only
+            </label>
+            <select
+              className={styles.regionSelect}
+              value={regionFilter}
+              onChange={e => setRegionFilter(e.target.value)}
+            >
+              <option value="">All regions</option>
+              {regions.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        </div>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -35,7 +70,7 @@ export default function CountriesPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((c: Country) => (
+            {filtered.map((c: Country) => (
               <tr key={c.id}>
                 <td className={styles.flag}>{c.flag}</td>
                 <td>{c.name}</td>
