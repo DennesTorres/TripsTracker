@@ -14,7 +14,13 @@
     }
 
     h1 { color: #58a6ff; text-align: center; margin-bottom: 4px; font-size: 1.35rem; letter-spacing: 0.5px; }
+    h2 { color: #8b949e; text-align: center; font-size: 0.85rem; font-weight: 400; margin-bottom: 6px; }
     .subtitle { text-align: center; color: #8b949e; font-size: 0.8rem; margin-bottom: 20px; }
+    .section-title {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #8b949e; margin: 20px 0 8px;
+      padding-bottom: 4px; border-bottom: 1px solid #21262d;
+    }
 
     /* ── Layer wrapper ───────────────────────── */
     .layer { border-radius: 8px; padding: 10px 14px 12px; margin-bottom: 4px; }
@@ -24,28 +30,69 @@
     }
 
     /* ── Layer themes ────────────────────────── */
-    .frontend  { background: #161b22; border: 1px solid #30363d; }
-    .frontend  .layer-label { color: #f0883e; }
-    .functions { background: #161b22; border: 1px solid #30363d; }
-    .functions .layer-label { color: #d2a8ff; }
-    .business  { background: #091d36; border: 2px solid #1f6feb; }
-    .business  .layer-label { color: #58a6ff; font-size: 0.75rem; }
-    .base      { background: #161b22; border: 1px solid #21262d; }
-    .base      .layer-label { color: #6e7681; }
-    .db        { background: #161b22; border: 1px solid #30363d; }
-    .db        .layer-label { color: #3fb950; }
+    .frontend    { background: #161b22; border: 1px solid #30363d; }
+    .frontend    .layer-label { color: #f0883e; }
+    .functions   { background: #161b22; border: 1px solid #30363d; }
+    .functions   .layer-label { color: #d2a8ff; }
+    .process     { background: #1a1428; border: 2px solid #6e40c9; }
+    .process     .layer-label { color: #d2a8ff; font-size: 0.75rem; }
+    .integration { background: #0d1a2a; border: 1px dashed #1f6feb; }
+    .integration .layer-label { color: #79c0ff; }
+    .business    { background: #091d36; border: 2px solid #1f6feb; }
+    .business    .layer-label { color: #58a6ff; font-size: 0.75rem; }
+    .base        { background: #161b22; border: 1px solid #21262d; }
+    .base        .layer-label { color: #6e7681; }
+    .db          { background: #161b22; border: 1px solid #30363d; }
+    .db          .layer-label { color: #3fb950; }
 
     /* ── Grids ───────────────────────────────── */
+    .cols2  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .cols3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
     .cols3w { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 8px; }
 
     /* ── Boxes ───────────────────────────────── */
-    .box     { background: #1c2128; border: 1px solid #30363d; border-radius: 6px; padding: 9px 11px; }
-    .box.hi  { background: #0a2040; border-color: #1f6feb; }
-    .box.dim { background: #161b22; border-color: #21262d; opacity: 0.85; }
-    .box.pat { background: #111a11; border: 1px dashed #2d5c2d; }
+    .box      { background: #1c2128; border: 1px solid #30363d; border-radius: 6px; padding: 9px 11px; }
+    .box.hi   { background: #0a2040; border-color: #1f6feb; }
+    .box.proc { background: #1a1428; border: 1px solid #6e40c9; }
+    .box.ext  { background: #0a1520; border: 1px dashed #1f6feb; }
+    .box.dim  { background: #161b22; border-color: #21262d; opacity: 0.85; }
+    .box.ro   { background: #0d1a0d; border: 1px solid #2d5c2d; }
 
-    /* ── Write section divider ───────────────── */
+    /* ── Add Place flow ──────────────────────── */
+    .flow-box {
+      background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      padding: 16px 20px; margin-bottom: 4px;
+    }
+    .flow-step {
+      display: flex; align-items: flex-start; gap: 14px; margin-bottom: 10px;
+    }
+    .step-num {
+      background: #1f6feb; color: #fff; border-radius: 50%;
+      width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+    .step-num.ext { background: #6e40c9; }
+    .step-num.db  { background: #238636; }
+    .step-body { flex: 1; }
+    .step-layer {
+      font-size: 0.64rem; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: #484f58; margin-bottom: 2px;
+    }
+    .step-desc { font-size: 0.82rem; color: #c9d1d9; margin-bottom: 3px; }
+    .step-code {
+      font-family: Consolas, monospace; font-size: 0.75rem;
+      color: #8b949e; line-height: 1.5;
+    }
+    .step-code .cls  { color: #e3b341; }
+    .step-code .mth  { color: #7ee787; }
+    .step-code .err  { color: #f85149; }
+    .step-code .ret  { color: #56d364; }
+    .step-arrow {
+      text-align: center; color: #30363d; font-size: 1rem;
+      margin: 2px 0 2px 36px; line-height: 1;
+    }
+
+    /* ── Dividers ────────────────────────────── */
     .flow-divider {
       display: flex; align-items: center; gap: 10px;
       margin: 6px 0 4px;
@@ -56,7 +103,8 @@
       border-radius: 3px;
     }
     .label-read  { color: #7ee787; background: #0d2a1a; border: 1px solid #2d5c2d; }
-    .label-write { color: #5ca87e; background: #0a1a0a; border: 1px dashed #2d5c2d; }
+    .label-write { color: #d2a8ff; background: #1a1428; border: 1px dashed #6e40c9; }
+    .label-ro    { color: #5ca87e; background: #0a1a0a; border: 1px dashed #2d5c2d; }
     .flow-divider .line { flex: 1; height: 1px; background: #21262d; }
 
     /* ── Class names ─────────────────────────── */
@@ -69,27 +117,26 @@
       font-family: Consolas, monospace; font-size: 0.76rem;
       padding: 3px 7px; border-radius: 3px; margin-bottom: 3px;
     }
-    .m-pub   { background: #0d2a1a; color: #7ee787; border-left: 2px solid #3fb950; }
-    .m-prot  { background: #0d1e33; color: #79c0ff; border-left: 2px solid #1f6feb; }
-    .m-inh   { background: #1c2128; color: #6e7681; border-left: 2px solid #30363d; }
-    .m-write { background: #0a1a0a; color: #5ca87e; border-left: 2px dashed #2d5c2d; }
-    .calls   {
+    .m-pub  { background: #0d2a1a; color: #7ee787; border-left: 2px solid #3fb950; }
+    .m-prot { background: #0d1e33; color: #79c0ff; border-left: 2px solid #1f6feb; }
+    .m-inh  { background: #1c2128; color: #6e7681; border-left: 2px solid #30363d; }
+    .m-proc { background: #1a1428; color: #d2a8ff; border-left: 2px solid #6e40c9; }
+    .calls  {
       font-family: Consolas, monospace; font-size: 0.71rem;
       color: #8b949e; padding-left: 12px; margin-bottom: 3px; line-height: 1.45;
     }
     .ret     { font-family: Consolas, monospace; font-size: 0.7rem; color: #56d364; padding-left: 7px; margin-bottom: 4px; }
-    .ret-pat { font-family: Consolas, monospace; font-size: 0.7rem; color: #3f7a4a; padding-left: 7px; margin-bottom: 4px; }
 
     /* ── API endpoint rows ───────────────────── */
     .ep    { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; flex-wrap: wrap; }
     .verb  { padding: 2px 6px; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.7rem; font-weight: 700; }
     .v-get    { background: #0d2a1a; color: #7ee787; }
     .v-post   { background: #1a1a0a; color: #e3b341; }
-    .v-patch  { background: #1a1020; color: #d2a8ff; }
+    .v-put    { background: #1a1020; color: #d2a8ff; }
     .v-delete { background: #2a0a0a; color: #f85149; }
     .path  { color: #79c0ff; font-family: Consolas, monospace; font-size: 0.78rem; }
     .hook  { color: #f0883e; font-family: Consolas, monospace; font-size: 0.78rem; }
-    .hook-w { color: #c09060; font-family: Consolas, monospace; font-size: 0.78rem; }
+    .hook-w { color: #d2a8ff; font-family: Consolas, monospace; font-size: 0.78rem; }
     .arr   { color: #484f58; font-size: 0.75rem; }
 
     /* ── Connectors ──────────────────────────── */
@@ -106,18 +153,6 @@
     }
     .aop strong { color: #d2a8ff; }
 
-    /* ── Notices ─────────────────────────────── */
-    .notice {
-      background: #1c1a10; border: 1px dashed #6a4e1a; border-radius: 5px;
-      padding: 6px 12px; font-size: 0.7rem; color: #9a7e3a;
-      text-align: center; margin-bottom: 4px;
-    }
-    .pattern-banner {
-      background: #0d1a0d; border: 1px dashed #2d5c2d; border-radius: 5px;
-      padding: 5px 12px; font-size: 0.68rem; color: #5ca87e;
-      text-align: center; margin-bottom: 4px;
-    }
-
     /* ── Legend ──────────────────────────────── */
     .legend {
       display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px;
@@ -131,7 +166,7 @@
 <body>
 
   <h1>TripsTracker — Backend Call Flow</h1>
-  <p class="subtitle">Stage 1 MVP · Business layer primary · Base Classes secondary · Frontend black box</p>
+  <p class="subtitle">Updated 2026-03-23 · Groups 1–6, 2.5b · Process layer active · Integration layer active</p>
 
   <!-- AOP ─────────────────────────────────────────────────────── -->
   <div class="aop">
@@ -140,57 +175,130 @@
     ValidationInterceptor · PerformanceInterceptor · CachingInterceptor
   </div>
 
-  <!-- FRONTEND ────────────────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">Primary flow — Add Place (UI → Process → Integration → Business → DB)</div>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <div class="flow-box">
+
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-layer">Frontend · AddPlaceForm.tsx</div>
+        <div class="step-desc">User selects country and types city name. Clicks "Add place."</div>
+        <div class="step-code">
+          <span class="mth">useCreatePlace()</span>.mutate(<span class="cls">{ cityName, countryIsoAlpha2, isHome }</span>)
+        </div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-layer">Frontend · API Client</div>
+        <div class="step-code">POST /api/places &nbsp;·&nbsp; body: <span class="cls">AddPlaceDto</span> { cityName, countryIsoAlpha2, isHome }</div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-layer">Functions · PlaceFunctions.CreatePlace</div>
+        <div class="step-desc">Deserializes body. Delegates to process. Maps exceptions to HTTP codes.</div>
+        <div class="step-code">
+          await <span class="cls">IAddPlaceProcess</span>.<span class="mth">ExecuteAsync</span>(dto, ct)<br>
+          <span class="err">NotFoundException</span> → 404 &nbsp;|&nbsp; <span class="err">BusinessRuleException</span> → 422
+        </div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-layer">Process · AddPlaceProcess.ExecuteAsync — orchestrates the full operation</div>
+        <div class="step-code">
+          <span class="cls">CountryBusiness</span>.<span class="mth">GetByIsoAlpha2Async</span>(countryIsoAlpha2) &nbsp;→ <span class="err">NotFoundException</span> if not found<br>
+          <span class="cls">NominatimGeocodingService</span>.<span class="mth">GeocodeAsync</span>(cityName, countryIsoAlpha2) &nbsp;→ step 5<br>
+          validate: geocoded city name must contain words from input &nbsp;→ <span class="err">BusinessRuleException</span> if mismatch<br>
+          <span class="cls">PlaceBusiness</span>.<span class="mth">CreateAsync</span>(lon, lat, countryId, city, stateAbbr, isHome) &nbsp;→ step 6<br>
+          if country not yet visited: <span class="cls">CountryBusiness</span>.<span class="mth">SetVisitedAsync</span>(countryId, true) &nbsp;→ step 7
+        </div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num ext">5</div>
+      <div class="step-body">
+        <div class="step-layer">Integration · NominatimGeocodingService.GeocodeAsync — external HTTP call</div>
+        <div class="step-desc">Calls Nominatim OpenStreetMap API. Returns coordinates, canonical city name, state abbreviation.</div>
+        <div class="step-code">
+          GET nominatim.openstreetmap.org/search?q={city}&amp;countrycodes={country}&amp;addressdetails=1&amp;limit=1<br>
+          extracts: lat, lon, city (city → town → village → municipality → input fallback)<br>
+          extracts state: <span class="cls">ISO3166-2-lvl4</span> ?? state_code &nbsp;→ strips prefix (BR-PR → PR)<br>
+          <span class="ret">returns GeocodingResult or null</span>
+        </div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num db">6</div>
+      <div class="step-body">
+        <div class="step-layer">Business · PlaceBusiness.CreateAsync</div>
+        <div class="step-code">
+          <span class="cls">InsertAsync</span>(new Place { Lon, Lat, CountryId, City, StateAbbr, IsHome })<br>
+          <span class="ret">→ PlaceDto</span>
+        </div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num db">7</div>
+      <div class="step-body">
+        <div class="step-layer">Business · CountryBusiness.SetVisitedAsync (only if country was unvisited)</div>
+        <div class="step-code">
+          <span class="cls">ExecuteUpdateAsync</span>(c =&gt; c.Id == countryId, IsVisited = true)
+        </div>
+      </div>
+    </div>
+    <div class="step-arrow">↓</div>
+
+    <div class="flow-step">
+      <div class="step-num">8</div>
+      <div class="step-body">
+        <div class="step-layer">Frontend · React Query</div>
+        <div class="step-desc">201 Created → modal closes. Cache invalidated → places list and countries refresh automatically.</div>
+        <div class="step-code">
+          invalidateQueries(['places']) &nbsp;·&nbsp; invalidateQueries(['countries'])
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">Read flows — Frontend hooks → Functions → Business</div>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
+  <!-- FRONTEND reads -->
   <div class="layer frontend">
-    <div class="layer-label">Frontend · React + Axios + React Query · black box</div>
-
-    <div class="flow-divider">
-      <div class="label label-read">read</div><div class="line"></div>
-    </div>
+    <div class="layer-label">Frontend · React + Axios + React Query</div>
     <div class="cols3">
-      <div class="ep">
-        <span class="hook">usePlaces()</span>
-        <span class="arr">→</span><span class="verb v-get">GET</span>
-        <span class="path">/api/places</span>
-      </div>
-      <div class="ep">
-        <span class="hook">useCountries()</span>
-        <span class="arr">→</span><span class="verb v-get">GET</span>
-        <span class="path">/api/countries</span>
-      </div>
-      <div class="ep">
-        <span class="hook">useVisitedStates()</span>
-        <span class="arr">→</span><span class="verb v-get">GET</span>
-        <span class="path">/api/visited-states</span>
-      </div>
-    </div>
-
-    <div class="flow-divider" style="margin-top:8px;">
-      <div class="label label-write">write · pattern</div><div class="line"></div>
-    </div>
-    <div class="cols3">
-      <div>
-        <div class="ep"><span class="hook-w">mutatePlace()</span><span class="arr">→</span><span class="verb v-post">POST</span><span class="path">/api/places</span></div>
-        <div class="ep"><span class="arr" style="padding-left:4px;"></span><span class="verb v-patch">PATCH</span><span class="path">/api/places/{id}</span></div>
-        <div class="ep"><span class="arr" style="padding-left:4px;"></span><span class="verb v-delete">DELETE</span><span class="path">/api/places/{id}</span></div>
-      </div>
-      <div>
-        <div class="ep"><span class="hook-w">mutateCountry()</span><span class="arr">→</span><span class="verb v-patch">PATCH</span><span class="path">/api/countries/{id}</span></div>
-      </div>
-      <div>
-        <div class="ep"><span class="hook-w">mutateState()</span><span class="arr">→</span><span class="verb v-post">POST</span><span class="path">/api/visited-states</span></div>
-        <div class="ep"><span class="arr" style="padding-left:4px;"></span><span class="verb v-delete">DELETE</span><span class="path">/api/visited-states/{id}</span></div>
-      </div>
+      <div class="ep"><span class="hook">usePlaces()</span><span class="arr">→</span><span class="verb v-get">GET</span><span class="path">/api/places</span></div>
+      <div class="ep"><span class="hook">useCountries()</span><span class="arr">→</span><span class="verb v-get">GET</span><span class="path">/api/countries</span></div>
+      <div class="ep"><span class="hook">useVisitedStates()</span><span class="arr">→</span><span class="verb v-get">GET</span><span class="path">/api/visited-states</span></div>
     </div>
   </div>
 
-  <div class="connector">↓ <span>HTTP trigger · Azure Functions isolated worker</span></div>
+  <div class="connector">↓</div>
 
-  <!-- FUNCTIONS ───────────────────────────────────────────────── -->
   <div class="layer functions">
-    <div class="layer-label">Functions · TripsTracker.Functions · MapFunctions</div>
-
-    <div class="flow-divider"><div class="label label-read">read</div><div class="line"></div></div>
+    <div class="layer-label">Functions · PlaceFunctions · CountryFunctions · VisitedStateFunctions</div>
     <div class="cols3">
       <div class="box">
         <div class="m m-pub">GetPlaces(req, ct)</div>
@@ -208,174 +316,124 @@
         <div class="ret">→ OkObjectResult(List&lt;VisitedStateDto&gt;)</div>
       </div>
     </div>
-
-    <div class="flow-divider" style="margin-top:8px;"><div class="label label-write">write · pattern</div><div class="line"></div></div>
-    <div class="cols3w">
-      <div class="box pat">
-        <div class="m m-write">CreatePlace(req, ct)</div>
-        <div class="calls">→ places.CreateAsync(dto, ct)</div>
-        <div class="ret-pat">→ CreatedResult(PlaceDto)</div>
-        <div class="m m-write" style="margin-top:4px;">UpdatePlace(req, ct)</div>
-        <div class="calls">→ places.UpdateAsync(id, dto, ct)</div>
-        <div class="ret-pat">→ OkObjectResult(PlaceDto)</div>
-        <div class="m m-write" style="margin-top:4px;">DeletePlace(req, ct)</div>
-        <div class="calls">→ places.DeleteAsync(id, ct)</div>
-        <div class="ret-pat">→ NoContentResult</div>
-      </div>
-      <div class="box pat">
-        <div class="m m-write">UpdateCountry(req, ct)</div>
-        <div class="calls">→ countries.UpdateAsync(id, dto, ct)</div>
-        <div class="ret-pat">→ OkObjectResult(CountryDto)</div>
-      </div>
-      <div class="box pat">
-        <div class="m m-write">CreateVisitedState(req, ct)</div>
-        <div class="calls">→ states.CreateAsync(dto, ct)</div>
-        <div class="ret-pat">→ CreatedResult(VisitedStateDto)</div>
-        <div class="m m-write" style="margin-top:4px;">DeleteVisitedState(req, ct)</div>
-        <div class="calls">→ states.DeleteAsync(id, ct)</div>
-        <div class="ret-pat">→ NoContentResult</div>
-      </div>
-    </div>
   </div>
 
-  <div class="connector">↓ <span>DI via IPlaceBusiness / ICountryBusiness / IVisitedStateBusiness</span></div>
+  <div class="connector">↓ <span>DI via interfaces · AOP wraps all Business calls</span></div>
 
-  <!-- PROCESS note ────────────────────────────────────────────── -->
-  <div class="notice">
-    Process layer — not yet present in Stage 1. Functions call Business directly. Process classes will appear here when multi-entity workflows are introduced.
-  </div>
-
-  <div class="connector">↓</div>
-
-  <!-- BUSINESS ────────────────────────────────────────────────── -->
   <div class="layer business">
-    <div class="layer-label">Business · TripsTracker.Business · PRIMARY</div>
+    <div class="layer-label">Business · TripsTracker.Business</div>
     <div class="cols3">
-
-      <!-- PlaceBusiness -->
       <div class="box hi">
         <div class="cname">PlaceBusiness</div>
-        <div class="csuper">: BusinessBase&lt;Place, PlaceDto&gt; · IPlaceBusiness</div>
-
-        <div class="flow-divider"><div class="label label-read">read</div><div class="line"></div></div>
+        <div class="csuper">: BusinessBase&lt;Place&gt; · IPlaceBusiness</div>
         <div class="m m-pub">GetAllAsync(ct)</div>
-        <div class="calls">→ ToListAsync(<br>&nbsp;&nbsp;&nbsp;BuildBaseQuery()<br>&nbsp;&nbsp;&nbsp;.Select(p =&gt; new PlaceDto(…)))</div>
+        <div class="calls">→ BuildBaseQuery().Select(PlaceDto).ToListAsync</div>
         <div class="ret">→ Task&lt;List&lt;PlaceDto&gt;&gt;</div>
-
-        <div class="flow-divider" style="margin-top:6px;"><div class="label label-write">write · pattern</div><div class="line"></div></div>
-        <div class="m m-write">CreateAsync(SavePlaceDto, ct)</div>
-        <div class="calls">→ InsertAsync(new Place(…), ct)<br>→ GetByIdAsync(id, proj, ct)</div>
-        <div class="ret-pat">→ Task&lt;PlaceDto&gt;</div>
-        <div class="m m-write" style="margin-top:3px;">UpdateAsync(id, SavePlaceDto, ct)</div>
-        <div class="calls">→ ExecuteUpdateAsync(pred, setters, ct)<br>→ GetByIdAsync(id, proj, ct)</div>
-        <div class="ret-pat">→ Task&lt;PlaceDto?&gt;</div>
-        <div class="m m-write" style="margin-top:3px;">DeleteAsync(id, ct)</div>
-        <div class="calls">→ ExecuteUpdateAsync(IsDeleted=true)</div>
-        <div class="ret-pat">→ Task&lt;bool&gt;</div>
       </div>
-
-      <!-- CountryBusiness -->
       <div class="box hi">
         <div class="cname">CountryBusiness</div>
-        <div class="csuper">: BusinessBase&lt;Country, CountryDto&gt; · ICountryBusiness</div>
-
-        <div class="flow-divider"><div class="label label-read">read</div><div class="line"></div></div>
+        <div class="csuper">: BusinessBase&lt;Country&gt; · ICountryBusiness</div>
         <div class="m m-pub">GetAllAsync(ct)</div>
-        <div class="calls">→ ToListAsync(<br>&nbsp;&nbsp;&nbsp;BuildBaseQuery()<br>&nbsp;&nbsp;&nbsp;.Select(c =&gt; new CountryDto(…)))</div>
+        <div class="calls">→ BuildBaseQuery().Select(CountryDto).ToListAsync</div>
         <div class="ret">→ Task&lt;List&lt;CountryDto&gt;&gt;</div>
-
-        <div class="flow-divider" style="margin-top:6px;"><div class="label label-write">write · pattern</div><div class="line"></div></div>
-        <div class="m m-write">UpdateAsync(id, SaveCountryDto, ct)</div>
-        <div class="calls">→ ExecuteUpdateAsync(pred, setters, ct)<br>→ GetByIdAsync(id, proj, ct)</div>
-        <div class="ret-pat">→ Task&lt;CountryDto?&gt;</div>
       </div>
-
-      <!-- VisitedStateBusiness -->
-      <div class="box hi">
+      <div class="box ro">
         <div class="cname">VisitedStateBusiness</div>
-        <div class="csuper">: BusinessBase&lt;VisitedState, VisitedStateDto&gt; · IVisitedStateBusiness</div>
-
-        <div class="flow-divider"><div class="label label-read">read</div><div class="line"></div></div>
+        <div class="csuper">: BusinessBase&lt;VisitedState&gt; · IVisitedStateBusiness</div>
         <div class="m m-pub">GetAllAsync(ct)</div>
-        <div class="calls">→ ToListAsync(<br>&nbsp;&nbsp;&nbsp;BuildBaseQuery()<br>&nbsp;&nbsp;&nbsp;.Select(vs =&gt; new VisitedStateDto(…)))</div>
+        <div class="calls">→ SQL VIEW — read-only<br>→ BuildBaseQuery().Select(VisitedStateDto).ToListAsync</div>
         <div class="ret">→ Task&lt;List&lt;VisitedStateDto&gt;&gt;</div>
-
-        <div class="flow-divider" style="margin-top:6px;"><div class="label label-write">write · pattern</div><div class="line"></div></div>
-        <div class="m m-write">CreateAsync(SaveVisitedStateDto, ct)</div>
-        <div class="calls">→ InsertAsync(new VisitedState(…), ct)<br>→ GetByIdAsync(id, proj, ct)</div>
-        <div class="ret-pat">→ Task&lt;VisitedStateDto&gt;</div>
-        <div class="m m-write" style="margin-top:3px;">DeleteAsync(id, ct)</div>
-        <div class="calls">→ ExecuteDeleteAsync(pred, ct)</div>
-        <div class="ret-pat">→ Task&lt;bool&gt;</div>
+        <div style="font-size:0.68rem;color:#3f7a4a;margin-top:6px;">No write methods — VisitedStates is derived from Places.StateAbbr</div>
       </div>
-
     </div>
   </div>
 
-  <div class="connector">↓ <span>inherited — all three business classes call the same base methods</span></div>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">Other write flows — Country flags</div>
+  <!-- ═══════════════════════════════════════════════════════════ -->
 
-  <!-- BASE CLASSES ────────────────────────────────────────────── -->
+  <div class="layer frontend">
+    <div class="layer-label">Frontend</div>
+    <div class="cols3">
+      <div class="ep"><span class="hook-w">useSetCountryVisited()</span><span class="arr">→</span><span class="verb v-put">PUT</span><span class="path">/api/countries/{id}/visited</span></div>
+      <div class="ep"><span class="hook-w">useSetCountryHome()</span><span class="arr">→</span><span class="verb v-put">PUT</span><span class="path">/api/countries/{id}/home</span></div>
+      <div class="ep"><span class="hook-w">useDeletePlace()</span><span class="arr">→</span><span class="verb v-delete">DELETE</span><span class="path">/api/places/{id}</span></div>
+    </div>
+  </div>
+
+  <div class="connector">↓ <span>Functions → Business directly (no Process layer for simple flag toggles)</span></div>
+
+  <div class="layer business" style="padding-bottom:10px;">
+    <div class="layer-label">Business</div>
+    <div class="cols3">
+      <div class="box hi">
+        <div class="m m-pub">SetVisitedAsync(id, value, ct)</div>
+        <div class="calls">→ ExecuteUpdateAsync(IsVisited = value)</div>
+      </div>
+      <div class="box hi">
+        <div class="m m-pub">SetHomeAsync(id, ct)</div>
+        <div class="calls">→ ExecuteUpdateAsync(IsHome = true)</div>
+      </div>
+      <div class="box hi">
+        <div class="m m-pub">DeleteAsync(id, ct)</div>
+        <div class="calls">→ ExecuteUpdateAsync(IsDeleted = true)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <div class="section-title">Base classes · TripsTracker.Data</div>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+
   <div class="layer base">
     <div class="layer-label">Base Classes · TripsTracker.Data · secondary</div>
     <div class="cols3">
-
       <div class="box dim">
-        <div class="cname dim">QueryBase&lt;TEntity, TDomain&gt;</div>
+        <div class="cname dim">QueryBase&lt;TEntity&gt;</div>
         <div class="m m-prot">BuildBaseQuery()</div>
-        <div class="calls">→ Context.Set&lt;T&gt;().AsNoTracking()</div>
+        <div class="calls">→ Context.Set&lt;T&gt;().AsNoTracking().Where(!IsDeleted)</div>
         <div class="m m-prot">ToListAsync(query, ct)</div>
-        <div class="calls">→ query.ToListAsync(ct)</div>
         <div class="m m-prot">FirstOrDefaultAsync(query, ct)</div>
-        <div class="m m-prot">ApplyFilter(predicate, projection)</div>
-        <div class="calls">→ BuildBaseQuery().Where(…).Select(…)</div>
       </div>
-
       <div class="box dim">
-        <div class="cname dim">CrudBase&lt;TEntity, TDomain&gt;</div>
-        <div class="csuper">: QueryBase&lt;TEntity, TDomain&gt;</div>
+        <div class="cname dim">CrudBase&lt;TEntity&gt;</div>
+        <div class="csuper">: QueryBase&lt;TEntity&gt;</div>
         <div class="m m-prot">InsertAsync(entity, ct)</div>
         <div class="calls">→ Set&lt;T&gt;().Add · SaveChangesAsync</div>
         <div class="m m-prot">GetByIdAsync(pred, proj, ct)</div>
-        <div class="calls">→ BuildBaseQuery().Where(…).FirstOrDefault</div>
         <div class="m m-prot">ExecuteUpdateAsync(pred, setters, ct)</div>
-        <div class="calls">→ Set&lt;T&gt;().Where(…).ExecuteUpdateAsync</div>
         <div class="m m-prot">ExecuteDeleteAsync(pred, ct)</div>
-        <div class="calls">→ Set&lt;T&gt;().Where(…).ExecuteDeleteAsync</div>
       </div>
-
       <div class="box dim">
-        <div class="cname dim">BusinessBase&lt;TEntity, TDomain&gt;</div>
-        <div class="csuper">: CrudBase&lt;TEntity, TDomain&gt;</div>
+        <div class="cname dim">BusinessBase&lt;TEntity&gt;</div>
+        <div class="csuper">: CrudBase&lt;TEntity&gt;</div>
         <div style="font-size:0.72rem;color:#484f58;margin-top:6px;line-height:1.5;">
-          Thin combiner. Provides the public extension
-          point for all business classes. Inherits all
-          query and CRUD infrastructure.
+          Thin combiner. Public extension point for all business classes.
+          TDomain generic removed — projection is Business responsibility.
         </div>
       </div>
-
     </div>
   </div>
 
   <div class="connector">↓ <span>EF Core · TripsTrackerDbContext : BaseContext</span></div>
 
-  <!-- DB ──────────────────────────────────────────────────────── -->
   <div class="layer db">
-    <div class="layer-label">Data · TripsTracker.Data · TripsTrackerDbContext · EF Core 10</div>
+    <div class="layer-label">Data · TripsTrackerDbContext · EF Core 10</div>
     <div class="cols3">
-      <div class="box"><div class="m m-inh">DbSet&lt;Place&gt;</div></div>
-      <div class="box"><div class="m m-inh">DbSet&lt;Country&gt;</div></div>
-      <div class="box"><div class="m m-inh">DbSet&lt;VisitedState&gt;</div></div>
+      <div class="box"><div class="m m-inh">DbSet&lt;Place&gt; &nbsp;·&nbsp; CountryId FK · StateAbbr</div></div>
+      <div class="box"><div class="m m-inh">DbSet&lt;Country&gt; &nbsp;·&nbsp; IsVisited · IsHome</div></div>
+      <div class="box"><div class="m m-inh">VisitedStates &nbsp;·&nbsp; SQL VIEW (read-only projection)</div></div>
     </div>
   </div>
 
-  <!-- Legend ──────────────────────────────────────────────────── -->
   <div class="legend">
-    <div class="li"><div class="ld" style="background:#3fb950;"></div> public method (implemented)</div>
-    <div class="li"><div class="ld" style="background:#5ca87e;border:1px dashed #2d5c2d;"></div> write pattern (not yet implemented in Stage 1)</div>
-    <div class="li"><div class="ld" style="background:#1f6feb;"></div> protected method (base class)</div>
-    <div class="li"><div class="ld" style="background:#484f58;border:1px solid #30363d;"></div> inherited / no override</div>
-    <div class="li"><div class="ld" style="background:#6e40c9;"></div> AOP interceptors (Castle DynamicProxy)</div>
-    <div class="li"><div class="ld" style="background:#1f6feb;border:2px solid #1f6feb;"></div> Business layer — primary focus</div>
+    <div class="li"><div class="ld" style="background:#3fb950;"></div> public method</div>
+    <div class="li"><div class="ld" style="background:#1f6feb;"></div> protected base class method</div>
+    <div class="li"><div class="ld" style="background:#6e40c9;"></div> process step (Add Place flow)</div>
+    <div class="li"><div class="ld" style="background:#238636;"></div> external call (Nominatim)</div>
+    <div class="li"><div class="ld" style="background:#2d5c2d;border:1px dashed #3fb950;"></div> read-only (VisitedStates VIEW)</div>
+    <div class="li"><div class="ld" style="background:#484f58;"></div> inherited / no override</div>
+    <div class="li"><div class="ld" style="background:#6e40c9;"></div> AOP wraps all Business calls</div>
   </div>
 
 </body>
