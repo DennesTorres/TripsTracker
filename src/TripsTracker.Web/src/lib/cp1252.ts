@@ -50,6 +50,16 @@ const CP1252_REVERSE: Record<number, number> = {
 export function decodeCp1252Utf8(str: string): string {
   if (!str) return str;
 
+  // If the string already contains genuine Unicode (code points > 0xFF that are
+  // not CP1252 special chars), it is correctly encoded — leave it untouched.
+  // Without this guard, emoji surrogates (e.g. 0xD83C for 🇬) would map to
+  // 0x3C ('<') via `code & 0xFF`, producing corruption like '<<' for '🇬🇧'.
+  const hasGenuineUnicode = [...str].some(c => {
+    const cp = c.codePointAt(0)!;
+    return cp > 0xFF && !(cp in CP1252_REVERSE);
+  });
+  if (hasGenuineUnicode) return str;
+
   // Map each character back to its original CP1252 byte value
   const bytes = new Uint8Array(
     [...str].map(c => {
