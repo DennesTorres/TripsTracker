@@ -118,6 +118,15 @@
   width: 36px;
 }
 
+.stateCell {
+  color: #94a3b8;
+  font-size: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .coord {
   color: #64748b;
   font-size: 12px;

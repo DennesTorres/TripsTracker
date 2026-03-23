@@ -99,7 +99,9 @@ export default function PlacesPage() {
                 <td className={styles.flag}>{p.countryFlag}</td>
                 <td>{p.city}</td>
                 <td>{p.countryName}</td>
-                <td>{p.stateAbbr ?? ''}</td>
+                <td className={styles.stateCell} title={p.stateName ?? p.stateAbbr ?? ''}>
+                  {p.stateName ?? p.stateAbbr ?? ''}
+                </td>
                 <td className={styles.coord}>{p.lon.toFixed(4)}</td>
                 <td className={styles.coord}>{p.lat.toFixed(4)}</td>
                 <td>{p.isHome ? '✓' : ''}</td>

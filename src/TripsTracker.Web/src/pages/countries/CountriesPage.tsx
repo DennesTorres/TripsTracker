@@ -15,8 +15,8 @@ export default function CountriesPage() {
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>;
 
-  const statesByCountry = visitedStates.reduce<Record<number, string[]>>((acc, vs) => {
-    (acc[vs.countryId] ??= []).push(vs.stateAbbr);
+  const statesByCountry = visitedStates.reduce<Record<number, { abbr: string; name?: string }[]>>((acc, vs) => {
+    (acc[vs.countryId] ??= []).push({ abbr: vs.stateAbbr, name: vs.stateName });
     return acc;
   }, {});
 
@@ -75,7 +75,15 @@ export default function CountriesPage() {
                 <td className={styles.flag}>{c.flag}</td>
                 <td>{c.name}</td>
                 <td className={styles.region}>{c.region}</td>
-                <td className={styles.states}>{(statesByCountry[c.id] ?? []).sort().join(', ')}</td>
+                <td className={styles.states}>
+                  {(statesByCountry[c.id] ?? [])
+                    .sort((a, b) => a.abbr.localeCompare(b.abbr))
+                    .map(s => (
+                      <span key={s.abbr} className={styles.stateTag} title={s.name ?? s.abbr}>
+                        {s.abbr}
+                      </span>
+                    ))}
+                </td>
                 <td className={styles.visited}>{c.isVisited ? '✓' : ''}</td>
                 <td>
                   <input
