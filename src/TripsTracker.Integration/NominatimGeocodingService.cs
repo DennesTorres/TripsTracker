@@ -14,6 +14,38 @@ public class NominatimGeocodingService : INominatimService
         _http = http;
     }
 
+    private static readonly HashSet<string> CityTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "city", "town", "village", "municipality", "hamlet" };
+
+    public async Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 3)
+            return [];
+
+        var url = $"/search?q={Uri.EscapeDataString(query)}&format=json&addressdetails=1&limit={limit * 3}";
+        var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
+        if (results is null or { Length: 0 })
+            return [];
+
+        return results
+            .Where(r => r.Address?.CountryCode is not null
+                        && (r.Type is null || CityTypes.Contains(r.Type) || r.AddressType is { } at && CityTypes.Contains(at)))
+            .DistinctBy(r => (r.Address!.CountryCode, r.Address.City ?? r.Address.Town ?? r.Address.Village ?? r.Address.Municipality))
+            .Take(limit)
+            .Select(r =>
+            {
+                var address = r.Address!;
+                var city = address.City ?? address.Town ?? address.Village ?? address.Municipality ?? query;
+                var rawState = address.StateCode ?? address.Iso3166Lvl4;
+                var stateAbbr = rawState?.ToUpperInvariant() is { } s
+                    ? (s.Contains('-') ? s[(s.IndexOf('-') + 1)..] : s)
+                    : null;
+                var countryCode = address.CountryCode!.ToUpperInvariant();
+                return new CitySuggestion(city, address.Country ?? countryCode, countryCode, address.State, stateAbbr);
+            })
+            .ToList();
+    }
+
     public async Task<GeocodingResult?> GeocodeAsync(string cityName, string countryIsoAlpha2Hint, CancellationToken ct = default)
     {
         var url = $"/search?q={Uri.EscapeDataString(cityName)}&countrycodes={countryIsoAlpha2Hint.ToLowerInvariant()}&format=json&addressdetails=1&limit=1";
@@ -51,9 +83,11 @@ public class NominatimGeocodingService : INominatimService
 
     private sealed class NominatimResult
     {
-        [JsonPropertyName("lat")] public string Lat { get; set; } = string.Empty;
-        [JsonPropertyName("lon")] public string Lon { get; set; } = string.Empty;
-        [JsonPropertyName("address")] public NominatimAddress? Address { get; set; }
+        [JsonPropertyName("lat")]          public string Lat         { get; set; } = string.Empty;
+        [JsonPropertyName("lon")]          public string Lon         { get; set; } = string.Empty;
+        [JsonPropertyName("type")]         public string? Type        { get; set; }
+        [JsonPropertyName("addresstype")] public string? AddressType { get; set; }
+        [JsonPropertyName("address")]      public NominatimAddress? Address { get; set; }
     }
 
     private sealed class NominatimAddress
@@ -65,6 +99,7 @@ public class NominatimGeocodingService : INominatimService
         [JsonPropertyName("state")]             public string? State        { get; set; }
         [JsonPropertyName("state_code")]        public string? StateCode    { get; set; }
         [JsonPropertyName("ISO3166-2-lvl4")]    public string? Iso3166Lvl4  { get; set; }
+        [JsonPropertyName("country")]            public string? Country      { get; set; }
         [JsonPropertyName("country_code")]      public string? CountryCode  { get; set; }
     }
 }

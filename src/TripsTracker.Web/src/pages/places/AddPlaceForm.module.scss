@@ -80,6 +80,54 @@
   }
 }
 
+.cityInputWrap {
+  position: relative;
+}
+
+.suggestList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  max-height: 220px;
+  overflow-y: auto;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #1e293b;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: #1e293b; }
+  }
+}
+
+.suggestCity {
+  color: #f1f5f9;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.suggestMeta {
+  color: #64748b;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .checkLabel {
   flex-direction: row !important;
   align-items: center;

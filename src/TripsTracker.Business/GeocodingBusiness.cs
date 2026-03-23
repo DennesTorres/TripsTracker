@@ -14,6 +14,9 @@ public class GeocodingBusiness : IGeocodingBusiness
         _nominatim = nominatim;
     }
 
+    public Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, CancellationToken ct = default)
+        => _nominatim.SuggestCitiesAsync(query, ct: ct);
+
     public async Task<GeocodingResult> GeocodeAsync(string cityName, CountryDto country, CancellationToken ct = default)
     {
         var result = await _nominatim.GeocodeAsync(cityName, country.IsoAlpha2, ct)

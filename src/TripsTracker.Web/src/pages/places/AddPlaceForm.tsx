@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useCreatePlace, useCountries } from '@/api/hooks';
+import { useCreatePlace, useCountries, useCitySuggestions } from '@/api/hooks';
+import type { CitySuggestion } from '@/types';
 import styles from './AddPlaceForm.module.scss';
 
 interface Props {
@@ -21,6 +22,34 @@ export default function AddPlaceForm({ onClose }: Props) {
   const [isHome, setIsHome] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<MismatchSuggestion | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: citySuggestions = [] } = useCitySuggestions(debouncedQuery);
+
+  // Debounce city input for suggestions
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(cityName), 300);
+    return () => clearTimeout(t);
+  }, [cityName]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onOutsideClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
+        setShowDropdown(false);
+    }
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, []);
+
+  function selectCitySuggestion(s: CitySuggestion) {
+    setCityName(s.city);
+    setCountryIsoAlpha2(s.countryIsoAlpha2);
+    setShowDropdown(false);
+    setError(null);
+  }
 
   const sorted = [...countries].sort((a, b) => a.name.localeCompare(b.name));
 
@@ -82,13 +111,29 @@ export default function AddPlaceForm({ onClose }: Props) {
 
           <label>
             City
-            <input
-              type="text"
-              value={cityName}
-              onChange={e => setCityName(e.target.value)}
-              placeholder="e.g. São Paulo"
-              required
-            />
+            <div className={styles.cityInputWrap} ref={dropdownRef}>
+              <input
+                type="text"
+                value={cityName}
+                onChange={e => { setCityName(e.target.value); setShowDropdown(true); }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="e.g. São Paulo"
+                required
+                autoComplete="off"
+              />
+              {showDropdown && citySuggestions.length > 0 && (
+                <ul className={styles.suggestList}>
+                  {citySuggestions.map((s, i) => (
+                    <li key={i} onMouseDown={() => selectCitySuggestion(s)}>
+                      <span className={styles.suggestCity}>{s.city}</span>
+                      <span className={styles.suggestMeta}>
+                        {s.stateName ? `${s.stateName}, ` : ''}{s.countryName}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </label>
 
           <label className={styles.checkLabel}>

@@ -12,4 +12,10 @@ public interface INominatimService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Geocoding result, or null if not found.</returns>
     Task<GeocodingResult?> GeocodeAsync(string cityName, string countryIsoAlpha2Hint, CancellationToken ct = default);
+
+    /// <summary>
+    /// Searches for city names matching a partial query string.
+    /// Returns up to <paramref name="limit"/> results suitable for autocomplete suggestions.
+    /// </summary>
+    Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, CancellationToken ct = default);
 }
