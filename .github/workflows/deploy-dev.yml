@@ -1,8 +1,9 @@
 name: Deploy — Development
 
 on:
-  push:
-    branches: [development]
+  workflow_dispatch:
+    # Automatic trigger disabled until Azure infrastructure is provisioned (Story #87).
+    # Re-enable by replacing workflow_dispatch with: push: / branches: [development]
 
 permissions:
   id-token: write
