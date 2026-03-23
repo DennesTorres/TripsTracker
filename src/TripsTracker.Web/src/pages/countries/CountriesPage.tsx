@@ -1,6 +1,6 @@
 import {
   useCountries, useVisitedStates,
-  useSetCountryVisited, useSetCountryHome,
+  useSetCountryHome,
 } from '@/api/hooks';
 import type { Country } from '@/types';
 import styles from './CountriesPage.module.scss';
@@ -8,7 +8,6 @@ import styles from './CountriesPage.module.scss';
 export default function CountriesPage() {
   const { data: countries = [], isLoading } = useCountries();
   const { data: visitedStates = [] } = useVisitedStates();
-  const setVisited = useSetCountryVisited();
   const setHome = useSetCountryHome();
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>;
@@ -42,14 +41,7 @@ export default function CountriesPage() {
                 <td>{c.name}</td>
                 <td className={styles.region}>{c.region}</td>
                 <td className={styles.states}>{(statesByCountry[c.id] ?? []).sort().join(', ')}</td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={c.isVisited}
-                    disabled={c.isHome}
-                    onChange={e => setVisited.mutate({ id: c.id, isVisited: e.target.checked })}
-                  />
-                </td>
+                <td className={styles.visited}>{c.isVisited ? '✓' : ''}</td>
                 <td>
                   <input
                     type="radio"

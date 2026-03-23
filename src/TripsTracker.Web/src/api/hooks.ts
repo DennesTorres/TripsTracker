@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AddPlace, Country, DeletePlaceResult, Place, UpdatePlace, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
+// useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
 import apiClient from './client';
 
@@ -49,15 +50,6 @@ export function useCountries() {
     queryKey: ['countries'],
     queryFn: () =>
       apiClient.get<Country[]>('/api/countries').then(r => r.data.map(c => decodeStrings(c))),
-  });
-}
-
-export function useSetCountryVisited() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, isVisited }: { id: number; isVisited: boolean }) =>
-      apiClient.put<Country>(`/api/countries/${id}/visited?value=${isVisited}`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
   });
 }
 
