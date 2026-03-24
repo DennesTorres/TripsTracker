@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using TripsTracker.Domain;
@@ -17,9 +18,12 @@ public class NominatimGeocodingService : INominatimService
     private static readonly HashSet<string> CityTypes = new(StringComparer.OrdinalIgnoreCase)
         { "city", "town", "village", "municipality", "hamlet" };
 
+    private static readonly CompareInfo _compareInfo = CultureInfo.InvariantCulture.CompareInfo;
+    private const CompareOptions _compareOpts = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
+
     public async Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(query) || query.Length < 3)
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             return [];
 
         var url = $"/search?q={Uri.EscapeDataString(query)}&format=json&addressdetails=1&limit={limit * 3}";
@@ -28,8 +32,16 @@ public class NominatimGeocodingService : INominatimService
             return [];
 
         return results
-            .Where(r => r.Address?.CountryCode is not null
-                        && (r.Type is null || CityTypes.Contains(r.Type) || r.AddressType is { } at && CityTypes.Contains(at)))
+            .Where(r =>
+            {
+                if (r.Address?.CountryCode is null) return false;
+                if (r.Type is not null && !CityTypes.Contains(r.Type)
+                    && (r.AddressType is null || !CityTypes.Contains(r.AddressType))) return false;
+                // Only include results whose city name actually starts with the query (accent + case insensitive)
+                var addr = r.Address;
+                var city = addr.City ?? addr.Town ?? addr.Village ?? addr.Municipality;
+                return city is not null && _compareInfo.IndexOf(city, query, _compareOpts) == 0;
+            })
             .DistinctBy(r => (r.Address!.CountryCode, r.Address.City ?? r.Address.Town ?? r.Address.Village ?? r.Address.Municipality))
             .Take(limit)
             .Select(r =>

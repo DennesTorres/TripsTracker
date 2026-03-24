@@ -200,7 +200,7 @@ export default function WorldMap({
         .on('mouseover', (event: MouseEvent) => {
           const p0 = c.places[0];
           const cityLabel = (p: Place) =>
-            p.stateName ? `${p.stateName}, ${p.city}` : p.city;
+            p.stateAbbr ? `${p.city} (${p.stateAbbr})` : p.city;
           const html = n === 1
             ? `<strong>${cityLabel(p0)}</strong><br/>${p0.countryName}`
             : `<strong>${n} places in ${p0.countryName}</strong><br/>${
