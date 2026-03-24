@@ -29,8 +29,10 @@ public class GeocodingBusiness : IGeocodingBusiness
         }
 
         // Geocoding failed or returned an unrelated city.
-        // Use partial-name search to find a meaningful correction hint.
-        var suggestions = await _nominatim.SuggestCitiesAsync(cityName, limit: 5, ct: ct);
+        // Use a short prefix (≤5 chars) so suggestions tolerate diacritics and spelling differences.
+        // e.g. "Itacuruça" → prefix "Itacu" → finds "Itacurussá" in Brazil.
+        var prefix = cityName.Length > 5 ? cityName[..5] : cityName;
+        var suggestions = await _nominatim.SuggestCitiesAsync(prefix, limit: 5, ct: ct);
         var inCountry = suggestions.FirstOrDefault(s =>
             s.CountryIsoAlpha2.Equals(country.IsoAlpha2, StringComparison.OrdinalIgnoreCase));
 
