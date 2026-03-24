@@ -1,15 +1,11 @@
 import { useState } from 'react';
-import {
-  useCountries, useVisitedStates,
-  useSetCountryHome,
-} from '@/api/hooks';
+import { useCountries, useVisitedStates } from '@/api/hooks';
 import type { Country } from '@/types';
 import styles from './CountriesPage.module.scss';
 
 export default function CountriesPage() {
   const { data: countries = [], isLoading } = useCountries();
   const { data: visitedStates = [] } = useVisitedStates();
-  const setHome = useSetCountryHome();
   const [visitedOnly, setVisitedOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState('');
 
@@ -53,7 +49,7 @@ export default function CountriesPage() {
               value={regionFilter}
               onChange={e => setRegionFilter(e.target.value)}
             >
-              <option value="">All regions</option>
+              <option value="">All continents</option>
               {regions.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
@@ -63,7 +59,7 @@ export default function CountriesPage() {
             <tr>
               <th></th>
               <th>Country</th>
-              <th>Region</th>
+              <th>Continent</th>
               <th>States</th>
               <th>Visited</th>
               <th>Home</th>
@@ -85,14 +81,7 @@ export default function CountriesPage() {
                     ))}
                 </td>
                 <td className={styles.visited}>{c.isVisited ? '✓' : ''}</td>
-                <td>
-                  <input
-                    type="radio"
-                    name="home"
-                    checked={c.isHome}
-                    onChange={() => setHome.mutate({ id: c.id })}
-                  />
-                </td>
+                <td>{c.isHome ? '✓' : ''}</td>
               </tr>
             ))}
           </tbody>

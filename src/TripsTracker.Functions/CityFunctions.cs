@@ -13,7 +13,7 @@ public class CityFunctions(IGeocodingBusiness geocoding)
         CancellationToken ct)
     {
         var query = req.Query["q"].FirstOrDefault() ?? string.Empty;
-        if (query.Length < 3)
+        if (query.Length < 2)
             return new OkObjectResult(Array.Empty<object>());
 
         var results = await geocoding.SuggestCitiesAsync(query, ct);

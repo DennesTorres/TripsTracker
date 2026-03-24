@@ -29,7 +29,9 @@ public class PlacesProcess : IPlacesProcess
             new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
             ct);
 
-        if (!country.IsVisited && !country.IsHome)
+        if (dto.IsHome)
+            await _countries.SetHomeAsync(country.Id, true, ct);
+        else if (!country.IsVisited)
             await _countries.SetVisitedAsync(country.Id, true, ct);
 
         return place;
@@ -46,9 +48,13 @@ public class PlacesProcess : IPlacesProcess
         if (!hasRemainingPlaces)
             await _countries.SetVisitedAsync(place.CountryId, false, ct);
 
-        return new DeletePlaceResult(
-            PromptHomeCountry: place.IsHome,
-            CountryId: place.IsHome ? place.CountryId : null,
-            CountryName: place.IsHome ? place.CountryName : null);
+        if (place.IsHome)
+        {
+            var hasRemainingHome = await _places.HasHomeInCountryAsync(place.CountryId, ct);
+            if (!hasRemainingHome)
+                await _countries.SetHomeAsync(place.CountryId, false, ct);
+        }
+
+        return new DeletePlaceResult(false, null, null);
     }
 }
