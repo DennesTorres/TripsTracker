@@ -60,7 +60,7 @@ export function useCitySuggestions(query: string, countryCode = '') {
       const country = countryCode ? `&country=${encodeURIComponent(countryCode)}` : '';
       return apiClient.get<CitySuggestion[]>(`/api/cities/suggest?q=${encodeURIComponent(query)}${country}`).then(r => r.data);
     },
-    enabled: query.trim().length >= 2,
+    enabled: query.trim().length >= 2 && countryCode.trim() !== '',
     staleTime: 30_000,
     placeholderData: [],
   });
