@@ -27,7 +27,7 @@ public class NominatimGeocodingService : INominatimService
             return [];
 
         var countryFilter = string.IsNullOrWhiteSpace(countryCode) ? "" : $"&countrycodes={Uri.EscapeDataString(countryCode.ToLowerInvariant())}";
-        var url = $"/search?q={Uri.EscapeDataString(query)}{countryFilter}&format=json&addressdetails=1&limit=50";
+        var url = $"/search?q={Uri.EscapeDataString(query)}{countryFilter}&format=json&addressdetails=1&featuretype=settlement&limit=50";
         var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
         if (results is null or { Length: 0 })
             return [];
@@ -38,17 +38,17 @@ public class NominatimGeocodingService : INominatimService
                 if (r.Address?.CountryCode is null) return false;
                 if (r.Type is not null && !CityTypes.Contains(r.Type)
                     && (r.AddressType is null || !CityTypes.Contains(r.AddressType))) return false;
-                // Only include results whose city name actually starts with the query (accent + case insensitive)
+                // Use top-level name first — address.city is often null for partial queries
                 var addr = r.Address;
-                var city = addr.City ?? addr.Town ?? addr.Village ?? addr.Municipality;
-                return city is not null && _compareInfo.IndexOf(city, query, _compareOpts) == 0;
+                var nameToCheck = r.Name ?? addr.City ?? addr.Town ?? addr.Village ?? addr.Municipality;
+                return nameToCheck is not null && _compareInfo.IndexOf(nameToCheck, query, _compareOpts) == 0;
             })
-            .DistinctBy(r => (r.Address!.CountryCode, r.Address.City ?? r.Address.Town ?? r.Address.Village ?? r.Address.Municipality))
+            .DistinctBy(r => (r.Address!.CountryCode, r.Name ?? r.Address.City ?? r.Address.Town ?? r.Address.Village ?? r.Address.Municipality))
             .Take(limit)
             .Select(r =>
             {
                 var address = r.Address!;
-                var city = address.City ?? address.Town ?? address.Village ?? address.Municipality ?? query;
+                var city = r.Name ?? address.City ?? address.Town ?? address.Village ?? address.Municipality ?? query;
                 var rawState = address.StateCode ?? address.Iso3166Lvl4;
                 var stateAbbr = rawState?.ToUpperInvariant() is { } s
                     ? (s.Contains('-') ? s[(s.IndexOf('-') + 1)..] : s)
@@ -98,6 +98,7 @@ public class NominatimGeocodingService : INominatimService
     {
         [JsonPropertyName("lat")]          public string Lat         { get; set; } = string.Empty;
         [JsonPropertyName("lon")]          public string Lon         { get; set; } = string.Empty;
+        [JsonPropertyName("name")]         public string? Name        { get; set; }
         [JsonPropertyName("type")]         public string? Type        { get; set; }
         [JsonPropertyName("addresstype")] public string? AddressType { get; set; }
         [JsonPropertyName("address")]      public NominatimAddress? Address { get; set; }
