@@ -21,40 +21,38 @@ public class NominatimGeocodingService : INominatimService
     private static readonly CompareInfo _compareInfo = CultureInfo.InvariantCulture.CompareInfo;
     private const CompareOptions _compareOpts = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
 
+    // Photon (photon.komoot.io) is an autocomplete API built on OSM data.
+    // Unlike Nominatim /search, it returns prefix matches for partial city names.
+    private const string PhotonBaseUrl = "https://photon.komoot.io";
+
     public async Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, string countryCode = "", CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             return [];
 
-        var countryFilter = string.IsNullOrWhiteSpace(countryCode) ? "" : $"&countrycodes={Uri.EscapeDataString(countryCode.ToLowerInvariant())}";
-        var url = $"/search?q={Uri.EscapeDataString(query)}*{countryFilter}&format=json&addressdetails=1&featuretype=settlement&limit=50";
-        var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
-        if (results is null or { Length: 0 })
+        // Photon has no server-side country filter — fetch more and filter client-side.
+        var url = $"{PhotonBaseUrl}/api/?q={Uri.EscapeDataString(query)}&lang=en&limit={limit * 10}";
+        var response = await _http.GetFromJsonAsync<PhotonFeatureCollection>(url, ct);
+        if (response?.Features is null or { Length: 0 })
             return [];
 
-        return results
-            .Where(r =>
+        var normalizedCountry = countryCode.ToUpperInvariant();
+        return response.Features
+            .Where(f =>
             {
-                if (r.Address?.CountryCode is null) return false;
-                if (r.Type is not null && !CityTypes.Contains(r.Type)
-                    && (r.AddressType is null || !CityTypes.Contains(r.AddressType))) return false;
-                // Use top-level name first — address.city is often null for partial queries
-                var addr = r.Address;
-                var nameToCheck = r.Name ?? addr.City ?? addr.Town ?? addr.Village ?? addr.Municipality;
-                return nameToCheck is not null && _compareInfo.IndexOf(nameToCheck, query, _compareOpts) == 0;
+                var props = f.Properties;
+                if (props?.CountryCode is null || props.Name is null) return false;
+                if (!CityTypes.Contains(props.OsmValue ?? "")) return false;
+                if (!string.IsNullOrWhiteSpace(normalizedCountry) && !props.CountryCode.Equals(normalizedCountry, StringComparison.OrdinalIgnoreCase)) return false;
+                return _compareInfo.IndexOf(props.Name, query, _compareOpts) == 0;
             })
-            .DistinctBy(r => (r.Address!.CountryCode, r.Name ?? r.Address.City ?? r.Address.Town ?? r.Address.Village ?? r.Address.Municipality))
+            .DistinctBy(f => (f.Properties!.CountryCode, f.Properties.Name))
             .Take(limit)
-            .Select(r =>
+            .Select(f =>
             {
-                var address = r.Address!;
-                var city = r.Name ?? address.City ?? address.Town ?? address.Village ?? address.Municipality ?? query;
-                var rawState = address.StateCode ?? address.Iso3166Lvl4;
-                var stateAbbr = rawState?.ToUpperInvariant() is { } s
-                    ? (s.Contains('-') ? s[(s.IndexOf('-') + 1)..] : s)
-                    : null;
-                var countryCode = address.CountryCode!.ToUpperInvariant();
-                return new CitySuggestion(city, address.Country ?? countryCode, countryCode, address.State, stateAbbr);
+                var props = f.Properties!;
+                var countryIso = props.CountryCode!.ToUpperInvariant();
+                return new CitySuggestion(props.Name!, props.Country ?? countryIso, countryIso, props.State, null);
             })
             .ToList();
     }
@@ -92,7 +90,7 @@ public class NominatimGeocodingService : INominatimService
             CountryIsoAlpha2: countryCode);
     }
 
-    // ─── Nominatim response models ────────────────────────────────────────────
+    // ─── Nominatim response models (GeocodeAsync) ────────────────────────────
 
     private sealed class NominatimResult
     {
@@ -115,5 +113,26 @@ public class NominatimGeocodingService : INominatimService
         [JsonPropertyName("ISO3166-2-lvl4")]    public string? Iso3166Lvl4  { get; set; }
         [JsonPropertyName("country")]            public string? Country      { get; set; }
         [JsonPropertyName("country_code")]      public string? CountryCode  { get; set; }
+    }
+
+    // ─── Photon response models (SuggestCitiesAsync) ──────────────────────────
+
+    private sealed class PhotonFeatureCollection
+    {
+        [JsonPropertyName("features")] public PhotonFeature[]? Features { get; set; }
+    }
+
+    private sealed class PhotonFeature
+    {
+        [JsonPropertyName("properties")] public PhotonProperties? Properties { get; set; }
+    }
+
+    private sealed class PhotonProperties
+    {
+        [JsonPropertyName("name")]        public string? Name        { get; set; }
+        [JsonPropertyName("osm_value")]   public string? OsmValue    { get; set; }
+        [JsonPropertyName("countrycode")] public string? CountryCode { get; set; }
+        [JsonPropertyName("country")]     public string? Country     { get; set; }
+        [JsonPropertyName("state")]       public string? State       { get; set; }
     }
 }
