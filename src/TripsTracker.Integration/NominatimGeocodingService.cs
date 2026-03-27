@@ -16,7 +16,7 @@ public class NominatimGeocodingService : INominatimService
     }
 
     private static readonly HashSet<string> CityTypes = new(StringComparer.OrdinalIgnoreCase)
-        { "city", "town", "village", "municipality", "hamlet" };
+        { "city", "town", "village", "municipality", "hamlet", "suburb", "locality", "quarter" };
 
     private static readonly CompareInfo _compareInfo = CultureInfo.InvariantCulture.CompareInfo;
     private const CompareOptions _compareOpts = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
@@ -27,7 +27,7 @@ public class NominatimGeocodingService : INominatimService
             return [];
 
         var countryFilter = string.IsNullOrWhiteSpace(countryCode) ? "" : $"&countrycodes={Uri.EscapeDataString(countryCode.ToLowerInvariant())}";
-        var url = $"/search?q={Uri.EscapeDataString(query)}{countryFilter}&format=json&addressdetails=1&limit={limit * 3}";
+        var url = $"/search?q={Uri.EscapeDataString(query)}{countryFilter}&format=json&addressdetails=1&limit=50";
         var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
         if (results is null or { Length: 0 })
             return [];

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { usePlaces, useDeletePlace } from '@/api/hooks';
 import type { Place } from '@/types';
 import AddPlaceForm from './AddPlaceForm';
@@ -28,8 +28,19 @@ export default function PlacesPage() {
   const [sortKey, setSortKey] = useState<SortKey>('city');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [search, setSearch] = useState('');
-  const [countryFilter, setCountryFilter] = useState('');
+  const [countryInput, setCountryInput] = useState('');
+  const [showCountryDD, setShowCountryDD] = useState(false);
+  const countryDDRef = useRef<HTMLDivElement>(null);
   const deletePlace = useDeletePlace();
+
+  useEffect(() => {
+    function onOutsideClick(e: MouseEvent) {
+      if (countryDDRef.current && !countryDDRef.current.contains(e.target as Node))
+        setShowCountryDD(false);
+    }
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, []);
 
   if (isLoading) return <div className={styles.loading}>Loading…</div>;
 
@@ -37,9 +48,19 @@ export default function PlacesPage() {
     [...new Set(places.map(p => p.countryName))].sort(),
     [places]);
 
+  const filteredCountryOptions = useMemo(() =>
+    countryOptions.filter(c => !countryInput || c.toLowerCase().includes(countryInput.toLowerCase())),
+    [countryOptions, countryInput]);
+
   const filtered = places
-    .filter(p => !search || p.city.toLowerCase().includes(search.toLowerCase()))
-    .filter(p => !countryFilter || p.countryName === countryFilter);
+    .filter(p => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return p.city.toLowerCase().includes(q) ||
+             (p.stateAbbr ?? '').toLowerCase().includes(q) ||
+             (p.stateName ?? '').toLowerCase().includes(q);
+    })
+    .filter(p => !countryInput || p.countryName.toLowerCase().includes(countryInput.toLowerCase()));
 
   const sorted = sortPlaces(filtered, sortKey, sortDir);
 
@@ -56,7 +77,7 @@ export default function PlacesPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h2>Places</h2>
+        <h2>Cities</h2>
         <div className={styles.filters}>
           <input
             className={styles.searchInput}
@@ -65,14 +86,28 @@ export default function PlacesPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <select
-            className={styles.countrySelect}
-            value={countryFilter}
-            onChange={e => setCountryFilter(e.target.value)}
-          >
-            <option value="">All countries</option>
-            {countryOptions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <div className={styles.countryCombo} ref={countryDDRef}>
+            <input
+              className={styles.countryInput}
+              type="text"
+              placeholder="All countries"
+              value={countryInput}
+              onChange={e => { setCountryInput(e.target.value); setShowCountryDD(true); }}
+              onFocus={() => setShowCountryDD(true)}
+            />
+            {showCountryDD && (
+              <ul className={styles.countryList}>
+                <li className={styles.countryItem} onMouseDown={() => { setCountryInput(''); setShowCountryDD(false); }}>
+                  All countries
+                </li>
+                {filteredCountryOptions.map(c => (
+                  <li key={c} className={styles.countryItem} onMouseDown={() => { setCountryInput(c); setShowCountryDD(false); }}>
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
         <button className={styles.addBtn} onClick={() => setAdding(true)}>+ Add place</button>
       </div>
