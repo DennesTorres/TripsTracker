@@ -15,5 +15,5 @@ public interface IGeocodingBusiness
     /// Returns up to 5 city suggestions for an autocomplete input.
     /// Query must be at least 3 characters; returns empty list otherwise.
     /// </summary>
-    Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, CancellationToken ct = default);
+    Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, string countryCode = "", CancellationToken ct = default);
 }

@@ -26,7 +26,7 @@ export default function AddPlaceForm({ onClose }: Props) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: citySuggestions = [] } = useCitySuggestions(debouncedQuery);
+  const { data: citySuggestions = [] } = useCitySuggestions(debouncedQuery, countryIsoAlpha2);
 
   // Debounce city input for suggestions
   useEffect(() => {

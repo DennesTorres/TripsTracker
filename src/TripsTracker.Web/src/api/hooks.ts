@@ -53,11 +53,13 @@ export function useCountries() {
   });
 }
 
-export function useCitySuggestions(query: string) {
+export function useCitySuggestions(query: string, countryCode = '') {
   return useQuery<CitySuggestion[]>({
-    queryKey: ['city-suggestions', query],
-    queryFn: () =>
-      apiClient.get<CitySuggestion[]>(`/api/cities/suggest?q=${encodeURIComponent(query)}`).then(r => r.data),
+    queryKey: ['city-suggestions', query, countryCode],
+    queryFn: () => {
+      const country = countryCode ? `&country=${encodeURIComponent(countryCode)}` : '';
+      return apiClient.get<CitySuggestion[]>(`/api/cities/suggest?q=${encodeURIComponent(query)}${country}`).then(r => r.data);
+    },
     enabled: query.trim().length >= 2,
     staleTime: 30_000,
     placeholderData: [],

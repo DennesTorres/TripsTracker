@@ -17,5 +17,5 @@ public interface INominatimService
     /// Searches for city names matching a partial query string.
     /// Returns up to <paramref name="limit"/> results suitable for autocomplete suggestions.
     /// </summary>
-    Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, CancellationToken ct = default);
+    Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, string countryCode = "", CancellationToken ct = default);
 }

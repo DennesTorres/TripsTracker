@@ -21,12 +21,13 @@ public class NominatimGeocodingService : INominatimService
     private static readonly CompareInfo _compareInfo = CultureInfo.InvariantCulture.CompareInfo;
     private const CompareOptions _compareOpts = CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace;
 
-    public async Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, CancellationToken ct = default)
+    public async Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, int limit = 5, string countryCode = "", CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
             return [];
 
-        var url = $"/search?q={Uri.EscapeDataString(query)}&format=json&addressdetails=1&limit={limit * 3}";
+        var countryFilter = string.IsNullOrWhiteSpace(countryCode) ? "" : $"&countrycodes={Uri.EscapeDataString(countryCode.ToLowerInvariant())}";
+        var url = $"/search?q={Uri.EscapeDataString(query)}{countryFilter}&format=json&addressdetails=1&limit={limit * 3}";
         var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
         if (results is null or { Length: 0 })
             return [];

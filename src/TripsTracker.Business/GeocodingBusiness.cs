@@ -14,8 +14,8 @@ public class GeocodingBusiness : IGeocodingBusiness
         _nominatim = nominatim;
     }
 
-    public Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, CancellationToken ct = default)
-        => _nominatim.SuggestCitiesAsync(query, ct: ct);
+    public Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, string countryCode = "", CancellationToken ct = default)
+        => _nominatim.SuggestCitiesAsync(query, countryCode: countryCode, ct: ct);
 
     public async Task<GeocodingResult> GeocodeAsync(string cityName, CountryDto country, CancellationToken ct = default)
     {
@@ -32,9 +32,8 @@ public class GeocodingBusiness : IGeocodingBusiness
         // Use a short prefix (≤5 chars) so suggestions tolerate diacritics and spelling differences.
         // e.g. "Itacuruça" → prefix "Itacu" → finds "Itacurussá" in Brazil.
         var prefix = cityName.Length > 5 ? cityName[..5] : cityName;
-        var suggestions = await _nominatim.SuggestCitiesAsync(prefix, limit: 5, ct: ct);
-        var inCountry = suggestions.FirstOrDefault(s =>
-            s.CountryIsoAlpha2.Equals(country.IsoAlpha2, StringComparison.OrdinalIgnoreCase));
+        var suggestions = await _nominatim.SuggestCitiesAsync(prefix, limit: 5, countryCode: country.IsoAlpha2, ct: ct);
+        var inCountry = suggestions.FirstOrDefault();
 
         if (inCountry is not null)
             throw new GeocodingMismatchException(cityName, inCountry.City, country.Name);

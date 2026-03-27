@@ -16,7 +16,8 @@ public class CityFunctions(IGeocodingBusiness geocoding)
         if (query.Length < 2)
             return new OkObjectResult(Array.Empty<object>());
 
-        var results = await geocoding.SuggestCitiesAsync(query, ct);
+        var countryCode = req.Query["country"].FirstOrDefault() ?? string.Empty;
+        var results = await geocoding.SuggestCitiesAsync(query, countryCode, ct);
         return new OkObjectResult(results);
     }
 }
