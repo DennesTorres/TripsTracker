@@ -9,7 +9,7 @@ interface Props {
 
 const TABS: { id: View; label: string }[] = [
   { id: 'map', label: 'Map' },
-  { id: 'places', label: 'Cities' },
+  { id: 'places', label: 'Places' },
   { id: 'countries', label: 'Countries' },
 ];
 
