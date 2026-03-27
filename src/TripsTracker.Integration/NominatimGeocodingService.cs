@@ -27,7 +27,7 @@ public class NominatimGeocodingService : INominatimService
             return [];
 
         var countryFilter = string.IsNullOrWhiteSpace(countryCode) ? "" : $"&countrycodes={Uri.EscapeDataString(countryCode.ToLowerInvariant())}";
-        var url = $"/search?q={Uri.EscapeDataString(query)}{countryFilter}&format=json&addressdetails=1&featuretype=settlement&limit=50";
+        var url = $"/search?q={Uri.EscapeDataString(query)}*{countryFilter}&format=json&addressdetails=1&featuretype=settlement&limit=50";
         var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
         if (results is null or { Length: 0 })
             return [];
