@@ -23,6 +23,20 @@ param sqlEntraAdminObjectId string
 @description('Display name of the SQL Entra admin group')
 param sqlEntraAdminDisplayName string
 
+@description('User-Agent header value for Nominatim geocoding API requests')
+param nominatimUserAgent string
+
+@description('Monthly budget limit in USD for Azure Cost Alerts (0 = disabled)')
+param monthlyBudgetUsd int = 20
+
+// ── Computed variables — break circular dependency between Functions and SQL ──
+// Azure SQL FQDN is predictable: {serverName}.database.windows.net
+// Computing it here avoids Functions depending on SQL outputs while SQL depends
+// on Functions outputs (managed identity principal ID).
+var sqlServerName = 'sql-tripstracker-${env}-${uniqueSuffix}'
+var sqlDatabaseName = 'TripsTracker'
+var sqlServerFqdn = '${sqlServerName}.database.windows.net'
+
 // ── Log Analytics ─────────────────────────────────────────────────────────────
 module logAnalytics 'modules/loganalytics.bicep' = {
   name: 'loganalytics'
@@ -33,20 +47,22 @@ module logAnalytics 'modules/loganalytics.bicep' = {
 }
 
 // ── Azure Functions + Application Insights + Storage ─────────────────────────
-// Deployed before SQL so we can capture the managed identity principal ID
+// Deployed first so the managed identity principal ID is available for SQL role assignment.
 module functions 'modules/functions.bicep' = {
   name: 'functions'
   params: {
     location: location
     env: env
     uniqueSuffix: uniqueSuffix
-    sqlServerFqdn: sql.outputs.serverFqdn
-    sqlDatabaseName: sql.outputs.databaseName
+    sqlServerFqdn: sqlServerFqdn
+    sqlDatabaseName: sqlDatabaseName
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
+    nominatimUserAgent: nominatimUserAgent
   }
 }
 
 // ── Azure SQL Server + Database ───────────────────────────────────────────────
+// Depends on Functions (one-way) for the managed identity principal ID.
 module sql 'modules/sql.bicep' = {
   name: 'sql'
   params: {
@@ -70,10 +86,19 @@ module staticWebApp 'modules/staticwebapp.bicep' = {
   }
 }
 
+// ── Azure Cost Budget Alert ───────────────────────────────────────────────────
+module budget 'modules/budget.bicep' = if (monthlyBudgetUsd > 0) {
+  name: 'budget'
+  params: {
+    env: env
+    monthlyBudgetUsd: monthlyBudgetUsd
+  }
+}
+
 // ── Outputs ───────────────────────────────────────────────────────────────────
 output functionAppName string = functions.outputs.functionAppName
 output functionAppPrincipalId string = functions.outputs.functionAppPrincipalId
-output sqlServerFqdn string = sql.outputs.serverFqdn
-output sqlDatabaseName string = sql.outputs.databaseName
+output sqlServerFqdn string = sqlServerFqdn
+output sqlDatabaseName string = sqlDatabaseName
 output staticWebAppHostname string = staticWebApp.outputs.staticWebAppHostname
 output staticWebAppDeploymentToken string = staticWebApp.outputs.deploymentToken
