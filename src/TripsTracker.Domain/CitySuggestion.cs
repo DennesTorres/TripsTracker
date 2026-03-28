@@ -5,4 +5,6 @@ public record CitySuggestion(
     string CountryName,
     string CountryIsoAlpha2,
     string? StateName,
-    string? StateAbbr);
+    string? StateAbbr,
+    double? Lat = null,
+    double? Lon = null);

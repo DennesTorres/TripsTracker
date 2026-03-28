@@ -52,7 +52,12 @@ public class NominatimGeocodingService : INominatimService
             {
                 var props = f.Properties!;
                 var countryIso = props.CountryCode!.ToUpperInvariant();
-                return new CitySuggestion(props.Name!, props.Country ?? countryIso, countryIso, props.State, null);
+                // GeoJSON: coordinates[0] = longitude, coordinates[1] = latitude
+                var coords = f.Geometry?.Coordinates;
+                return new CitySuggestion(
+                    props.Name!, props.Country ?? countryIso, countryIso, props.State, null,
+                    Lat: coords?.Length >= 2 ? coords[1] : null,
+                    Lon: coords?.Length >= 2 ? coords[0] : null);
             })
             .ToList();
     }
@@ -124,7 +129,14 @@ public class NominatimGeocodingService : INominatimService
 
     private sealed class PhotonFeature
     {
+        [JsonPropertyName("geometry")]   public PhotonGeometry?   Geometry   { get; set; }
         [JsonPropertyName("properties")] public PhotonProperties? Properties { get; set; }
+    }
+
+    private sealed class PhotonGeometry
+    {
+        // GeoJSON point geometry: coordinates[0] = longitude, coordinates[1] = latitude
+        [JsonPropertyName("coordinates")] public double[]? Coordinates { get; set; }
     }
 
     private sealed class PhotonProperties

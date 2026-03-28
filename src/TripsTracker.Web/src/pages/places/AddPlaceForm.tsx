@@ -14,6 +14,13 @@ interface MismatchSuggestion {
   isHome: boolean;
 }
 
+interface ResolvedCoords {
+  lat: number;
+  lon: number;
+  stateAbbr?: string;
+  stateName?: string;
+}
+
 export default function AddPlaceForm({ onClose }: Props) {
   const { data: countries = [] } = useCountries();
   const create = useCreatePlace();
@@ -24,6 +31,9 @@ export default function AddPlaceForm({ onClose }: Props) {
   const [suggestion, setSuggestion] = useState<MismatchSuggestion | null>(null);
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  // Coordinates pre-resolved from Photon when user selects from autocomplete.
+  // Cleared when user manually edits the city field after selecting a suggestion.
+  const [resolvedCoords, setResolvedCoords] = useState<ResolvedCoords | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: citySuggestions = [] } = useCitySuggestions(debouncedQuery, countryIsoAlpha2);
@@ -49,15 +59,19 @@ export default function AddPlaceForm({ onClose }: Props) {
     setCountryIsoAlpha2(s.countryIsoAlpha2);
     setShowDropdown(false);
     setError(null);
+    // Capture Photon coordinates so the backend can skip Nominatim re-geocoding
+    setResolvedCoords(s.lat != null && s.lon != null
+      ? { lat: s.lat, lon: s.lon, stateAbbr: s.stateAbbr, stateName: s.stateName }
+      : null);
   }
 
   const sorted = [...countries].sort((a, b) => a.name.localeCompare(b.name));
 
-  function submitCity(city: string, country: string, home: boolean) {
+  function submitCity(city: string, country: string, home: boolean, coords?: ResolvedCoords) {
     setError(null);
     setSuggestion(null);
     create.mutate(
-      { cityName: city, countryIsoAlpha2: country, isHome: home },
+      { cityName: city, countryIsoAlpha2: country, isHome: home, ...coords },
       {
         onSuccess: onClose,
         onError: (err: unknown) => {
@@ -81,7 +95,7 @@ export default function AddPlaceForm({ onClose }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    submitCity(cityName.trim(), countryIsoAlpha2, isHome);
+    submitCity(cityName.trim(), countryIsoAlpha2, isHome, resolvedCoords ?? undefined);
   };
 
   return (
@@ -115,7 +129,7 @@ export default function AddPlaceForm({ onClose }: Props) {
               <input
                 type="text"
                 value={cityName}
-                onChange={e => { setCityName(e.target.value); setShowDropdown(true); }}
+                onChange={e => { setCityName(e.target.value); setShowDropdown(true); setResolvedCoords(null); }}
                 onFocus={() => setShowDropdown(true)}
                 placeholder="e.g. São Paulo"
                 required

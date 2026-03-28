@@ -23,10 +23,33 @@ public class PlacesProcess : IPlacesProcess
         var country = await _countries.GetByIsoAlpha2Async(dto.CountryIsoAlpha2, ct)
             ?? throw new NotFoundException("Country", dto.CountryIsoAlpha2);
 
-        var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
+        double lat, lon;
+        string city;
+        string? stateAbbr, stateName;
+
+        if (dto.Lat.HasValue && dto.Lon.HasValue)
+        {
+            // Coordinates pre-resolved by Photon autocomplete — skip Nominatim re-geocoding.
+            // This preserves the user-selected city name (e.g. "Itacuruça") rather than
+            // storing Nominatim's potentially different canonical spelling ("Itacurussa").
+            lat = dto.Lat.Value;
+            lon = dto.Lon.Value;
+            city = dto.CityName;
+            stateAbbr = dto.StateAbbr;
+            stateName = dto.StateName;
+        }
+        else
+        {
+            var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
+            lat = geocoded.Lat;
+            lon = geocoded.Lon;
+            city = geocoded.City;
+            stateAbbr = geocoded.StateAbbr;
+            stateName = geocoded.StateName;
+        }
 
         var place = await _places.CreateAsync(
-            new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
+            new CreatePlaceDto(lon, lat, country.Id, city, stateAbbr, stateName, dto.IsHome),
             ct);
 
         if (dto.IsHome)
