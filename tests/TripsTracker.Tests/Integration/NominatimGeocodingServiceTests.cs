@@ -92,4 +92,24 @@ public class NominatimGeocodingServiceTests
             results.Any(r => r.City.Equals("Pindamonhangaba", StringComparison.OrdinalIgnoreCase)),
             $"Expected 'Pindamonhangaba' in suggestions (BR filter). Got: [{string.Join(", ", results.Select(r => $"{r.City} ({r.CountryIsoAlpha2})"))}]");
     }
+
+    [TestMethod]
+    public async Task SuggestCitiesAsync_ReturnsCoordinatesForEachSuggestion()
+    {
+        // Regression: suggestions must carry Lat/Lon from Photon GeoJSON geometry so
+        // PlacesProcess can skip Nominatim re-geocoding when the user selects one.
+        // If geometry reading is broken, Lat/Lon are null and the bypass never fires.
+        var sut = BuildService();
+
+        var results = await sut.SuggestCitiesAsync("São Paulo", limit: 5, countryCode: "BR");
+
+        Assert.IsNotEmpty(results, "Expected at least one suggestion for 'São Paulo'");
+        foreach (var r in results)
+        {
+            Assert.IsNotNull(r.Lat,  $"Lat must not be null for suggestion '{r.City}'");
+            Assert.IsNotNull(r.Lon,  $"Lon must not be null for suggestion '{r.City}'");
+            Assert.IsTrue(r.Lat >= -90  && r.Lat <= 90,  $"Lat {r.Lat} out of range for '{r.City}'");
+            Assert.IsTrue(r.Lon >= -180 && r.Lon <= 180, $"Lon {r.Lon} out of range for '{r.City}'");
+        }
+    }
 }
