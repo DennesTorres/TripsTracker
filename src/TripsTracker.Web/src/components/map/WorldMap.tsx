@@ -199,10 +199,12 @@ export default function WorldMap({
         .style('cursor', 'pointer')
         .on('mouseover', (event: MouseEvent) => {
           const p0 = c.places[0];
+          const cityLabel = (p: Place) =>
+            p.stateAbbr ? `${p.city} (${p.stateAbbr})` : p.city;
           const html = n === 1
-            ? `<strong>${p0.countryFlag} ${p0.city}</strong><br/>${p0.countryName}`
+            ? `<strong>${cityLabel(p0)}</strong><br/>${p0.countryName}`
             : `<strong>${n} places in ${p0.countryName}</strong><br/>${
-                c.places.map(p => `${p.countryFlag} ${p.city}`).join('<br/>')
+                c.places.map(p => cityLabel(p)).join('<br/>')
               }`;
           tooltip.style('display', 'block').html(html);
           const rect = svgRef.current!.getBoundingClientRect();

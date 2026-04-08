@@ -21,6 +21,73 @@
   }
 }
 
+.filters {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  margin: 0 12px;
+}
+
+.searchInput {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #cbd5e1;
+  font-size: 12px;
+  padding: 5px 10px;
+  width: 160px;
+
+  &::placeholder { color: #475569; }
+  &:focus { outline: none; border-color: #4ade80; }
+}
+
+.countryCombo {
+  position: relative;
+}
+
+.countryInput {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 5px 8px;
+  width: 140px;
+
+  &::placeholder { color: #475569; }
+  &:focus { outline: none; border-color: #4ade80; }
+}
+
+.countryList {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 4px 0;
+  margin: 0;
+  list-style: none;
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.countryItem {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #cbd5e1;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #334155;
+    color: #f1f5f9;
+  }
+}
+
 .addBtn {
   padding: 6px 14px;
   background: #4ade80;
@@ -68,9 +135,37 @@
   }
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    color: #e2e8f0;
+  }
+}
+
+.sortArrow {
+  color: #4ade80;
+}
+
 .flag {
   font-size: 18px;
   width: 36px;
+}
+
+.stateCell {
+  color: #94a3b8;
+  font-size: 12px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.coord {
+  color: #64748b;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .actions {

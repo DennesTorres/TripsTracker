@@ -10,4 +10,5 @@ public interface IPlaceBusiness
     Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<bool> HasAnyInCountryAsync(int countryId, CancellationToken ct = default);
+    Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default);
 }

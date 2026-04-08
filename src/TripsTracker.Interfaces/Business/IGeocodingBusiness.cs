@@ -10,4 +10,10 @@ public interface IGeocodingBusiness
     /// returns a city that doesn't match the requested city name.
     /// </summary>
     Task<GeocodingResult> GeocodeAsync(string cityName, CountryDto country, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns up to 5 city suggestions for an autocomplete input.
+    /// Query must be at least 3 characters; returns empty list otherwise.
+    /// </summary>
+    Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, string countryCode = "", CancellationToken ct = default);
 }

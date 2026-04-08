@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, Country, DeletePlaceResult, Place, UpdatePlace, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, UpdatePlace, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
+// useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
 import apiClient from './client';
 
@@ -52,21 +53,16 @@ export function useCountries() {
   });
 }
 
-export function useSetCountryVisited() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, isVisited }: { id: number; isVisited: boolean }) =>
-      apiClient.put<Country>(`/api/countries/${id}/visited?value=${isVisited}`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
-  });
-}
-
-export function useSetCountryHome() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, isHome = true }: { id: number; isHome?: boolean }) =>
-      apiClient.put<Country>(`/api/countries/${id}/home?value=${isHome}`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+export function useCitySuggestions(query: string, countryCode = '') {
+  return useQuery<CitySuggestion[]>({
+    queryKey: ['city-suggestions', query, countryCode],
+    queryFn: () => {
+      const country = countryCode ? `&country=${encodeURIComponent(countryCode)}` : '';
+      return apiClient.get<CitySuggestion[]>(`/api/cities/suggest?q=${encodeURIComponent(query)}${country}`).then(r => r.data);
+    },
+    enabled: query.trim().length >= 2,
+    staleTime: 30_000,
+    placeholderData: [],
   });
 }
 

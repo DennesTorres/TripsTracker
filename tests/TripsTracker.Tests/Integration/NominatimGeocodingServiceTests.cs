@@ -65,4 +65,31 @@ public class NominatimGeocodingServiceTests
 
         Assert.IsNull(result);
     }
+
+    [TestMethod]
+    public async Task SuggestCitiesAsync_PartialPrefix_ReturnsCityWithFullName()
+    {
+        // Regression: "Pinda" (prefix of "Pindamonhangaba") must return a result
+        // without requiring the full name to be typed.
+        var sut = BuildService();
+
+        var results = await sut.SuggestCitiesAsync("Pinda", limit: 5);
+
+        Assert.IsTrue(
+            results.Any(r => r.City.Equals("Pindamonhangaba", StringComparison.OrdinalIgnoreCase)),
+            $"Expected 'Pindamonhangaba' in suggestions. Got: [{string.Join(", ", results.Select(r => $"{r.City} ({r.CountryIsoAlpha2})"))}]");
+    }
+
+    [TestMethod]
+    public async Task SuggestCitiesAsync_PartialPrefixWithCountry_ReturnsCityWithFullName()
+    {
+        // Same regression with country filter applied.
+        var sut = BuildService();
+
+        var results = await sut.SuggestCitiesAsync("Pinda", limit: 5, countryCode: "BR");
+
+        Assert.IsTrue(
+            results.Any(r => r.City.Equals("Pindamonhangaba", StringComparison.OrdinalIgnoreCase)),
+            $"Expected 'Pindamonhangaba' in suggestions (BR filter). Got: [{string.Join(", ", results.Select(r => $"{r.City} ({r.CountryIsoAlpha2})"))}]");
+    }
 }

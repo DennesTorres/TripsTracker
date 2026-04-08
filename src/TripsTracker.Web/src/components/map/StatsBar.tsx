@@ -16,8 +16,8 @@ export default function StatsBar({ countries, places }: Props) {
   return (
     <div className={styles.bar}>
       <Stat value={visitedCountries} label="countries visited" />
-      <Stat value={regions} label="regions" />
-      <Stat value={totalPlaces} label="places" />
+      <Stat value={regions} label="continents" />
+      <Stat value={totalPlaces} label="cities" />
     </div>
   );
 }

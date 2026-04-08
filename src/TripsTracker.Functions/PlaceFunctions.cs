@@ -29,9 +29,18 @@ public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
         {
             return new NotFoundObjectResult(ex.Message);
         }
+        catch (GeocodingMismatchException ex)
+        {
+            return new UnprocessableEntityObjectResult(new
+            {
+                errorCode = ex.ErrorCode,
+                message = ex.Message,
+                suggestedCity = ex.SuggestedCity,
+            });
+        }
         catch (BusinessRuleException ex)
         {
-            return new UnprocessableEntityObjectResult(ex.Message);
+            return new UnprocessableEntityObjectResult(new { errorCode = ex.ErrorCode, message = ex.Message });
         }
     }
 

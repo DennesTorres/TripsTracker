@@ -66,4 +66,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public Task<bool> HasAnyInCountryAsync(int countryId, CancellationToken ct = default)
         => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId, ct);
+
+    public Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default)
+        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.IsHome, ct);
 }
