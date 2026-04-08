@@ -15,25 +15,25 @@
 </head>
 <body>
 <h1>TripsTracker — Backend Architecture</h1>
-<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-03-23 (after arch-review-fixes #132–#135)</h2>
+<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-04-08 (after stories #122–#131, #137)</h2>
 <div class="diagram-wrap">
   <div class="mermaid">
 flowchart TB
     subgraph ENTRY["🚀 Root — TripsTracker.Functions (entry point + DI)"]
         direction LR
-        F1["Azure Functions\nHTTP Triggers\nPlaceFunctions · CountryFunctions\nVisitedStateFunctions"]
+        F1["Azure Functions\nHTTP Triggers\nPlaceFunctions · CountryFunctions\nVisitedStateFunctions · CityFunctions"]
         F2["DI Wiring\nScrutor auto-registration\nCastle DynamicProxy\nIOptions config"]
     end
 
     subgraph PROCESS["⚙️ Process Layer — TripsTracker.Process"]
         direction LR
-        P1["AddPlaceProcess\n(geocode → create → mark visited)\nDeletePlaceProcess\n(delete → unset IsVisited if last place)"]
+        P1["PlacesProcess\nAddAsync (geocode → create → mark visited)\nDeleteAsync (delete → manage IsVisited/IsHome)"]
         P2["IQueryable composition\nacross Business classes\nTransactionScope(Required)"]
     end
 
     subgraph INTEGRATION["🌐 Integration — TripsTracker.Integration"]
         direction LR
-        G1["NominatimGeocodingService\n: INominatimService\nGeocodeAsync(city, countryCode)"]
+        G1["NominatimGeocodingService\n: INominatimService\nGeocodeAsync(city, countryCode) → Nominatim\nSuggestCitiesAsync(query, country) → Photon API\n(photon.komoot.io — prefix autocomplete)"]
         G2["HttpClient (named)\nNominatimOptions\n(BaseUrl · UserAgent · Timeout)"]
     end
 
@@ -59,7 +59,7 @@ flowchart TB
     end
 
     subgraph DOMAIN["📦 Domain — TripsTracker.Domain"]
-        D0["Projection DTOs\nPlaceDto · CountryDto\nVisitedStateDto · GeocodingResult\nAddPlaceDto · CreatePlaceDto\nDeletePlaceResult"]
+        D0["Projection DTOs\nPlaceDto · CountryDto\nVisitedStateDto · GeocodingResult\nAddPlaceDto · CreatePlaceDto\nDeletePlaceResult · CitySuggestion"]
     end
 
     subgraph TOOLS["🔧 Tools — TripsTracker.Tools"]
@@ -69,7 +69,7 @@ flowchart TB
     end
 
     subgraph TESTS["🧪 Tests — TripsTracker.Tests"]
-        TS1["72+ MSTests\nSQLite in-memory for bulk ops\nReal SQL Server for integration\n(transaction rollback isolation)"]
+        TS1["84+ MSTests\nSQLite in-memory for bulk ops\nReal SQL Server for integration\n(transaction rollback isolation)"]
     end
 
     ENTRY -->|"calls via interfaces"| PROCESS
@@ -99,7 +99,7 @@ flowchart TB
     <div class="legend-item">DbContext registered as Scoped — one per Function invocation; enables IQueryable composition + safe sequential writes</div>
     <div class="legend-item">Base classes (BusinessBase / CrudBase / QueryBase) live in Data project — Business references Data for inheritance. TDomain generic removed; projection is Business responsibility.</div>
     <div class="legend-item">Process layer never references Data or Integration directly — composes Business interfaces only</div>
-    <div class="legend-item">Integration layer holds all external HTTP calls. NominatimGeocodingService is wrapped by GeocodingBusiness (Business layer). Process calls IGeocodingBusiness, never INominatimService directly.</div>
+    <div class="legend-item">Integration layer holds all external HTTP calls. NominatimGeocodingService uses two APIs: Nominatim for geocoding (GeocodeAsync) and Photon (photon.komoot.io) for prefix autocomplete (SuggestCitiesAsync). Wrapped by GeocodingBusiness — Process calls IGeocodingBusiness, never INominatimService directly.</div>
     <div class="legend-item">VisitedStates is a SQL VIEW — no entity class, no write API. VisitedStateBusiness reads it via a raw SQL query projection.</div>
   </div>
 </div>
