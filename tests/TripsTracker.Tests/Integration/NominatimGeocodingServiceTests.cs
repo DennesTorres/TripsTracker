@@ -67,23 +67,40 @@ public class NominatimGeocodingServiceTests
     }
 
     [TestMethod]
-    public async Task SuggestCitiesAsync_PartialPrefix_ReturnsCityWithFullName()
+    public async Task GeocodeAsync_Itacuruca_ReturnsPhotonCanonicalNameWithCoordinates()
     {
-        // Regression: "Pinda" (prefix of "Pindamonhangaba") must return a result
-        // without requiring the full name to be typed.
+        // Regression: Nominatim uses the spelling "Itacurussa" while Photon uses "Itacuruça".
+        // With Photon as primary geocoder the result must use Photon's canonical spelling
+        // and carry valid coordinates — this is the city-name mismatch that previously
+        // caused Add Place to fail when the user selected "Itacuruça" from autocomplete.
         var sut = BuildService();
 
-        var results = await sut.SuggestCitiesAsync("Pinda", limit: 5);
+        var result = await sut.GeocodeAsync("Itacuruça", "BR");
 
-        Assert.IsTrue(
-            results.Any(r => r.City.Equals("Pindamonhangaba", StringComparison.OrdinalIgnoreCase)),
-            $"Expected 'Pindamonhangaba' in suggestions. Got: [{string.Join(", ", results.Select(r => $"{r.City} ({r.CountryIsoAlpha2})"))}]");
+        Assert.IsNotNull(result, "Itacuruça must be found via Photon despite Nominatim spelling difference");
+        Assert.IsTrue(result.Lat != 0 && result.Lon != 0, "Coordinates must be populated");
+        Assert.IsTrue(result.City.Equals("Itacuruça", StringComparison.OrdinalIgnoreCase),
+            $"City name must match Photon canonical spelling. Got: {result.City}");
+        Assert.IsTrue(result.CountryIsoAlpha2.Equals("BR", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task GeocodeAsync_SaoPaulo_PopulatesStateAbbr()
+    {
+        // Nominatim is still called for StateAbbr — verify it is populated for cities with known state codes.
+        var sut = BuildService();
+
+        var result = await sut.GeocodeAsync("São Paulo", "BR");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("SP", result.StateAbbr,
+            $"StateAbbr must be populated from Nominatim. Got: {result.StateAbbr}");
     }
 
     [TestMethod]
     public async Task SuggestCitiesAsync_PartialPrefixWithCountry_ReturnsCityWithFullName()
     {
-        // Same regression with country filter applied.
+        // Regression: "Pinda" (prefix of "Pindamonhangaba") must return a result with country filter applied.
         var sut = BuildService();
 
         var results = await sut.SuggestCitiesAsync("Pinda", limit: 5, countryCode: "BR");
@@ -91,25 +108,5 @@ public class NominatimGeocodingServiceTests
         Assert.IsTrue(
             results.Any(r => r.City.Equals("Pindamonhangaba", StringComparison.OrdinalIgnoreCase)),
             $"Expected 'Pindamonhangaba' in suggestions (BR filter). Got: [{string.Join(", ", results.Select(r => $"{r.City} ({r.CountryIsoAlpha2})"))}]");
-    }
-
-    [TestMethod]
-    public async Task SuggestCitiesAsync_ReturnsCoordinatesForEachSuggestion()
-    {
-        // Regression: suggestions must carry Lat/Lon from Photon GeoJSON geometry so
-        // PlacesProcess can skip Nominatim re-geocoding when the user selects one.
-        // If geometry reading is broken, Lat/Lon are null and the bypass never fires.
-        var sut = BuildService();
-
-        var results = await sut.SuggestCitiesAsync("São Paulo", limit: 5, countryCode: "BR");
-
-        Assert.IsNotEmpty(results, "Expected at least one suggestion for 'São Paulo'");
-        foreach (var r in results)
-        {
-            Assert.IsNotNull(r.Lat,  $"Lat must not be null for suggestion '{r.City}'");
-            Assert.IsNotNull(r.Lon,  $"Lon must not be null for suggestion '{r.City}'");
-            Assert.IsTrue(r.Lat >= -90  && r.Lat <= 90,  $"Lat {r.Lat} out of range for '{r.City}'");
-            Assert.IsTrue(r.Lon >= -180 && r.Lon <= 180, $"Lon {r.Lon} out of range for '{r.City}'");
-        }
     }
 }

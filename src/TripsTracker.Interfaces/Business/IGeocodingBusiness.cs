@@ -5,9 +5,9 @@ namespace TripsTracker.Interfaces.Business;
 public interface IGeocodingBusiness
 {
     /// <summary>
-    /// Geocodes a city name using Nominatim, validates the result matches the requested city,
-    /// and returns the geocoding result. Throws BusinessRuleException if geocoding fails or
-    /// returns a city that doesn't match the requested city name.
+    /// Geocodes a city name using Photon as primary (for coordinates and city name) and
+    /// Nominatim as secondary (for StateAbbr only). Throws BusinessRuleException if the
+    /// city is not found.
     /// </summary>
     Task<GeocodingResult> GeocodeAsync(string cityName, CountryDto country, CancellationToken ct = default);
 
