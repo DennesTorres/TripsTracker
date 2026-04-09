@@ -378,11 +378,23 @@
         <div class="step-row">
           <div class="step-num" style="background:#79c0ff; color:#0f1117">3</div>
           <div class="step-body">
-            <div class="step-who">PlacesProcess.AddAsync — coordinate resolution <span class="layer-tag">Process</span></div>
+            <div class="step-who">PlacesProcess.AddAsync — country lookup + geocoding <span class="layer-tag">Process</span></div>
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body"><span class="call-arrow">→</span> <code>GeocodingBusiness.GeocodeAsync(cityName, countryCode)</code></span>
+                <span class="call-body"><span class="call-arrow">→</span> <code>CountryBusiness.GetByIsoAlpha2Async(countryIsoAlpha2)</code></span>
+              </div>
+              <div class="call">
+                <span class="call-prefix">   </span>
+                <span class="call-body cond">Countries are pre-seeded (195 rows) — lookup always succeeds for a valid ISO code. No creation.</span>
+              </div>
+              <div class="call">
+                <span class="call-prefix">   </span>
+                <span class="call-body"><span class="call-ret">←</span> <code>countryDto</code> (includes <code>countryId</code>)</span>
+              </div>
+              <div class="call" style="margin-top:8px">
+                <span class="call-prefix">   </span>
+                <span class="call-body"><span class="call-arrow">→</span> <code>GeocodingBusiness.GeocodeAsync(cityName, countryDto)</code></span>
               </div>
               <div class="call">
                 <span class="call-prefix">   </span>
@@ -402,7 +414,7 @@
               </div>
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body skip">⚠ geocoding strategy under revision — Nominatim/Photon canonical name mismatch being addressed in story #146</span>
+                <span class="call-body skip">⚠ geocoding strategy under revision for Nominatim/Photon name mismatch — story #146</span>
               </div>
             </div>
           </div>
@@ -411,19 +423,15 @@
         <div class="step-row">
           <div class="step-num" style="background:#58a6ff; color:#fff">4</div>
           <div class="step-body">
-            <div class="step-who">PlacesProcess.AddAsync — persistence <span class="layer-tag">Process</span></div>
+            <div class="step-who">PlacesProcess.AddAsync — two Business calls <span class="layer-tag">Process</span></div>
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body"><span class="call-arrow">→</span> <code>PlaceBusiness.CreateAsync(place)</code></span>
+                <span class="call-body"><span class="call-arrow">→</span> <code>PlaceBusiness.CreateAsync(place)</code> — persists the new place</span>
               </div>
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body"><span class="call-arrow">→</span> <code>CountryBusiness.SetVisitedAsync(countryId, true)</code></span>
-              </div>
-              <div class="call">
-                <span class="call-prefix">   </span>
-                <span class="call-body cond">SetVisited encapsulates the existence/state check — Process does not pre-check IsVisited</span>
+                <span class="call-body"><span class="call-arrow">→</span> <code>CountryBusiness.SetVisitedAsync(countryId, true)</code> — always called; Business checks internally</span>
               </div>
             </div>
           </div>
@@ -432,19 +440,32 @@
         <div class="step-row">
           <div class="step-num" style="background:#58a6ff; color:#fff">5</div>
           <div class="step-body">
-            <div class="step-who">PlaceBusiness / CountryBusiness <span class="layer-tag">Business</span></div>
+            <div class="step-who">PlaceBusiness <span class="layer-tag">Business</span></div>
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
                 <span class="call-body"><span class="call-arrow">→</span> <code>INSERT INTO Places</code> (EF Core)</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-row">
+          <div class="step-num" style="background:#58a6ff; color:#fff">4b</div>
+          <div class="step-body">
+            <div class="step-who">CountryBusiness.SetVisitedAsync <span class="layer-tag">Business</span></div>
+            <div class="step-calls">
+              <div class="call">
+                <span class="call-prefix">├─ </span>
+                <span class="call-body cond">if country already visited: no-op</span>
+              </div>
               <div class="call">
                 <span class="call-prefix">└─ </span>
-                <span class="call-body cond">if SetVisited called:</span>
+                <span class="call-body cond">if not yet visited:</span>
               </div>
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body"><span class="call-arrow">→</span> <code>UPDATE Countries SET IsVisited = 1</code> (ExecuteUpdateAsync)</span>
+                <span class="call-body"><span class="call-arrow">→</span> <code>UPDATE Countries SET IsVisited = 1 WHERE Id = @id</code> (ExecuteUpdateAsync)</span>
               </div>
             </div>
           </div>
@@ -675,6 +696,10 @@
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
+                <span class="call-body cond">Purpose: map pins — Lat/Lon position each visited city on the globe</span>
+              </div>
+              <div class="call">
+                <span class="call-prefix">   </span>
                 <span class="call-body"><span class="call-arrow">→</span> <code>PlaceBusiness.GetAllAsync()</code></span>
               </div>
               <div class="call">
@@ -696,6 +721,10 @@
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
+                <span class="call-body cond">Purpose: country colouring — IsVisited/IsHome determine map fill colour per country</span>
+              </div>
+              <div class="call">
+                <span class="call-prefix">   </span>
                 <span class="call-body"><span class="call-arrow">→</span> <code>CountryBusiness.GetAllAsync()</code></span>
               </div>
               <div class="call">
@@ -711,6 +740,10 @@
           <div class="step-body">
             <div class="step-who">GET /api/visited-states → <code>VisitedStateDto[]</code> <span class="layer-tag">WorldMap</span></div>
             <div class="step-calls">
+              <div class="call">
+                <span class="call-prefix">   </span>
+                <span class="call-body cond">Purpose: state shading — StateAbbr/CountryId identify which sub-national regions to shade on the map</span>
+              </div>
               <div class="call">
                 <span class="call-prefix">   </span>
                 <span class="call-body"><span class="call-arrow">→</span> <code>VisitedStateBusiness.GetAllAsync()</code></span>
@@ -773,7 +806,7 @@
             </div>
             <div class="call">
               <span class="call-prefix">   </span>
-              <span class="call-body cond">value=true: clears all other home flags, sets this country IsHome=1 + IsVisited=1</span>
+              <span class="call-body cond">value=true: clears all other home flags, sets this country IsHome=1 (IsVisited unchanged — derived from Places)</span>
             </div>
             <div class="call">
               <span class="call-prefix">   </span>
