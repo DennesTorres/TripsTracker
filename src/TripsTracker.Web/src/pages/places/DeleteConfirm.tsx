@@ -1,4 +1,5 @@
 import type { Place } from '@/types';
+import Modal from '@/components/ui/Modal';
 import styles from './DeleteConfirm.module.scss';
 
 interface Props {
@@ -9,9 +10,8 @@ interface Props {
 
 export default function DeleteConfirm({ place, onConfirm, onCancel }: Props) {
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
-        <h3>Delete place</h3>
+    <Modal title="Delete place" onClose={onCancel} width={380}>
+      <div className={styles.content}>
         <p>
           Delete <strong>{place.countryFlag} {place.city}</strong> ({place.countryName})?
           This cannot be undone.
@@ -21,6 +21,6 @@ export default function DeleteConfirm({ place, onConfirm, onCancel }: Props) {
           <button className={styles.deleteBtn} onClick={onConfirm}>Delete</button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

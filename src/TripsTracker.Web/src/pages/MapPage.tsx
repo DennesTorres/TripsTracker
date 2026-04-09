@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
+import AddPlaceForm from '@/pages/places/AddPlaceForm';
 import { usePlaces, useCountries, useVisitedStates } from '@/api/hooks';
 import styles from './MapPage.module.scss';
 
@@ -12,6 +13,7 @@ export default function MapPage() {
   const [worldGeo, setWorldGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [usGeo, setUsGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [brGeo, setBrGeo] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [adding, setAdding] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -54,10 +56,16 @@ export default function MapPage() {
             brazilStatesGeoJson={brGeo!}
           />
         )}
+        {!isLoading && !hasError && (
+          <button className={styles.addBtn} onClick={() => setAdding(true)}>
+            + Add place
+          </button>
+        )}
       </div>
       {!isLoading && (
         <StatsBar countries={countries} places={places} />
       )}
+      {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
     </div>
   );
 }
