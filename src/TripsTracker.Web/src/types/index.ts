@@ -37,6 +37,11 @@ export interface AddPlace {
   cityName: string;
   countryIsoAlpha2: string;
   isHome: boolean;
+  // Pre-resolved from Photon autocomplete selection — skips Nominatim re-geocoding when present
+  lat?: number;
+  lon?: number;
+  stateAbbr?: string;
+  stateName?: string;
 }
 
 export interface CitySuggestion {
@@ -45,6 +50,8 @@ export interface CitySuggestion {
   countryIsoAlpha2: string;
   stateName?: string;
   stateAbbr?: string;
+  lat?: number;
+  lon?: number;
 }
 
 export interface VisitedState {

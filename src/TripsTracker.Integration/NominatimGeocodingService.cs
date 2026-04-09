@@ -59,38 +59,66 @@ public class NominatimGeocodingService : INominatimService
 
     public async Task<GeocodingResult?> GeocodeAsync(string cityName, string countryIsoAlpha2Hint, CancellationToken ct = default)
     {
-        var url = $"/search?q={Uri.EscapeDataString(cityName)}&countrycodes={countryIsoAlpha2Hint.ToLowerInvariant()}&format=json&addressdetails=1&limit=1";
+        // Primary: Photon — handles diacritics and is consistent with autocomplete city names
+        var photon = await GeocodeWithPhotonAsync(cityName, countryIsoAlpha2Hint, ct);
+        if (photon is null) return null;
 
-        var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
-        if (results is null or { Length: 0 })
-            return null;
+        // Secondary: Nominatim — used only to retrieve StateAbbr (state_code / ISO3166-2-lvl4).
+        // Photon has no state abbreviation field. Failure here is non-fatal — StateAbbr stays null.
+        var stateAbbr = await GetStateAbbrFromNominatimAsync(cityName, countryIsoAlpha2Hint, ct);
 
-        var r = results[0];
-        var address = r.Address;
-
-        var city = address?.City
-            ?? address?.Town
-            ?? address?.Village
-            ?? address?.Municipality
-            ?? cityName;
-
-        var rawState = address?.StateCode ?? address?.Iso3166Lvl4;
-        var stateAbbr = rawState?.ToUpperInvariant() is { } s
-            ? (s.Contains('-') ? s[(s.IndexOf('-') + 1)..] : s)
-            : null;
-        var stateName = address?.State;
-        var countryCode = address?.CountryCode?.ToUpperInvariant() ?? countryIsoAlpha2Hint.ToUpperInvariant();
-
-        return new GeocodingResult(
-            Lat: double.Parse(r.Lat, System.Globalization.CultureInfo.InvariantCulture),
-            Lon: double.Parse(r.Lon, System.Globalization.CultureInfo.InvariantCulture),
-            City: city,
-            StateAbbr: stateAbbr,
-            StateName: stateName,
-            CountryIsoAlpha2: countryCode);
+        return photon with { StateAbbr = stateAbbr };
     }
 
-    // ─── Nominatim response models (GeocodeAsync) ────────────────────────────
+    private async Task<GeocodingResult?> GeocodeWithPhotonAsync(string cityName, string countryIsoAlpha2Hint, CancellationToken ct)
+    {
+        var url = $"{PhotonBaseUrl}/api/?q={Uri.EscapeDataString(cityName)}&lang=en&limit=10";
+        var response = await _http.GetFromJsonAsync<PhotonFeatureCollection>(url, ct);
+        if (response?.Features is null or { Length: 0 }) return null;
+
+        var normalizedCountry = countryIsoAlpha2Hint.ToUpperInvariant();
+        var match = response.Features.FirstOrDefault(f =>
+        {
+            var props = f.Properties;
+            if (props?.Name is null || props.CountryCode is null) return false;
+            if (!CityTypes.Contains(props.OsmValue ?? "")) return false;
+            if (!string.IsNullOrWhiteSpace(normalizedCountry) &&
+                !props.CountryCode.Equals(normalizedCountry, StringComparison.OrdinalIgnoreCase)) return false;
+            return true;
+        });
+
+        if (match?.Geometry?.Coordinates is not { Length: >= 2 } coords) return null;
+
+        var props2 = match.Properties!;
+        return new GeocodingResult(
+            Lat: coords[1],
+            Lon: coords[0],
+            City: props2.Name!,
+            StateAbbr: null,
+            StateName: props2.State,
+            CountryIsoAlpha2: props2.CountryCode!.ToUpperInvariant());
+    }
+
+    private async Task<string?> GetStateAbbrFromNominatimAsync(string cityName, string countryIsoAlpha2Hint, CancellationToken ct)
+    {
+        try
+        {
+            var url = $"/search?q={Uri.EscapeDataString(cityName)}&countrycodes={countryIsoAlpha2Hint.ToLowerInvariant()}&format=json&addressdetails=1&limit=1";
+            var results = await _http.GetFromJsonAsync<NominatimResult[]>(url, ct);
+            if (results is null or { Length: 0 }) return null;
+
+            var address = results[0].Address;
+            var rawState = address?.StateCode ?? address?.Iso3166Lvl4;
+            if (rawState?.ToUpperInvariant() is not { } s) return null;
+            return s.Contains('-') ? s[(s.IndexOf('-') + 1)..] : s;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // ─── Nominatim response models (GetStateAbbrFromNominatimAsync) ──────────
 
     private sealed class NominatimResult
     {
@@ -115,7 +143,7 @@ public class NominatimGeocodingService : INominatimService
         [JsonPropertyName("country_code")]      public string? CountryCode  { get; set; }
     }
 
-    // ─── Photon response models (SuggestCitiesAsync) ──────────────────────────
+    // ─── Photon response models (SuggestCitiesAsync / GeocodeWithPhotonAsync) ─
 
     private sealed class PhotonFeatureCollection
     {
@@ -125,6 +153,13 @@ public class NominatimGeocodingService : INominatimService
     private sealed class PhotonFeature
     {
         [JsonPropertyName("properties")] public PhotonProperties? Properties { get; set; }
+        [JsonPropertyName("geometry")]   public PhotonGeometry?   Geometry   { get; set; }
+    }
+
+    private sealed class PhotonGeometry
+    {
+        // GeoJSON point geometry: coordinates[0] = longitude, coordinates[1] = latitude
+        [JsonPropertyName("coordinates")] public double[]? Coordinates { get; set; }
     }
 
     private sealed class PhotonProperties

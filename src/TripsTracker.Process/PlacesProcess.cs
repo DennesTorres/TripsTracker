@@ -31,7 +31,7 @@ public class PlacesProcess : IPlacesProcess
 
         if (dto.IsHome)
             await _countries.SetHomeAsync(country.Id, true, ct);
-        else if (!country.IsVisited)
+        else
             await _countries.SetVisitedAsync(country.Id, true, ct);
 
         return place;

@@ -20,26 +20,10 @@ public class GeocodingBusiness : IGeocodingBusiness
     public async Task<GeocodingResult> GeocodeAsync(string cityName, CountryDto country, CancellationToken ct = default)
     {
         var result = await _nominatim.GeocodeAsync(cityName, country.IsoAlpha2, ct);
-
-        if (result is not null)
-        {
-            var inputWords = cityName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var cityMatches = inputWords.Any(w => result.City.Contains(w, StringComparison.OrdinalIgnoreCase));
-            if (cityMatches) return result;
-        }
-
-        // Geocoding failed or returned an unrelated city.
-        // Use a short prefix (≤5 chars) so suggestions tolerate diacritics and spelling differences.
-        // e.g. "Itacuruça" → prefix "Itacu" → finds "Itacurussá" in Brazil.
-        var prefix = cityName.Length > 5 ? cityName[..5] : cityName;
-        var suggestions = await _nominatim.SuggestCitiesAsync(prefix, limit: 5, countryCode: country.IsoAlpha2, ct: ct);
-        var inCountry = suggestions.FirstOrDefault();
-
-        if (inCountry is not null)
-            throw new GeocodingMismatchException(cityName, inCountry.City, country.Name);
-
-        throw new BusinessRuleException(
-            $"No city matching '{cityName}' found in {country.Name}. Try a different city name.",
-            "GEOCODING_FAILED");
+        if (result is null)
+            throw new BusinessRuleException(
+                $"No city matching '{cityName}' found in {country.Name}. Try a different city name.",
+                "GEOCODING_FAILED");
+        return result;
     }
 }
