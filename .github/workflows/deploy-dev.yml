@@ -13,6 +13,8 @@ env:
   AZURE_LOCATION: uksouth
   ENV: dev
   UNIQUE_SUFFIX: ttk
+  SQL_SERVER: sql-tripstracker-dev-ttk.database.windows.net
+  SQL_DATABASE: TripsTracker
   FUNCTION_APP_NAME: func-tripstracker-dev-ttk
   FUNCTION_APP_URL: https://func-tripstracker-dev-ttk.azurewebsites.net/api
 
@@ -29,6 +31,8 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      # ── Infra ────────────────────────────────────────────────────────────────
+
       - name: Create resource group (idempotent)
         run: |
           az group create             --name $AZURE_RG             --location $AZURE_LOCATION             --tags environment=dev project=tripstracker
@@ -40,10 +44,28 @@ jobs:
           swa_token=$(echo "$output" | jq -r '.staticWebAppDeploymentToken.value')
           echo "swa_token=$swa_token" >> $GITHUB_OUTPUT
 
+      # ── Database: access grants + migrations ─────────────────────────────────
+
+      - name: Install go-sqlcmd
+        run: |
+          curl -sSfL https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2             | sudo tar -C /usr/local/bin -xj
+          sqlcmd version
+
+      - name: Setup SQL access (idempotent)
+        run: |
+          sqlcmd             -S $SQL_SERVER             -d $SQL_DATABASE             --authentication-method ActiveDirectoryDefault             -v FunctionAppName="$FUNCTION_APP_NAME"             -i infra/sql/setup.sql
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
+
+      - name: Run EF Core migrations
+        run: |
+          dotnet tool install --global dotnet-ef
+          dotnet ef database update             --project src/TripsTracker.Data/TripsTracker.Data.csproj             --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
+
+      # ── Backend — Azure Functions ─────────────────────────────────────────────
 
       - name: Publish Functions
         run: |
@@ -54,6 +76,8 @@ jobs:
         with:
           app-name: ${{ env.FUNCTION_APP_NAME }}
           package: ./publish/functions
+
+      # ── Frontend — Static Web App ─────────────────────────────────────────────
 
       - name: Setup Node
         uses: actions/setup-node@v4
