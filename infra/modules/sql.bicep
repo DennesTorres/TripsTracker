@@ -16,8 +16,8 @@ param sqlEntraAdminDisplayName string
 @description('Resource ID of the Log Analytics workspace for diagnostics')
 param logAnalyticsWorkspaceId string
 
-@description('Resource ID of the Function App managed identity for database role assignment')
-param functionAppPrincipalId string
+// Note: managed identity database role assignment (db_datareader/db_datawriter/db_ddladmin)
+// must be done via T-SQL post-deployment — see issue #145. Bicep cannot execute T-SQL.
 
 var serverName = 'sql-tripstracker-${env}-${uniqueSuffix}'
 var databaseName = 'TripsTracker'
