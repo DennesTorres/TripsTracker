@@ -19,6 +19,9 @@ param logAnalyticsWorkspaceId string
 @description('User-Agent header for Nominatim geocoding API requests')
 param nominatimUserAgent string
 
+@description('Static Web App origin for CORS (https://{name}.azurestaticapps.net)')
+param swaOrigin string
+
 var storageAccountName = 'sttripstracker${env}${uniqueSuffix}'
 var appServicePlanName = 'asp-tripstracker-${env}'
 var functionAppName = 'func-tripstracker-${env}-${uniqueSuffix}'
@@ -89,8 +92,7 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       netFrameworkVersion: 'v10.0'
       use32BitWorkerProcess: false
       cors: {
-        // SWA origin added after provisioning — placeholder updated per environment
-        allowedOrigins: ['https://stapp-tripstracker-${env}-${uniqueSuffix}.azurestaticapps.net']
+        allowedOrigins: [swaOrigin]
       }
       appSettings: [
         {
