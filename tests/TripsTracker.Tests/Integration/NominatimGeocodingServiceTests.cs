@@ -98,6 +98,19 @@ public class NominatimGeocodingServiceTests
     }
 
     [TestMethod]
+    public async Task GeocodeAsync_Gdansk_PopulatesStateAbbr()
+    {
+        // Poland uses numeric ISO 3166-2 codes (e.g. "22" for Pomeranian Voivodeship).
+        // StateAbbr may be numeric — that is correct ISO data. Verify it is populated.
+        var sut = BuildService();
+
+        var result = await sut.GeocodeAsync("Gdansk", "PL");
+
+        Assert.IsNotNull(result);
+        Assert.IsNotNull(result.StateAbbr, "StateAbbr must be populated for Gdansk");
+    }
+
+    [TestMethod]
     public async Task SuggestCitiesAsync_PartialPrefixWithCountry_ReturnsCityWithFullName()
     {
         // Regression: "Pinda" (prefix of "Pindamonhangaba") must return a result with country filter applied.

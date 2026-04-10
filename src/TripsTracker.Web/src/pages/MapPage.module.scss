@@ -21,3 +21,22 @@
   color: #94a3b8;
   font-size: 16px;
 }
+
+.addBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 7px 16px;
+  background: #4ade80;
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 10;
+
+  &:hover {
+    background: #86efac;
+  }
+}

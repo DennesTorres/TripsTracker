@@ -1,8 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { usePlaces, useDeletePlace } from '@/api/hooks';
+import { usePlaces, useDeletePlace, useUpdatePlace } from '@/api/hooks';
 import type { Place } from '@/types';
 import AddPlaceForm from './AddPlaceForm';
-import PlaceForm from './PlaceForm';
 import DeleteConfirm from './DeleteConfirm';
 import styles from './PlacesPage.module.scss';
 
@@ -23,7 +22,6 @@ function sortPlaces(places: Place[], key: SortKey, dir: SortDir): Place[] {
 export default function PlacesPage() {
   const { data: places = [], isLoading } = usePlaces();
   const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<Place | null>(null);
   const [deleting, setDeleting] = useState<Place | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('city');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -32,6 +30,7 @@ export default function PlacesPage() {
   const [showCountryDD, setShowCountryDD] = useState(false);
   const countryDDRef = useRef<HTMLDivElement>(null);
   const deletePlace = useDeletePlace();
+  const updatePlace = useUpdatePlace();
 
   useEffect(() => {
     function onOutsideClick(e: MouseEvent) {
@@ -139,7 +138,15 @@ export default function PlacesPage() {
                 <td className={styles.coord}>{p.lat.toFixed(4)}</td>
                 <td>{p.isHome ? '✓' : ''}</td>
                 <td className={styles.actions}>
-                  <button onClick={() => setEditing(p)}>Edit</button>
+                  {!p.isHome && (
+                    <button
+                      className={styles.homeBtn}
+                      onClick={() => updatePlace.mutate({ id: p.id, dto: { city: p.city, isHome: true } })}
+                      disabled={updatePlace.isPending}
+                    >
+                      Set home
+                    </button>
+                  )}
                   <button className={styles.deleteBtn} onClick={() => setDeleting(p)}>Delete</button>
                 </td>
               </tr>
@@ -149,13 +156,6 @@ export default function PlacesPage() {
       </div>
 
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
-
-      {editing !== null && (
-        <PlaceForm
-          place={editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
 
       {deleting && (
         <DeleteConfirm

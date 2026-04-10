@@ -199,8 +199,13 @@ export default function WorldMap({
         .style('cursor', 'pointer')
         .on('mouseover', (event: MouseEvent) => {
           const p0 = c.places[0];
-          const cityLabel = (p: Place) =>
-            p.stateAbbr ? `${p.city} (${p.stateAbbr})` : p.city;
+          // Show stateAbbr only for letter-based codes (e.g. "SP", "RJ").
+          // Numeric ISO codes like Poland's "22" are not meaningful to display.
+          const cityLabel = (p: Place) => {
+            const abbr = p.stateAbbr && !/^\d+$/.test(p.stateAbbr) ? p.stateAbbr : null;
+            const state = abbr ?? (p.stateName ? p.stateName.split(' ')[0] : null);
+            return state ? `${p.city} (${state})` : p.city;
+          };
           const html = n === 1
             ? `<strong>${cityLabel(p0)}</strong><br/>${p0.countryName}`
             : `<strong>${n} places in ${p0.countryName}</strong><br/>${

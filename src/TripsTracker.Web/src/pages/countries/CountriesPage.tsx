@@ -74,11 +74,15 @@ export default function CountriesPage() {
                 <td className={styles.states}>
                   {(statesByCountry[c.id] ?? [])
                     .sort((a, b) => a.abbr.localeCompare(b.abbr))
-                    .map(s => (
-                      <span key={s.abbr} className={styles.stateTag} title={s.name ?? s.abbr}>
-                        {s.abbr}
-                      </span>
-                    ))}
+                    .map(s => {
+                      const isNumeric = /^\d+$/.test(s.abbr);
+                      const label = isNumeric && s.name ? s.name.split(' ')[0] : s.abbr;
+                      return (
+                        <span key={s.abbr} className={styles.stateTag} title={s.name ?? s.abbr}>
+                          {label}
+                        </span>
+                      );
+                    })}
                 </td>
                 <td className={styles.visited}>{c.isVisited ? '✓' : ''}</td>
                 <td>{c.isHome ? '✓' : ''}</td>

@@ -1,7 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
-import { useCreatePlace, useCountries, useCitySuggestions } from '@/api/hooks';
+import { useCreatePlace, useCountries } from '@/api/hooks';
 import type { CitySuggestion } from '@/types';
+import Modal from '@/components/ui/Modal';
+import CountryCombobox from '@/components/ui/CountryCombobox';
+import CityAutocomplete from '@/components/ui/CityAutocomplete';
+import FormCheckbox from '@/components/ui/FormCheckbox';
 import styles from './AddPlaceForm.module.scss';
 
 interface Props {
@@ -19,39 +23,27 @@ export default function AddPlaceForm({ onClose }: Props) {
   const create = useCreatePlace();
   const [countryIsoAlpha2, setCountryIsoAlpha2] = useState('');
   const [cityName, setCityName] = useState('');
+  const [selectedStateName, setSelectedStateName] = useState<string | undefined>();
   const [isHome, setIsHome] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<MismatchSuggestion | null>(null);
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: citySuggestions = [] } = useCitySuggestions(debouncedQuery, countryIsoAlpha2);
-
-  // Debounce city input for suggestions
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(cityName), 300);
-    return () => clearTimeout(t);
-  }, [cityName]);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    function onOutsideClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setShowDropdown(false);
-    }
-    document.addEventListener('mousedown', onOutsideClick);
-    return () => document.removeEventListener('mousedown', onOutsideClick);
-  }, []);
-
-  function selectCitySuggestion(s: CitySuggestion) {
+  function handleCitySelect(s: CitySuggestion) {
     setCityName(s.city);
     setCountryIsoAlpha2(s.countryIsoAlpha2);
-    setShowDropdown(false);
+    setSelectedStateName(s.stateName ?? undefined);
     setError(null);
   }
 
-  const sorted = [...countries].sort((a, b) => a.name.localeCompare(b.name));
+  function handleCityChange(value: string) {
+    setCityName(value);
+    if (selectedStateName) setSelectedStateName(undefined);
+  }
+
+  function handleCountryChange(isoAlpha2: string) {
+    setCountryIsoAlpha2(isoAlpha2);
+    setSelectedStateName(undefined);
+  }
 
   function submitCity(city: string, country: string, home: boolean) {
     setError(null);
@@ -85,98 +77,67 @@ export default function AddPlaceForm({ onClose }: Props) {
   };
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
-        <div className={styles.header}>
-          <h3>Add place</h3>
-          <button className={styles.close} onClick={onClose}>×</button>
-        </div>
+    <Modal title="Add place" onClose={onClose}>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.fieldLabel}>
+          Country
+          <CountryCombobox
+            countries={countries}
+            value={countryIsoAlpha2}
+            onChange={handleCountryChange}
+            required
+          />
+        </label>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label>
-            Country
-            <select
-              value={countryIsoAlpha2}
-              onChange={e => setCountryIsoAlpha2(e.target.value)}
-              required
-            >
-              <option value="">— select a country —</option>
-              {sorted.map(c => (
-                <option key={c.isoAlpha2} value={c.isoAlpha2}>
-                  {c.flag} {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        <label className={styles.fieldLabel}>
+          City
+          <CityAutocomplete
+            value={cityName}
+            onChange={handleCityChange}
+            countryCode={countryIsoAlpha2}
+            onSelect={handleCitySelect}
+            selectedStateName={selectedStateName}
+            required
+          />
+        </label>
 
-          <label>
-            City
-            <div className={styles.cityInputWrap} ref={dropdownRef}>
-              <input
-                type="text"
-                value={cityName}
-                onChange={e => { setCityName(e.target.value); setShowDropdown(true); }}
-                onFocus={() => setShowDropdown(true)}
-                placeholder="e.g. São Paulo"
-                required
-                autoComplete="off"
-              />
-              {showDropdown && citySuggestions.length > 0 && (
-                <ul className={styles.suggestList}>
-                  {citySuggestions.map((s, i) => (
-                    <li key={i} onMouseDown={() => selectCitySuggestion(s)}>
-                      <span className={styles.suggestCity}>{s.city}</span>
-                      <span className={styles.suggestMeta}>
-                        {s.stateName ? `${s.stateName}, ` : ''}{s.countryName}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </label>
+        <FormCheckbox
+          label="Home location"
+          checked={isHome}
+          onChange={setIsHome}
+        />
 
-          <label className={styles.checkLabel}>
-            <input
-              type="checkbox"
-              checked={isHome}
-              onChange={e => setIsHome(e.target.checked)}
-            />
-            Home location
-          </label>
+        {error && <p className={styles.error}>{error}</p>}
 
-          {error && <p className={styles.error}>{error}</p>}
-
-          {suggestion && (
-            <div className={styles.suggestion}>
-              <p>
-                <strong>'{cityName}'</strong> was not found, but <strong>'{suggestion.suggestedCity}'</strong> was.
-                Use this name instead?
-              </p>
-              <div className={styles.suggestionActions}>
-                <button type="button" onClick={() => setSuggestion(null)}>Cancel</button>
-                <button
-                  type="button"
-                  className={styles.saveBtn}
-                  onClick={() => submitCity(suggestion.suggestedCity, suggestion.countryIsoAlpha2, suggestion.isHome)}
-                  disabled={create.isPending}
-                >
-                  {create.isPending ? 'Adding…' : `Add '${suggestion.suggestedCity}'`}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {!suggestion && (
-            <div className={styles.actions}>
-              <button type="button" onClick={onClose}>Cancel</button>
-              <button type="submit" className={styles.saveBtn} disabled={create.isPending}>
-                {create.isPending ? 'Geocoding…' : 'Add place'}
+        {suggestion && (
+          <div className={styles.suggestion}>
+            <p>
+              <strong>'{cityName}'</strong> was not found, but <strong>'{suggestion.suggestedCity}'</strong> was.
+              Use this name instead?
+            </p>
+            <div className={styles.suggestionActions}>
+              <button type="button" onClick={() => setSuggestion(null)}>Cancel</button>
+              <button
+                type="button"
+                className={styles.saveBtn}
+                onClick={() => submitCity(suggestion.suggestedCity, suggestion.countryIsoAlpha2, suggestion.isHome)}
+                disabled={create.isPending}
+              >
+                {create.isPending ? 'Adding…' : `Add '${suggestion.suggestedCity}'`}
               </button>
             </div>
-          )}
-        </form>
-      </div>
-    </div>
+          </div>
+        )}
+
+        {!suggestion && (
+          <div className={styles.actions}>
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button type="submit" className={styles.saveBtn} disabled={create.isPending}>
+              {create.isPending ? 'Geocoding…' : 'Add place'}
+            </button>
+          </div>
+        )}
+      </form>
+    </Modal>
   );
 }
