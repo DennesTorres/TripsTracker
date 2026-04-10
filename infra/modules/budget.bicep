@@ -4,6 +4,9 @@ param env string
 @description('Monthly budget limit in USD')
 param monthlyBudgetUsd int
 
+@description('Budget start date (first day of a month, yyyy-MM-dd). Defaults to current month.')
+param startDate string = '${substring(utcNow('yyyy-MM-dd'), 0, 7)}-01'
+
 // Budget alerts are resource-group scoped.
 // Alerts at 80% (forecast) and 100% (actual) of monthly spend.
 var budgetName = 'budget-tripstracker-${env}'
@@ -15,12 +18,9 @@ resource budget 'Microsoft.Consumption/budgets@2023-11-01' = {
     amount: monthlyBudgetUsd
     timeGrain: 'Monthly'
     timePeriod: {
-      // Start on the first of the current month; no end date
-      startDate: '${substring(utcNow('yyyy-MM-dd'), 0, 7)}-01'
+      startDate: startDate
     }
-    filter: {
-      // Scope to this resource group only
-    }
+    filter: {}
     notifications: {
       forecastedAt80: {
         enabled: true
