@@ -1,4 +1,4 @@
-name: Deploy — Development
+name: Deploy — DEV
 
 on:
   push:
@@ -9,63 +9,73 @@ permissions:
   contents: read
 
 env:
-  DOTNET_VERSION: '10.x'
-  NODE_VERSION: '22.x'
-  FUNCTIONS_PROJECT: src/TripsTracker.Functions/TripsTracker.Functions.csproj
-  PUBLISH_DIR: ./publish/functions
+  AZURE_RG: rg-tripstracker-dev
+  AZURE_LOCATION: uksouth
+  ENV: dev
+  UNIQUE_SUFFIX: ttk
+  FUNCTION_APP_NAME: func-tripstracker-dev-ttk
+  FUNCTION_APP_URL: https://func-tripstracker-dev-ttk.azurewebsites.net/api
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Provision + Deploy
     runs-on: ubuntu-latest
-    environment: dev
 
     steps:
       - uses: actions/checkout@v4
 
-      # ── Azure Login (OIDC) ──────────────────────────────────────────────────
-      - name: Azure Login
+      - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # ── Backend: Build & Deploy Azure Functions ──────────────────────────────
+      - name: Create resource group (idempotent)
+        run: |
+          az group create             --name $AZURE_RG             --location $AZURE_LOCATION             --tags environment=dev project=tripstracker
+
+      - name: Deploy Bicep (incremental — idempotent)
+        id: bicep
+        run: |
+          output=$(az deployment group create             --resource-group $AZURE_RG             --template-file infra/main.bicep             --parameters infra/dev.parameters.json             --mode Incremental             --query properties.outputs             --output json)
+          swa_token=$(echo "$output" | jq -r '.staticWebAppDeploymentToken.value')
+          echo "swa_token=$swa_token" >> $GITHUB_OUTPUT
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: '10.x'
 
-      - name: Build Functions
-        run: dotnet publish ${{ env.FUNCTIONS_PROJECT }} -c Release -o ${{ env.PUBLISH_DIR }}
+      - name: Publish Functions
+        run: |
+          dotnet publish src/TripsTracker.Functions/TripsTracker.Functions.csproj             --configuration Release             --output ./publish/functions
 
-      - name: Deploy Azure Functions
-        uses: azure/functions-action@v1
+      - name: Deploy Functions
+        uses: Azure/functions-action@v1
         with:
-          app-name: ${{ secrets.AZURE_FUNCTION_APP_NAME }}
-          package: ${{ env.PUBLISH_DIR }}
+          app-name: ${{ env.FUNCTION_APP_NAME }}
+          package: ./publish/functions
 
-      # ── Frontend: Build & Deploy Static Web App ──────────────────────────────
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: src/TripsTracker.Web/package-lock.json
 
-      - name: Install & Build Frontend
+      - name: Build frontend
         working-directory: src/TripsTracker.Web
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: |
           npm ci
           npm run build
+        env:
+          VITE_API_BASE_URL: ${{ env.FUNCTION_APP_URL }}
 
       - name: Deploy Static Web App
-        uses: azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+          azure_static_web_apps_api_token: ${{ steps.bicep.outputs.swa_token }}
           action: upload
-          app_location: src/TripsTracker.Web
-          output_location: dist
+          app_location: src/TripsTracker.Web/dist
           skip_app_build: true
