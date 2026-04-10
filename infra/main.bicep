@@ -29,13 +29,18 @@ param nominatimUserAgent string
 @description('Monthly budget limit in USD for Azure Cost Alerts (0 = disabled)')
 param monthlyBudgetUsd int = 20
 
-// ── Computed variables — break circular dependency between Functions and SQL ──
+@description('Azure region for Static Web App (must be one of: westus2, centralus, eastus2, westeurope, eastasia)')
+param swaLocation string = 'westeurope'
+
+// ── Computed variables — break circular dependencies ──
 // Azure SQL FQDN is predictable: {serverName}.database.windows.net
-// Computing it here avoids Functions depending on SQL outputs while SQL depends
-// on Functions outputs (managed identity principal ID).
+// SWA origin is predictable: https://{name}.azurestaticapps.net
+// Computing both here avoids deployment ordering constraints.
 var sqlServerName = 'sql-tripstracker-${env}-${uniqueSuffix}'
 var sqlDatabaseName = 'TripsTracker'
-var sqlServerFqdn = '${sqlServerName}.database.windows.net'
+var sqlServerFqdn = '${sqlServerName}${environment().suffixes.sqlServerHostname}'
+var swaName = 'stapp-tripstracker-${env}-${uniqueSuffix}'
+var swaOrigin = 'https://${swaName}.azurestaticapps.net'
 
 // ── Log Analytics ─────────────────────────────────────────────────────────────
 module logAnalytics 'modules/loganalytics.bicep' = {
@@ -58,11 +63,11 @@ module functions 'modules/functions.bicep' = {
     sqlDatabaseName: sqlDatabaseName
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
     nominatimUserAgent: nominatimUserAgent
+    swaOrigin: swaOrigin
   }
 }
 
 // ── Azure SQL Server + Database ───────────────────────────────────────────────
-// Depends on Functions (one-way) for the managed identity principal ID.
 module sql 'modules/sql.bicep' = {
   name: 'sql'
   params: {
@@ -72,15 +77,15 @@ module sql 'modules/sql.bicep' = {
     sqlEntraAdminObjectId: sqlEntraAdminObjectId
     sqlEntraAdminDisplayName: sqlEntraAdminDisplayName
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
-    functionAppPrincipalId: functions.outputs.functionAppPrincipalId
   }
 }
 
 // ── Azure Static Web App (React frontend) ─────────────────────────────────────
+// SWA has limited region support: westus2, centralus, eastus2, westeurope, eastasia
 module staticWebApp 'modules/staticwebapp.bicep' = {
   name: 'staticwebapp'
   params: {
-    location: location
+    location: swaLocation
     env: env
     uniqueSuffix: uniqueSuffix
   }
