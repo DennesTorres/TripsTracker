@@ -14,6 +14,7 @@ env:
   ENV: dev
   UNIQUE_SUFFIX: ttk
   SQL_SERVER: sql-tripstracker-dev-ttk.database.windows.net
+  SQL_SERVER_NAME: sql-tripstracker-dev-ttk
   SQL_DATABASE: TripsTracker
   FUNCTION_APP_NAME: func-tripstracker-dev-ttk
   FUNCTION_APP_URL: https://func-tripstracker-dev-ttk.azurewebsites.net/api
@@ -53,7 +54,18 @@ jobs:
           swa_token=$(echo "$output" | jq -r '.staticWebAppDeploymentToken.value')
           echo "swa_token=$swa_token" >> $GITHUB_OUTPUT
 
-      # ── Database: access grants + migrations ─────────────────────────────────
+      # ── Database: firewall + access grants + migrations ───────────────────────
+
+      - name: Open SQL firewall for GitHub runner
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "Runner IP: $RUNNER_IP"
+          az sql server firewall-rule create \
+            --server $SQL_SERVER_NAME \
+            --resource-group $AZURE_RG \
+            --name GitHubActionsRunner \
+            --start-ip-address $RUNNER_IP \
+            --end-ip-address $RUNNER_IP
 
       - name: Install go-sqlcmd
         run: |
@@ -76,8 +88,6 @@ jobs:
             -v FunctionAppName="$FUNCTION_APP_NAME" \
             -i infra/sql/setup.sql
 
-      # ── Backend: compile + migrate + deploy ──────────────────────────────────
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -93,6 +103,17 @@ jobs:
             --project src/TripsTracker.Data/TripsTracker.Data.csproj \
             --startup-project src/TripsTracker.Functions/TripsTracker.Functions.csproj \
             --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
+
+      - name: Close SQL firewall
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --server $SQL_SERVER_NAME \
+            --resource-group $AZURE_RG \
+            --name GitHubActionsRunner \
+            --yes 2>/dev/null || true
+
+      # ── Backend: compile + deploy ─────────────────────────────────────────────
 
       - name: Publish Functions
         run: |
