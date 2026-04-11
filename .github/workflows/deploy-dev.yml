@@ -142,7 +142,7 @@ jobs:
           npm ci
           npm run build
         env:
-          VITE_API_BASE_URL: ${{ env.FUNCTION_APP_URL }}
+          VITE_API_BASE_URL: https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net
 
       - name: Deploy Static Web App
         uses: Azure/static-web-apps-deploy@v1
@@ -156,14 +156,8 @@ jobs:
 
       - name: Smoke test — verify API responds
         run: |
-          FUNCTION_KEY=$(az functionapp keys list \
-            --name $FUNCTION_APP_NAME \
-            --resource-group $AZURE_RG \
-            --query functionKeys.default \
-            -o tsv)
           for i in 1 2 3; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              "$FUNCTION_APP_URL/places?code=$FUNCTION_KEY")
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_APP_URL/places")
             echo "Smoke test attempt $i: HTTP $STATUS"
             [ "$STATUS" = "200" ] && exit 0
             [ "$i" = "3" ] && echo "Smoke test FAILED — deployment did not result in a working API" && exit 1
