@@ -19,7 +19,7 @@ param logAnalyticsWorkspaceId string
 @description('User-Agent header for Nominatim geocoding API requests')
 param nominatimUserAgent string
 
-@description('Static Web App origin for CORS (https://{name}.azurestaticapps.net)')
+@description('Static Web App origin for CORS — actual hostname from SWA module output, not computed from resource name')
 param swaOrigin string
 
 var storageAccountName = 'sttripstracker${env}${uniqueSuffix}'
