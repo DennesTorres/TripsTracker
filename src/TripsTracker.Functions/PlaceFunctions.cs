@@ -15,7 +15,7 @@ public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
 
     [Function("CreatePlace")]
     public async Task<IActionResult> CreatePlace(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "places")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "places")] HttpRequest req,
         CancellationToken ct)
     {
         var dto = await JsonSerializer.DeserializeAsync<AddPlaceDto>(req.Body, JsonOptions, ct);
@@ -46,7 +46,7 @@ public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
 
     [Function("UpdatePlace")]
     public async Task<IActionResult> UpdatePlace(
-        [HttpTrigger(AuthorizationLevel.Function, "put", Route = "places/{id:int}")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "places/{id:int}")] HttpRequest req,
         int id,
         CancellationToken ct)
     {
@@ -58,7 +58,7 @@ public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
 
     [Function("DeletePlace")]
     public async Task<IActionResult> DeletePlace(
-        [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "places/{id:int}")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "places/{id:int}")] HttpRequest req,
         int id,
         CancellationToken ct)
     {
