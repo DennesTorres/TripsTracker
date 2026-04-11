@@ -68,7 +68,7 @@ jobs:
       - name: Run EF Core migrations
         run: |
           dotnet tool install --global dotnet-ef
-          dotnet ef database update             --project src/TripsTracker.Data/TripsTracker.Data.csproj             --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
+          dotnet ef database update             --project src/TripsTracker.Data/TripsTracker.Data.csproj             --startup-project src/TripsTracker.Functions/TripsTracker.Functions.csproj             --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
 
       - name: Publish Functions
         run: |
