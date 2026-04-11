@@ -48,12 +48,17 @@ jobs:
 
       - name: Install go-sqlcmd
         run: |
-          curl -sSfL https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2             | sudo tar -C /usr/local/bin -xj
-          sqlcmd version
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/22.04/prod jammy main"             | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update -q
+          sudo ACCEPT_EULA=Y apt-get install -yq --allow-downgrades sqlcmd
+          sqlcmd --version
 
       - name: Setup SQL access (idempotent)
         run: |
           sqlcmd             -S $SQL_SERVER             -d $SQL_DATABASE             --authentication-method ActiveDirectoryDefault             -v FunctionAppName="$FUNCTION_APP_NAME"             -i infra/sql/setup.sql
+
+      # ── Backend: compile + migrate + deploy ──────────────────────────────────
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -64,8 +69,6 @@ jobs:
         run: |
           dotnet tool install --global dotnet-ef
           dotnet ef database update             --project src/TripsTracker.Data/TripsTracker.Data.csproj             --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
-
-      # ── Backend — Azure Functions ─────────────────────────────────────────────
 
       - name: Publish Functions
         run: |
