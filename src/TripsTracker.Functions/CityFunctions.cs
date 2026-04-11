@@ -9,7 +9,7 @@ public class CityFunctions(IGeocodingBusiness geocoding)
 {
     [Function("SuggestCities")]
     public async Task<IActionResult> SuggestCities(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cities/suggest")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "cities/suggest")] HttpRequest req,
         CancellationToken ct)
     {
         var query = req.Query["q"].FirstOrDefault() ?? string.Empty;
