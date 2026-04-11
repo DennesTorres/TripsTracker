@@ -32,15 +32,13 @@ param monthlyBudgetUsd int = 20
 @description('Azure region for Static Web App (must be one of: westus2, centralus, eastus2, westeurope, eastasia)')
 param swaLocation string = 'westeurope'
 
-// ── Computed variables — break circular dependencies ──
-// Azure SQL FQDN is predictable: {serverName}.database.windows.net
-// SWA origin is predictable: https://{name}.azurestaticapps.net
-// Computing both here avoids deployment ordering constraints.
+// ── Computed variables ────────────────────────────────────────────────────────
+// Azure SQL FQDN is predictable from the naming convention.
+// SWA hostname is NOT predictable — Azure assigns a random subdomain.
+// Functions CORS uses the actual SWA hostname from the SWA module output.
 var sqlServerName = 'sql-tripstracker-${env}-${uniqueSuffix}'
 var sqlDatabaseName = 'TripsTracker'
 var sqlServerFqdn = '${sqlServerName}${environment().suffixes.sqlServerHostname}'
-var swaName = 'stapp-tripstracker-${env}-${uniqueSuffix}'
-var swaOrigin = 'https://${swaName}.azurestaticapps.net'
 
 // ── Log Analytics ─────────────────────────────────────────────────────────────
 module logAnalytics 'modules/loganalytics.bicep' = {
@@ -51,8 +49,19 @@ module logAnalytics 'modules/loganalytics.bicep' = {
   }
 }
 
+// ── Azure Static Web App (React frontend) ─────────────────────────────────────
+// Deployed before Functions so its actual hostname is available for CORS config.
+// SWA has limited region support: westus2, centralus, eastus2, westeurope, eastasia
+module staticWebApp 'modules/staticwebapp.bicep' = {
+  name: 'staticwebapp'
+  params: {
+    location: swaLocation
+    env: env
+    uniqueSuffix: uniqueSuffix
+  }
+}
+
 // ── Azure Functions + Application Insights + Storage ─────────────────────────
-// Deployed first so the managed identity principal ID is available for SQL role assignment.
 module functions 'modules/functions.bicep' = {
   name: 'functions'
   params: {
@@ -63,7 +72,7 @@ module functions 'modules/functions.bicep' = {
     sqlDatabaseName: sqlDatabaseName
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
     nominatimUserAgent: nominatimUserAgent
-    swaOrigin: swaOrigin
+    swaOrigin: 'https://${staticWebApp.outputs.staticWebAppHostname}'
   }
 }
 
@@ -77,17 +86,6 @@ module sql 'modules/sql.bicep' = {
     sqlEntraAdminObjectId: sqlEntraAdminObjectId
     sqlEntraAdminDisplayName: sqlEntraAdminDisplayName
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
-  }
-}
-
-// ── Azure Static Web App (React frontend) ─────────────────────────────────────
-// SWA has limited region support: westus2, centralus, eastus2, westeurope, eastasia
-module staticWebApp 'modules/staticwebapp.bicep' = {
-  name: 'staticwebapp'
-  params: {
-    location: swaLocation
-    env: env
-    uniqueSuffix: uniqueSuffix
   }
 }
 
