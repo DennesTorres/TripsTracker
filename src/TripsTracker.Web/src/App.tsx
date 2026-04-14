@@ -2,8 +2,13 @@ import AppShell from '@/components/layout/AppShell';
 import MapPage from '@/pages/MapPage';
 import PlacesPage from '@/pages/places/PlacesPage';
 import CountriesPage from '@/pages/countries/CountriesPage';
+import { RequireAuth } from './auth/RequireAuth';
+import { useEnsureUser } from './api/hooks';
 
-export default function App() {
+function AuthenticatedApp() {
+  // Ensure user record exists on first login (adopts legacy places and country flags)
+  useEnsureUser();
+
   return (
     <AppShell>
       {view => {
@@ -12,5 +17,13 @@ export default function App() {
         return <CountriesPage />;
       }}
     </AppShell>
+  );
+}
+
+export default function App() {
+  return (
+    <RequireAuth>
+      <AuthenticatedApp />
+    </RequireAuth>
   );
 }

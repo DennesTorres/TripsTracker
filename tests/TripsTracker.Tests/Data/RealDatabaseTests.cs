@@ -4,9 +4,27 @@ using Microsoft.Extensions.Configuration;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Data;
+
+/// <summary>
+/// IUserContext backed by the seeded owner (dennes@bufaloinfo.com.br).
+/// Looked up from the database so the test is not coupled to a hardcoded int ID.
+/// </summary>
+file sealed class OwnerUserContext : IUserContext
+{
+    public int? UserId { get; }
+    public string? Email { get; }
+    public bool IsAuthenticated => UserId is not null;
+
+    public OwnerUserContext(int userId, string email)
+    {
+        UserId = userId;
+        Email = email;
+    }
+}
 
 /// <summary>
 /// Integration tests that hit the real SQL Server database.
@@ -24,6 +42,7 @@ public class RealDatabaseTests
         public PlaceBusiness Places { get; }
         public CountryBusiness Countries { get; }
         public VisitedStateBusiness States { get; }
+        public int OwnerUserId { get; }
         private IDbContextTransaction? _transaction;
 
         public Fixture()
@@ -42,9 +61,15 @@ public class RealDatabaseTests
                 .Options;
 
             Context = new TripsTrackerDbContext(options);
-            Places = new PlaceBusiness(Context);
-            Countries = new CountryBusiness(Context);
-            States = new VisitedStateBusiness(Context);
+
+            // Look up the seeded owner — tests run as this user
+            var owner = Context.Set<User>().First(u => u.Email == "dennes@bufaloinfo.com.br");
+            OwnerUserId = owner.Id;
+            var userContext = new OwnerUserContext(owner.Id, owner.Email);
+
+            Places = new PlaceBusiness(Context, userContext);
+            Countries = new CountryBusiness(Context, userContext);
+            States = new VisitedStateBusiness(Context, userContext);
         }
 
         public async Task BeginTransactionAsync()
@@ -130,6 +155,7 @@ public class RealDatabaseTests
             Lat = -23.5,
             Lon = -46.6,
             IsHome = false,
+            UserId = f.OwnerUserId,
         };
         f.Context.Set<Place>().Add(testPlace);
         await f.Context.SaveChangesAsync();

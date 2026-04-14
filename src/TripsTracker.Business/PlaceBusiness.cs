@@ -2,13 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
 
 namespace TripsTracker.Business;
 
 public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 {
-    public PlaceBusiness(TripsTrackerDbContext context) : base(context) { }
+    private readonly IUserContext _userContext;
+
+    public PlaceBusiness(TripsTrackerDbContext context, IUserContext userContext) : base(context)
+    {
+        _userContext = userContext;
+    }
 
     public async Task<PlaceDto> CreateAsync(CreatePlaceDto dto, CancellationToken ct = default)
     {
@@ -20,7 +26,8 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             City = dto.City,
             StateAbbr = dto.StateAbbr,
             StateName = dto.StateName,
-            IsHome = dto.IsHome
+            IsHome = dto.IsHome,
+            UserId = _userContext.UserId
         };
         await InsertAsync(place, ct);
         return await GetByIdAsync(place.Id, ct)
@@ -29,6 +36,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public Task<List<PlaceDto>> GetAllAsync(CancellationToken ct = default)
         => BuildBaseQuery()
+            .Where(p => p.UserId == _userContext.UserId)
             .Join(Context.Set<Country>().AsNoTracking(),
                 p => p.CountryId,
                 c => c.Id,
@@ -37,7 +45,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public Task<PlaceDto?> GetByIdAsync(int id, CancellationToken ct = default)
         => BuildBaseQuery()
-            .Where(p => p.Id == id)
+            .Where(p => p.Id == id && p.UserId == _userContext.UserId)
             .Join(Context.Set<Country>().AsNoTracking(),
                 p => p.CountryId,
                 c => c.Id,
@@ -47,7 +55,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
         var rows = await ExecuteUpdateAsync(
-            p => p.Id == id,
+            p => p.Id == id && p.UserId == _userContext.UserId,
             s =>
             {
                 s.SetProperty(p => p.City, dto.City);
@@ -60,13 +68,14 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var rows = await ExecuteDeleteAsync(p => p.Id == id, ct);
+        var rows = await ExecuteDeleteAsync(p => p.Id == id && p.UserId == _userContext.UserId, ct);
         return rows > 0;
     }
 
     public Task<bool> HasAnyInCountryAsync(int countryId, CancellationToken ct = default)
-        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId, ct);
+        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.UserId == _userContext.UserId, ct);
 
     public Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default)
-        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.IsHome, ct);
+        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.IsHome && p.UserId == _userContext.UserId, ct);
+
 }

@@ -72,3 +72,17 @@ export function useVisitedStates() {
     queryFn: () => apiClient.get<VisitedState[]>('/api/visited-states').then(r => r.data),
   });
 }
+
+/**
+ * Calls GET /api/me on mount after every login.
+ * Idempotent on the backend: creates the user record on first login and adopts
+ * legacy unassigned places/country flags. A no-op on subsequent logins.
+ */
+export function useEnsureUser() {
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: () => apiClient.get('/api/me').then(r => r.data),
+    staleTime: Infinity, // Run once per session — no need to re-fetch
+    retry: false,
+  });
+}
