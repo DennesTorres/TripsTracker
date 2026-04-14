@@ -13,6 +13,10 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
     public DbSet<User> Users => Set<User>();
     public DbSet<UserCountry> UserCountries => Set<UserCountry>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
+    public DbSet<PlacePhoto> PlacePhotos => Set<PlacePhoto>();
+    public DbSet<PlaceComment> PlaceComments => Set<PlaceComment>();
+    public DbSet<PhotoRating> PhotoRatings => Set<PhotoRating>();
+    public DbSet<CommentRating> CommentRatings => Set<CommentRating>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +45,40 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         {
             e.Property(u => u.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             e.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<PlacePhoto>(e =>
+        {
+            e.HasIndex(p => p.PlaceId);
+            e.HasIndex(p => p.UserId);
+            e.Property(p => p.UploadedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<Place>().WithMany().HasForeignKey(p => p.PlaceId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PlaceComment>(e =>
+        {
+            e.HasIndex(c => c.PlaceId);
+            e.HasIndex(c => c.UserId);
+            e.Property(c => c.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<Place>().WithMany().HasForeignKey(c => c.PlaceId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PhotoRating>(e =>
+        {
+            e.HasKey(r => new { r.UserId, r.PhotoId });
+            e.Property(r => r.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<PlacePhoto>().WithMany().HasForeignKey(r => r.PhotoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CommentRating>(e =>
+        {
+            e.HasKey(r => new { r.UserId, r.CommentId });
+            e.Property(r => r.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<PlaceComment>().WithMany().HasForeignKey(r => r.CommentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShareLink>(e =>

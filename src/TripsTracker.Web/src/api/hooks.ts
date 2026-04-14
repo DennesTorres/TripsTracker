@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
@@ -65,6 +65,84 @@ export function useCitySuggestions(query: string, countryCode = '') {
     placeholderData: [],
   });
 }
+
+// ── Photos & Comments ───────────────────────────────────────────────────────
+
+export function usePlacePhotos(placeId: number) {
+  return useQuery<PlacePhoto[]>({
+    queryKey: ['photos', placeId],
+    queryFn: () => apiClient.get<PlacePhoto[]>(`/api/places/${placeId}/photos`).then(r => r.data),
+    enabled: placeId > 0,
+  });
+}
+
+export function useUploadPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ placeId, file, caption }: { placeId: number; file: File; caption?: string }) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (caption) form.append('caption', caption);
+      return apiClient.post<PlacePhoto>(`/api/places/${placeId}/photos`, form).then(r => r.data);
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+  });
+}
+
+export function useDeletePhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ photoId }: { photoId: number; placeId: number }) =>
+      apiClient.delete(`/api/photos/${photoId}`),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+  });
+}
+
+export function useRatePhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ photoId, rating }: { photoId: number; rating: number; placeId: number }) =>
+      apiClient.put(`/api/photos/${photoId}/rating`, { rating }),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+  });
+}
+
+export function usePlaceComments(placeId: number) {
+  return useQuery<PlaceComment[]>({
+    queryKey: ['comments', placeId],
+    queryFn: () => apiClient.get<PlaceComment[]>(`/api/places/${placeId}/comments`).then(r => r.data),
+    enabled: placeId > 0,
+  });
+}
+
+export function useCreateComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ placeId, text }: { placeId: number; text: string }) =>
+      apiClient.post<PlaceComment>(`/api/places/${placeId}/comments`, { text }).then(r => r.data),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+export function useDeleteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId }: { commentId: number; placeId: number }) =>
+      apiClient.delete(`/api/comments/${commentId}`),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+export function useVoteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId, isUpvote }: { commentId: number; isUpvote: boolean; placeId: number }) =>
+      apiClient.put(`/api/comments/${commentId}/vote`, { isUpvote }),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+// ── Countries ───────────────────────────────────────────────────────────────
 
 export function useSetStateBorders() {
   const qc = useQueryClient();

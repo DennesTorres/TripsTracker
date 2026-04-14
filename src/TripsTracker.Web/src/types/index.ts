@@ -79,6 +79,32 @@ export interface ShareLink {
   viewCount: number;
 }
 
+export interface PlacePhoto {
+  id: number;
+  placeId: number;
+  userId: number;
+  originalFileName?: string;
+  contentType: string;
+  sizeBytes: number;
+  caption?: string;
+  sortOrder: number;
+  uploadedAt: string;
+  averageRating: number;
+  ratingCount: number;
+}
+
+export interface PlaceComment {
+  id: number;
+  placeId: number;
+  userId: number;
+  userDisplayName: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+  upvoteCount: number;
+  downvoteCount: number;
+}
+
 export interface PublicShareSummary {
   token: string;
   displayName: string;
