@@ -17,6 +17,7 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
     public DbSet<PlaceComment> PlaceComments => Set<PlaceComment>();
     public DbSet<PhotoRating> PhotoRatings => Set<PhotoRating>();
     public DbSet<CommentRating> CommentRatings => Set<CommentRating>();
+    public DbSet<PointEvent> PointEvents => Set<PointEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +80,14 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
             e.Property(r => r.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             e.HasOne<PlaceComment>().WithMany().HasForeignKey(r => r.CommentId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<User>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PointEvent>(e =>
+        {
+            e.HasIndex(p => p.UserId);
+            e.HasIndex(p => p.EventType);
+            e.Property(p => p.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ShareLink>(e =>

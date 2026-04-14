@@ -113,6 +113,20 @@ export interface PublicShareSummary {
   placesCount: number;
 }
 
+export interface PointEvent {
+  id: number;
+  eventType: string;
+  points: number;
+  referenceId?: number;
+  referenceType?: string;
+  createdAt: string;
+}
+
+export interface UserPointsSummary {
+  totalPoints: number;
+  recentEvents: PointEvent[];
+}
+
 export interface PublicMapData {
   ownerDisplayName: string;
   places: Place[];

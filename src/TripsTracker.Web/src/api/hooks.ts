@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserPointsSummary, UserProfile, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
@@ -139,6 +139,15 @@ export function useVoteComment() {
     mutationFn: ({ commentId, isUpvote }: { commentId: number; isUpvote: boolean; placeId: number }) =>
       apiClient.put(`/api/comments/${commentId}/vote`, { isUpvote }),
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+// ── Points ──────────────────────────────────────────────────────────────────
+
+export function usePointsSummary() {
+  return useQuery<UserPointsSummary>({
+    queryKey: ['points'],
+    queryFn: () => apiClient.get<UserPointsSummary>('/api/me/points').then(r => r.data),
   });
 }
 
