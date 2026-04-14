@@ -27,7 +27,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             StateAbbr = dto.StateAbbr,
             StateName = dto.StateName,
             IsHome = dto.IsHome,
-            UserId = _userContext.UserId
+            UserId = _userContext.UserId!.Value
         };
         await InsertAsync(place, ct);
         return await GetByIdAsync(place.Id, ct)
