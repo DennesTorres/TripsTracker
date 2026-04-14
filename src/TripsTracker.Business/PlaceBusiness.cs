@@ -78,4 +78,12 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
     public Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default)
         => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.IsHome && p.UserId == _userContext.UserId, ct);
 
+    public Task<List<PlaceDto>> GetAllForUserAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(p => p.UserId == userId)
+            .Join(Context.Set<Country>().AsNoTracking(),
+                p => p.CountryId,
+                c => c.Id,
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
+            .ToListAsync(ct);
 }

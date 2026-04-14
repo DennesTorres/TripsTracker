@@ -22,10 +22,16 @@
   font-size: 16px;
 }
 
-.addBtn {
+.mapButtons {
   position: absolute;
   top: 12px;
   right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.addBtn {
   padding: 7px 16px;
   background: #4ade80;
   color: #0f172a;
@@ -34,9 +40,28 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  z-index: 10;
 
   &:hover {
     background: #86efac;
+  }
+}
+
+.shareBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: rgba(255,255,255,0.15);
+    color: #e8e8e8;
   }
 }

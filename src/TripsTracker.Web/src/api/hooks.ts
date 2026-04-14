@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, PublicMapData, ShareLink, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
@@ -92,6 +92,38 @@ export function useEnsureUser() {
     queryKey: ['me'],
     queryFn: () => apiClient.get<UserProfile>('/api/me').then(r => r.data),
     staleTime: Infinity,
+    retry: false,
+  });
+}
+
+export function useShareLinks() {
+  return useQuery<ShareLink[]>({
+    queryKey: ['share-links'],
+    queryFn: () => apiClient.get<ShareLink[]>('/api/share-links').then(r => r.data),
+  });
+}
+
+export function useCreateShareLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post<ShareLink>('/api/share-links', {}).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['share-links'] }),
+  });
+}
+
+export function useDeactivateShareLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/api/share-links/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['share-links'] }),
+  });
+}
+
+export function useSharedMap(token: string) {
+  return useQuery<PublicMapData>({
+    queryKey: ['shared-map', token],
+    queryFn: () => apiClient.get<PublicMapData>(`/api/shared/${token}`).then(r => r.data),
+    enabled: !!token,
     retry: false,
   });
 }

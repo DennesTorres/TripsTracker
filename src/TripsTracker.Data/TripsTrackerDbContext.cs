@@ -12,6 +12,7 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
     public DbSet<VisitedState> VisitedStates => Set<VisitedState>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserCountry> UserCountries => Set<UserCountry>();
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +41,14 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         {
             e.Property(u => u.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             e.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<ShareLink>(e =>
+        {
+            e.HasIndex(l => l.Token).IsUnique();
+            e.HasIndex(l => l.UserId);
+            e.Property(l => l.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<User>().WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<UserCountry>(e =>

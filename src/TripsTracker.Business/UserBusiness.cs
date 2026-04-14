@@ -10,6 +10,12 @@ public class UserBusiness : BusinessBase<User>, IUserBusiness
 {
     public UserBusiness(TripsTrackerDbContext context) : base(context) { }
 
+    public Task<UserDto?> GetByIdAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(u => u.Id == userId)
+            .Select(u => new UserDto(u.Id, u.Email, u.DisplayName, u.CreatedAt))
+            .FirstOrDefaultAsync(ct);
+
     public Task<UserDto?> GetByEmailAsync(string email, CancellationToken ct = default)
         => BuildBaseQuery()
             .Where(u => u.Email == email)

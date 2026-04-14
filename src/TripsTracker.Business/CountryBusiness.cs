@@ -91,6 +91,22 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
         return await GetByIdForUserAsync(id, userId, ct);
     }
 
+    public Task<List<CountryDto>> GetAllForUserAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .GroupJoin(
+                Context.Set<UserCountry>().AsNoTracking().Where(uc => uc.UserId == userId),
+                c => c.Id,
+                uc => uc.CountryId,
+                (c, ucs) => new { c, ucs })
+            .SelectMany(
+                x => x.ucs.DefaultIfEmpty(),
+                (x, uc) => new CountryDto(
+                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
+                    uc != null && uc.IsHome,
+                    uc != null && uc.IsVisited,
+                    uc != null && uc.ShowStateBorders))
+            .ToListAsync(ct);
+
     // ── private helpers ──────────────────────────────────────────────────────────
 
     private async Task UpsertUserCountryAsync(

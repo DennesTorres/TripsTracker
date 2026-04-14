@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
+import ShareModal from '@/components/share/ShareModal';
 import { usePlaces, useCountries, useVisitedStates } from '@/api/hooks';
+import { Share2 } from 'lucide-react';
 import styles from './MapPage.module.scss';
 
 export default function MapPage() {
@@ -14,6 +16,7 @@ export default function MapPage() {
   const [usGeo, setUsGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [brGeo, setBrGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [adding, setAdding] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -57,15 +60,21 @@ export default function MapPage() {
           />
         )}
         {!isLoading && !hasError && (
-          <button className={styles.addBtn} onClick={() => setAdding(true)}>
-            + Add place
-          </button>
+          <div className={styles.mapButtons}>
+            <button className={styles.addBtn} onClick={() => setAdding(true)}>
+              + Add place
+            </button>
+            <button className={styles.shareBtn} onClick={() => setSharing(true)}>
+              <Share2 size={14} /> Share
+            </button>
+          </div>
         )}
       </div>
       {!isLoading && (
         <StatsBar countries={countries} places={places} />
       )}
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
+      {sharing && <ShareModal onClose={() => setSharing(false)} />}
     </div>
   );
 }

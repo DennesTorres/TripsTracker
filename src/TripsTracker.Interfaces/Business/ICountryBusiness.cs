@@ -9,4 +9,5 @@ public interface ICountryBusiness
     Task<CountryDto?> SetVisitedAsync(int id, bool isVisited, CancellationToken ct = default);
     Task<CountryDto?> SetHomeAsync(int id, bool isHome = true, CancellationToken ct = default);
     Task<CountryDto?> SetShowStateBordersAsync(int id, bool show, CancellationToken ct = default);
+    Task<List<CountryDto>> GetAllForUserAsync(int userId, CancellationToken ct = default);
 }

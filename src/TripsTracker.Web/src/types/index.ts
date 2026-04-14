@@ -65,3 +65,19 @@ export interface UserProfile {
 export interface UpdateUser {
   displayName?: string;
 }
+
+export interface ShareLink {
+  id: number;
+  token: string;
+  isActive: boolean;
+  createdAt: string;
+  expiresAt?: string;
+  viewCount: number;
+}
+
+export interface PublicMapData {
+  ownerDisplayName: string;
+  places: Place[];
+  countries: Country[];
+  visitedStates: VisitedState[];
+}

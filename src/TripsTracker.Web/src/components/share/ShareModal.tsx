@@ -1,0 +1,70 @@
+import { useState } from 'react';
+import { useShareLinks, useCreateShareLink, useDeactivateShareLink } from '@/api/hooks';
+import Modal from '@/components/ui/Modal';
+import { Copy, Trash2, Check } from 'lucide-react';
+import styles from './ShareModal.module.scss';
+
+interface Props {
+  onClose: () => void;
+}
+
+export default function ShareModal({ onClose }: Props) {
+  const { data: links = [] } = useShareLinks();
+  const createLink = useCreateShareLink();
+  const deactivate = useDeactivateShareLink();
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  const handleCreate = () => createLink.mutate();
+
+  const copyLink = (token: string, id: number) => {
+    const url = `${window.location.origin}/#/shared/${token}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  return (
+    <Modal title="Share your map" onClose={onClose} width={500}>
+      <div className={styles.content}>
+        <p className={styles.description}>
+          Generate a link to share a read-only view of your travel map.
+        </p>
+
+        <button className={styles.createBtn} onClick={handleCreate} disabled={createLink.isPending}>
+          {createLink.isPending ? 'Creating...' : 'Generate new link'}
+        </button>
+
+        {links.length > 0 && (
+          <div className={styles.linkList}>
+            {links.map(l => (
+              <div key={l.id} className={`${styles.linkRow} ${!l.isActive ? styles.inactive : ''}`}>
+                <code className={styles.token}>{`.../${l.token.slice(0, 12)}...`}</code>
+                <span className={styles.views}>{l.viewCount} views</span>
+                {l.isActive ? (
+                  <>
+                    <button
+                      className={styles.iconBtn}
+                      onClick={() => copyLink(l.token, l.id)}
+                      title="Copy link"
+                    >
+                      {copiedId === l.id ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                    <button
+                      className={styles.iconBtn}
+                      onClick={() => deactivate.mutate(l.id)}
+                      title="Deactivate"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <span className={styles.deactivated}>Deactivated</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
