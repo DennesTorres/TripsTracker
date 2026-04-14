@@ -53,3 +53,14 @@ export interface VisitedState {
   stateAbbr: string;
   stateName?: string;
 }
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  displayName?: string;
+  createdAt: string;
+}
+
+export interface UpdateUser {
+  displayName?: string;
+}

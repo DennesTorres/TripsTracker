@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, UpdatePlace, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
@@ -79,10 +79,19 @@ export function useVisitedStates() {
  * legacy unassigned places/country flags. A no-op on subsequent logins.
  */
 export function useEnsureUser() {
-  return useQuery({
+  return useQuery<UserProfile>({
     queryKey: ['me'],
-    queryFn: () => apiClient.get('/api/me').then(r => r.data),
-    staleTime: Infinity, // Run once per session — no need to re-fetch
+    queryFn: () => apiClient.get<UserProfile>('/api/me').then(r => r.data),
+    staleTime: Infinity,
     retry: false,
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: UpdateUser) =>
+      apiClient.put<UserProfile>('/api/me', dto).then(r => r.data),
+    onSuccess: (data) => qc.setQueryData(['me'], data),
   });
 }

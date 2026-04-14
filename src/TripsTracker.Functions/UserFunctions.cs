@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using TripsTracker.Domain;
 using TripsTracker.Functions.Middleware;
 using TripsTracker.Interfaces.Business;
 
@@ -13,9 +14,19 @@ public class UserFunctions(IUserBusiness userBusiness, UserContext userContext)
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "me")] HttpRequest req,
         CancellationToken ct)
     {
-        // Middleware already ensured the user exists and populated userContext.
-        // Fetch the full record (includes DisplayName, CreatedAt).
         var user = await userBusiness.GetByEmailAsync(userContext.Email!, ct);
         return new OkObjectResult(user);
+    }
+
+    [Function("UpdateMe")]
+    public async Task<IActionResult> UpdateMe(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "me")] HttpRequest req,
+        CancellationToken ct)
+    {
+        var dto = await req.ReadFromJsonAsync<UpdateUserDto>(ct);
+        if (dto is null) return new BadRequestResult();
+
+        var updated = await userBusiness.UpdateAsync(userContext.UserId!.Value, dto, ct);
+        return updated is not null ? new OkObjectResult(updated) : new NotFoundResult();
     }
 }
