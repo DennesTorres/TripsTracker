@@ -10,7 +10,7 @@ public class PlacesProcessTests
 {
     private static CountryDto Brazil() => new(
         Id: 1, IsoNumeric: 76, IsoAlpha2: "BR", Flag: "🇧🇷",
-        Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false);
+        Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false, ShowStateBorders: false);
 
     private static PlaceDto AnyPlace() => new(
         Id: 1, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",

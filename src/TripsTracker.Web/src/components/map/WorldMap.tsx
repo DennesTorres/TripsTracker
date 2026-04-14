@@ -264,8 +264,12 @@ export default function WorldMap({
 
     const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
     const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
+    // Build sets for countries with state borders enabled
+    const showBordersCountries = new Set(countries.filter(c => c.showStateBorders).map(c => c.isoAlpha2));
     const brCountry = countries.find(c => c.isoAlpha2 === 'BR');
+    const usCountry = countries.find(c => c.isoAlpha2 === 'US');
     const visitedBrStates  = new Set(visitedStates.filter(s => s.countryId === brCountry?.id).map(s => s.stateAbbr));
+    const visitedUsStates  = new Set(visitedStates.filter(s => s.countryId === usCountry?.id).map(s => s.stateAbbr));
 
     const g = svg.append('g');
 
@@ -292,28 +296,41 @@ export default function WorldMap({
       .attr('stroke-width', 0.35)
       .attr('vector-effect', 'non-scaling-stroke');
 
-    // Brazil state borders (hidden until zoom >= BR_ZOOM_MIN)
-    const brStatesG = g.append('g');
-    brStatesGRef.current = brStatesG;
+    // State borders — rendered for countries with showStateBorders enabled
+    // Hidden until zoom >= BR_ZOOM_MIN
+    const statesG = g.append('g');
+    brStatesGRef.current = statesG;
 
-    if (brazilStatesGeoJson) {
-      brStatesG.selectAll<SVGPathElement, GeoJSON.Feature>('.brs')
-        .data(brazilStatesGeoJson.features)
+    const renderStateBorders = (
+      geoData: GeoJSON.FeatureCollection,
+      abbrProp: string,
+      visitedSet: Set<string>,
+      cssClass: string,
+    ) => {
+      statesG.selectAll<SVGPathElement, GeoJSON.Feature>(`.${cssClass}`)
+        .data(geoData.features)
         .join('path')
-        .attr('class', 'brs')
+        .attr('class', `brs ${cssClass}`)
         .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
         .attr('fill', f => {
-          const abbr: string = (f.properties?.['sigla'] as string) ?? '';
-          return visitedBrStates.has(abbr) ? BR_STATE_VIS_FILL : BR_STATE_BASE_FILL;
+          const abbr: string = (f.properties?.[abbrProp] as string) ?? '';
+          return visitedSet.has(abbr) ? BR_STATE_VIS_FILL : BR_STATE_BASE_FILL;
         })
         .attr('stroke', f => {
-          const abbr: string = (f.properties?.['sigla'] as string) ?? '';
-          return visitedBrStates.has(abbr) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
+          const abbr: string = (f.properties?.[abbrProp] as string) ?? '';
+          return visitedSet.has(abbr) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
         })
         .attr('stroke-width', 0.5)
         .attr('vector-effect', 'non-scaling-stroke')
         .attr('pointer-events', 'none')
-        .style('display', 'none');  // hidden until zoom threshold
+        .style('display', 'none');
+    };
+
+    if (brazilStatesGeoJson && showBordersCountries.has('BR')) {
+      renderStateBorders(brazilStatesGeoJson, 'sigla', visitedBrStates, 'brs-br');
+    }
+    if (usStatesGeoJson && showBordersCountries.has('US')) {
+      renderStateBorders(usStatesGeoJson, 'STUSPS', visitedUsStates, 'brs-us');
     }
 
     // Sphere outline (reference draws this on top of countries)

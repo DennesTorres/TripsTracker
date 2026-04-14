@@ -26,6 +26,7 @@ export interface Country {
   region: string;
   isHome: boolean;
   isVisited: boolean;
+  showStateBorders: boolean;
 }
 
 export interface UpdatePlace {

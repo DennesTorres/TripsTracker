@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useCountries, useVisitedStates } from '@/api/hooks';
+import { useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
 import type { Country } from '@/types';
 import styles from './CountriesPage.module.scss';
 
 export default function CountriesPage() {
   const { data: countries = [], isLoading } = useCountries();
   const { data: visitedStates = [] } = useVisitedStates();
+  const setStateBorders = useSetStateBorders();
   const [visitedOnly, setVisitedOnly] = useState(false);
   const [regionFilter, setRegionFilter] = useState('');
 
@@ -63,6 +64,7 @@ export default function CountriesPage() {
               <th>States</th>
               <th>Visited</th>
               <th>Home</th>
+              <th>Borders</th>
             </tr>
           </thead>
           <tbody>
@@ -86,6 +88,14 @@ export default function CountriesPage() {
                 </td>
                 <td className={styles.visited}>{c.isVisited ? '✓' : ''}</td>
                 <td>{c.isHome ? '✓' : ''}</td>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={c.showStateBorders}
+                    onChange={() => setStateBorders.mutate({ id: c.id, show: !c.showStateBorders })}
+                    title="Show state/region borders on map"
+                  />
+                </td>
               </tr>
             ))}
           </tbody>

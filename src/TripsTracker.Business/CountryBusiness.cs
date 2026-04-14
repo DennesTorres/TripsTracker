@@ -30,7 +30,8 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (x, uc) => new CountryDto(
                     x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited))
+                    uc != null && uc.IsVisited,
+                    uc != null && uc.ShowStateBorders))
             .ToListAsync(ct);
     }
 
@@ -49,7 +50,8 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (x, uc) => new CountryDto(
                     x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited))
+                    uc != null && uc.IsVisited,
+                    uc != null && uc.ShowStateBorders))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -82,11 +84,18 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
         return await GetByIdForUserAsync(id, userId, ct);
     }
 
+    public async Task<CountryDto?> SetShowStateBordersAsync(int id, bool show, CancellationToken ct = default)
+    {
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");
+        await UpsertUserCountryAsync(userId, id, showStateBorders: show, ct: ct);
+        return await GetByIdForUserAsync(id, userId, ct);
+    }
+
     // ── private helpers ──────────────────────────────────────────────────────────
 
     private async Task UpsertUserCountryAsync(
         int userId, int countryId,
-        bool? isHome = null, bool? isVisited = null,
+        bool? isHome = null, bool? isVisited = null, bool? showStateBorders = null,
         CancellationToken ct = default)
     {
         var existing = await Context.Set<UserCountry>()
@@ -99,7 +108,8 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 UserId = userId,
                 CountryId = countryId,
                 IsHome = isHome ?? false,
-                IsVisited = isVisited ?? false
+                IsVisited = isVisited ?? false,
+                ShowStateBorders = showStateBorders ?? false
             };
             Context.Set<UserCountry>().Add(newUc);
             await Context.SaveChangesAsync(ct);
@@ -108,6 +118,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
         {
             if (isHome.HasValue) existing.IsHome = isHome.Value;
             if (isVisited.HasValue) existing.IsVisited = isVisited.Value;
+            if (showStateBorders.HasValue) existing.ShowStateBorders = showStateBorders.Value;
             await Context.SaveChangesAsync(ct);
         }
     }
@@ -125,6 +136,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (x, uc) => new CountryDto(
                     x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited))
+                    uc != null && uc.IsVisited,
+                    uc != null && uc.ShowStateBorders))
             .FirstOrDefaultAsync(ct);
 }

@@ -66,6 +66,15 @@ export function useCitySuggestions(query: string, countryCode = '') {
   });
 }
 
+export function useSetStateBorders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, show }: { id: number; show: boolean }) =>
+      apiClient.put<Country>(`/api/countries/${id}/state-borders?value=${show}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+  });
+}
+
 export function useVisitedStates() {
   return useQuery<VisitedState[]>({
     queryKey: ['visited-states'],
