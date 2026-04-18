@@ -19,6 +19,12 @@ param logAnalyticsWorkspaceId string
 @description('User-Agent header for Nominatim geocoding API requests')
 param nominatimUserAgent string
 
+@description('OIDC authority URL for JWT validation')
+param authAuthority string
+
+@description('Application ID URI for JWT audience validation')
+param authAudience string
+
 @description('Static Web App origin for CORS — actual hostname from SWA module output, not computed from resource name')
 param swaOrigin string
 
@@ -119,6 +125,14 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'Nominatim__UserAgent'
           value: nominatimUserAgent
+        }
+        {
+          name: 'Auth__Authority'
+          value: authAuthority
+        }
+        {
+          name: 'Auth__Audience'
+          value: authAudience
         }
       ]
     }

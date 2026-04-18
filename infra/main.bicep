@@ -26,6 +26,12 @@ param sqlEntraAdminDisplayName string
 @description('User-Agent header value for Nominatim geocoding API requests')
 param nominatimUserAgent string
 
+@description('OIDC authority URL for JWT validation')
+param authAuthority string = 'https://login.microsoftonline.com/common/v2.0'
+
+@description('Application ID URI for JWT audience validation (api://{clientId})')
+param authAudience string
+
 @description('Monthly budget limit in USD for Azure Cost Alerts (0 = disabled)')
 param monthlyBudgetUsd int = 20
 
@@ -73,6 +79,8 @@ module functions 'modules/functions.bicep' = {
     logAnalyticsWorkspaceId: logAnalytics.outputs.workspaceId
     nominatimUserAgent: nominatimUserAgent
     swaOrigin: 'https://${staticWebApp.outputs.staticWebAppHostname}'
+    authAuthority: authAuthority
+    authAudience: authAudience
   }
 }
 
