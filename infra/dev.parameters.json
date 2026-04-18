@@ -9,6 +9,7 @@
     "sqlEntraAdminObjectId": { "value": "ff61575c-8f14-4a41-8597-48f7cdd6c973" },
     "sqlEntraAdminDisplayName": { "value": "SQLAdmins" },
     "nominatimUserAgent": { "value": "TripsTracker/1.0 (dennes@bufaloinfo.com.br)" },
+    "authAudience": { "value": "api://05aa01d6-ed6d-4bd2-8844-2c13c91a873f" },
     "monthlyBudgetUsd": { "value": 20 }
   }
 }
