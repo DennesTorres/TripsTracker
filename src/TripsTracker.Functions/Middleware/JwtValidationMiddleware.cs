@@ -39,6 +39,14 @@ public class JwtValidationMiddleware : IFunctionsWorkerMiddleware
             return;
         }
 
+        // Public endpoints that do not require authentication
+        var functionName = context.FunctionDefinition.Name;
+        if (functionName is "HealthCheck" or "GetSharedMap")
+        {
+            await next(context);
+            return;
+        }
+
         var authHeader = request.Headers.TryGetValues("Authorization", out var values)
             ? values.FirstOrDefault()
             : null;
