@@ -1,0 +1,17 @@
+[
+  {
+    "Name": "Front and Back",
+    "Projects": [
+      {
+        "Path": "src\\TripsTracker.Functions\\TripsTracker.Functions.csproj",
+        "Action": "Start",
+        "DebugTarget": "TripsTracker.Functions"
+      },
+      {
+        "Path": "src\\TripsTracker.Web\\TripsTracker.Web.esproj",
+        "Action": "Start",
+        "DebugTarget": "localhost (Chrome)"
+      }
+    ]
+  }
+]
