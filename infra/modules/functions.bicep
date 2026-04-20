@@ -114,6 +114,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
           value: 'dotnet-isolated'
         }
         {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
+        }
+        {
           name: 'ApplicationInsights__ConnectionString'
           value: appInsights.properties.ConnectionString
         }
