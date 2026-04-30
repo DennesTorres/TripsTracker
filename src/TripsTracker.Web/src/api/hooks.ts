@@ -101,6 +101,9 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: (dto: UpdateUser) =>
       apiClient.put<UserProfile>('/api/me', dto).then(r => r.data),
-    onSuccess: (data) => qc.setQueryData(['me'], data),
+    onSuccess: (data) => {
+      qc.setQueryData(['me'], data);
+      qc.invalidateQueries({ queryKey: ['countries'] });
+    },
   });
 }

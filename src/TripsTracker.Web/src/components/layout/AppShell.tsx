@@ -7,7 +7,7 @@ import styles from './AppShell.module.scss';
 export type View = 'map' | 'places' | 'countries' | 'profile';
 
 interface Props {
-  children: (view: View) => React.ReactNode;
+  children: (view: View, navigate: (v: View) => void) => React.ReactNode;
 }
 
 const TABS: { id: View; label: string }[] = [
@@ -77,7 +77,7 @@ export default function AppShell({ children }: Props) {
           )}
         </div>
       </nav>
-      <main className={styles.main}>{children(view)}</main>
+      <main className={styles.main}>{children(view, setView)}</main>
     </div>
   );
 }

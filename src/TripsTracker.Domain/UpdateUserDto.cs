@@ -1,3 +1,3 @@
 namespace TripsTracker.Domain;
 
-public record UpdateUserDto(string? DisplayName);
+public record UpdateUserDto(string? DisplayName, int? HomeCountryId);

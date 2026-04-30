@@ -11,10 +11,10 @@ function AuthenticatedApp() {
 
   return (
     <AppShell>
-      {view => {
+      {(view, navigate) => {
         if (view === 'map') return <MapPage />;
         if (view === 'places') return <PlacesPage />;
-        if (view === 'profile') return <ProfilePage />;
+        if (view === 'profile') return <ProfilePage onClose={() => navigate('map')} />;
         return <CountriesPage />;
       }}
     </AppShell>

@@ -35,6 +35,26 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .ToListAsync(ct);
     }
 
+    public Task<CountryDto?> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        var userId = _userContext.UserId;
+        return BuildBaseQuery()
+            .Where(c => c.Id == id)
+            .GroupJoin(
+                Context.Set<UserCountry>().AsNoTracking().Where(uc => uc.UserId == userId),
+                c => c.Id,
+                uc => uc.CountryId,
+                (c, ucs) => new { c, ucs })
+            .SelectMany(
+                x => x.ucs.DefaultIfEmpty(),
+                (x, uc) => new CountryDto(
+                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
+                    uc != null && uc.IsHome,
+                    uc != null && uc.IsVisited,
+                    uc != null && uc.ShowStateBorders))
+            .FirstOrDefaultAsync(ct);
+    }
+
     public Task<CountryDto?> GetByIsoAlpha2Async(string isoAlpha2, CancellationToken ct = default)
     {
         var userId = _userContext.UserId;
