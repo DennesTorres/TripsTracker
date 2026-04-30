@@ -1,5 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -41,4 +42,12 @@ builder.Services.AddScoped<IUserContext>(sp => sp.GetRequiredService<UserContext
 // Auto-register all application services against their interfaces (after manual registrations so TryAdd skips them)
 builder.Services.AddScopedApplicationServices("TripsTracker.");
 
-builder.Build().Run();
+var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<TripsTrackerDbContext>();
+    await db.Database.MigrateAsync();
+}
+
+await app.RunAsync();
