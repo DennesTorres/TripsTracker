@@ -15,7 +15,7 @@ export default function Modal({ title, onClose, children, width = 480 }: Props) 
           <h3>{title}</h3>
           <button className={styles.close} type="button" onClick={onClose}>×</button>
         </div>
-        {children}
+        <div className={styles.body}>{children}</div>
       </div>
     </div>
   );

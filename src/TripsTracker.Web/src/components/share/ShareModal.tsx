@@ -38,6 +38,9 @@ export default function ShareModal({ onClose }: Props) {
           <div className={styles.linkList}>
             {links.map(l => (
               <div key={l.id} className={`${styles.linkRow} ${!l.isActive ? styles.inactive : ''}`}>
+                <span className={l.isActive ? styles.statusActive : styles.statusDisabled}>
+                  {l.isActive ? 'Public' : 'Disabled'}
+                </span>
                 <code className={styles.token}>{`.../${l.token.slice(0, 12)}...`}</code>
                 <span className={styles.views}>{l.viewCount} views</span>
                 {l.isActive ? (
@@ -50,16 +53,14 @@ export default function ShareModal({ onClose }: Props) {
                       {copiedId === l.id ? <Check size={14} /> : <Copy size={14} />}
                     </button>
                     <button
-                      className={styles.iconBtn}
+                      className={`${styles.iconBtn} ${styles.disableBtn}`}
                       onClick={() => deactivate.mutate(l.id)}
-                      title="Deactivate"
+                      title="Disable link — URL will stop working"
                     >
                       <Trash2 size={14} />
                     </button>
                   </>
-                ) : (
-                  <span className={styles.deactivated}>Deactivated</span>
-                )}
+                ) : null}
               </div>
             ))}
           </div>

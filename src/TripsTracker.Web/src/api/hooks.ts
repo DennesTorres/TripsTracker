@@ -3,7 +3,7 @@ import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, Publi
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
-import apiClient from './client';
+import apiClient, { publicApiClient } from './client';
 
 export function usePlaces() {
   return useQuery<Place[]>({
@@ -122,7 +122,7 @@ export function useDeactivateShareLink() {
 export function useSharedMap(token: string) {
   return useQuery<PublicMapData>({
     queryKey: ['shared-map', token],
-    queryFn: () => apiClient.get<PublicMapData>(`/api/shared/${token}`).then(r => r.data),
+    queryFn: () => publicApiClient.get<PublicMapData>(`/api/shared/${token}`).then(r => r.data),
     enabled: !!token,
     retry: false,
   });

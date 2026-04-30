@@ -43,7 +43,36 @@
 }
 
 .inactive {
-  opacity: 0.4;
+  opacity: 0.5;
+}
+
+.statusActive {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #0d2b1a;
+  color: #4ade80;
+  border: 1px solid #166534;
+  white-space: nowrap;
+}
+
+.statusDisabled {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  color: #64748b;
+  border: 1px solid #334155;
+  white-space: nowrap;
+}
+
+.disableBtn {
+  &:hover {
+    background: rgba(248, 81, 73, 0.15);
+    color: #f85149;
+  }
 }
 
 .token {
