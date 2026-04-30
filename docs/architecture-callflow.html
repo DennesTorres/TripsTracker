@@ -9,15 +9,15 @@
   h1 { color: #94a3b8; font-size: 1.15rem; font-weight: 600; text-align: center;
        letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
   h2 { color: #475569; font-size: 0.78rem; font-weight: 400; text-align: center; margin-bottom: 20px; }
-  svg { display: block; margin: 0 auto; width: 100%; max-width: 1380px; }
-  .leg { display:flex; flex-wrap:wrap; gap:10px 22px; max-width:1380px; margin:12px auto 0;
+  svg { display: block; margin: 0 auto; width: 100%; max-width: 1560px; }
+  .leg { display:flex; flex-wrap:wrap; gap:10px 22px; max-width:1560px; margin:12px auto 0;
          padding:10px 14px; background:#1e2533; border-radius:8px;
          font-size:0.7rem; color:#64748b; align-items:center; }
   .li  { display:flex; align-items:center; gap:7px; }
   .lc  { flex-shrink:0; width:26px; height:3px; border-radius:2px; }
 
   /* ── Process detail section ── */
-  .proc-section { max-width: 1380px; margin: 48px auto 0; }
+  .proc-section { max-width: 1560px; margin: 48px auto 0; }
   .proc-section > h3 {
     font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
     color: #475569; margin-bottom: 24px; padding-bottom: 10px;
@@ -83,9 +83,9 @@
 </head>
 <body>
 <h1>TripsTracker — Architecture Overview</h1>
-<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-04-08 (after stories #122–#131, #137 and #146)</h2>
+<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-04-30 (Stage 4 — stories #47, #48, #84 — multi-user · profiles · state borders)</h2>
 
-<svg viewBox="0 0 1380 710" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 1560 810" xmlns="http://www.w3.org/2000/svg"
      font-family="'Segoe UI', Consolas, sans-serif">
   <defs>
     <marker id="ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
@@ -94,24 +94,25 @@
     <marker id="ae" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#79c0ff"/></marker>
     <marker id="ar" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f85149"/></marker>
     <marker id="av" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#a78bfa"/></marker>
+    <marker id="aa" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e3b341"/></marker>
   </defs>
 
   <!-- ═══════════════════ LAYER BANDS ═══════════════════ -->
 
   <!-- Frontend  y=25  h=105 -->
-  <rect x="120" y="25"  width="910" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
+  <rect x="120" y="25"  width="1200" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
   <text x="137" y="43" font-size="10" font-weight="700" letter-spacing="1.8" fill="#f0883e">FRONTEND · React + React Query</text>
 
   <!-- Functions  y=175  h=85 -->
-  <rect x="120" y="175" width="910" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
+  <rect x="120" y="175" width="1200" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
   <text x="137" y="193" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">AZURE FUNCTIONS · HTTP Triggers</text>
 
   <!-- Process  y=305  h=95 -->
-  <rect x="120" y="305" width="910" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
+  <rect x="120" y="305" width="1200" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
   <text x="137" y="323" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">PROCESS · TripsTracker.Process</text>
 
   <!-- Business  y=445  h=105 -->
-  <rect x="120" y="445" width="910" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
+  <rect x="120" y="445" width="1200" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
   <text x="137" y="463" font-size="10" font-weight="700" letter-spacing="1.8" fill="#58a6ff">BUSINESS · TripsTracker.Business · AOP wraps all calls</text>
 
   <!-- External  x=1048  y=445  h=200 -->
@@ -119,7 +120,7 @@
   <text x="1064" y="463" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
 
   <!-- Database  y=595  h=80 -->
-  <rect x="120" y="595" width="910" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
+  <rect x="120" y="595" width="1200" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
   <text x="137" y="613" font-size="10" font-weight="700" letter-spacing="1.8" fill="#3fb950">DATABASE · Azure SQL · EF Core 10</text>
 
   <!-- ═══════════════════ USER ACTOR ═══════════════════ -->
@@ -132,6 +133,7 @@
   <line x1="108" y1="373" x2="430" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
   <line x1="108" y1="380" x2="640" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
   <line x1="108" y1="387" x2="840" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="394" x2="1080" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
 
   <!-- ═══════════════════ COMPONENT OVALS ═══════════════════ -->
 
@@ -152,6 +154,10 @@
   <text x="853" y="73"  text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">Countries Page</text>
   <text x="853" y="87"  text-anchor="middle" font-size="9"  fill="#a87040">CountriesPage.tsx</text>
 
+  <ellipse cx="1080" cy="77" rx="90" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1080" y="73" text-anchor="middle" font-size="11" font-weight="bold" fill="#f0883e">ProfilePage</text>
+  <text x="1080" y="86" text-anchor="middle" font-size="9" fill="#a87040">AppShell · avatar dropdown · sign out</text>
+
   <!-- Functions (cy=217) -->
   <ellipse cx="215" cy="217" rx="84"  ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
   <text x="215" y="213" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">POST /api/places</text>
@@ -169,6 +175,10 @@
   <ellipse cx="900" cy="217" rx="80"  ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
   <text x="900" y="213" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">PUT /api/countries</text>
   <text x="900" y="226" text-anchor="middle" font-size="9"  fill="#8a6fef">CountryFunctions</text>
+
+  <ellipse cx="1100" cy="217" rx="90" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1100" y="213" text-anchor="middle" font-size="10" font-weight="bold" fill="#d2a8ff">GET · PUT /api/me</text>
+  <text x="1100" y="225" text-anchor="middle" font-size="9" fill="#8a6fef">UserFunctions</text>
 
   <!-- Process (cy=352) -->
   <ellipse cx="245" cy="352" rx="118" ry="28" fill="#19153a" stroke="#8a6fef" stroke-width="1.5"/>
@@ -196,6 +206,10 @@
   <text x="930" y="492" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">GeocodingBusiness</text>
   <text x="930" y="506" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync · SuggestCitiesAsync</text>
 
+  <ellipse cx="1130" cy="497" rx="90" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1130" y="493" text-anchor="middle" font-size="11" font-weight="bold" fill="#79c0ff">UserBusiness</text>
+  <text x="1130" y="506" text-anchor="middle" font-size="9" fill="#4a80b0">GetByEmailAsync · CreateAsync · UpdateAsync</text>
+
   <!-- External — Nominatim -->
   <ellipse cx="1145" cy="487" rx="88" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
   <text x="1145" y="482" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
@@ -209,15 +223,23 @@
   <!-- Database (cy=635) -->
   <ellipse cx="215" cy="635" rx="75"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
   <text x="215" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Places</text>
-  <text x="215" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">CountryId FK · StateAbbr · StateName</text>
+  <text x="215" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">UserId FK · CountryId FK · StateAbbr · StateName</text>
 
-  <ellipse cx="470" cy="635" rx="82"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
-  <text x="470" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Countries</text>
-  <text x="470" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">IsVisited · IsHome · Flag</text>
+  <ellipse cx="420" cy="635" rx="82"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="420" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Countries</text>
+  <text x="420" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">Flag · IsoAlpha2 · Region</text>
 
-  <ellipse cx="710" cy="635" rx="96"  ry="26" fill="#071a07" stroke="#2d5c2d" stroke-width="1.5" stroke-dasharray="4,2"/>
-  <text x="710" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#5ca87e">VisitedStates</text>
-  <text x="710" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">SQL VIEW — derived from Places</text>
+  <ellipse cx="640" cy="635" rx="96"  ry="26" fill="#071a07" stroke="#2d5c2d" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="640" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#5ca87e">VisitedStates</text>
+  <text x="640" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">SQL VIEW — UserId · CountryId · StateAbbr</text>
+
+  <ellipse cx="870" cy="635" rx="110" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="870" y="631" text-anchor="middle" font-size="12" font-weight="bold" fill="#7ee787">UserCountries</text>
+  <text x="870" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId FK · CountryId FK · IsHome · IsVisited · ShowStateBorders</text>
+
+  <ellipse cx="1110" cy="635" rx="80" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="1110" y="631" text-anchor="middle" font-size="12" font-weight="bold" fill="#7ee787">Users</text>
+  <text x="1110" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">Id · Email · DisplayName · CreatedAt</text>
 
   <!-- ═══════════════════ OPERATION FLOWS ═══════════════════ -->
 
@@ -298,6 +320,19 @@
   <line x1="870" y1="241" x2="556" y2="469" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
   <line x1="462" y1="525" x2="462" y2="609" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
 
+  <!-- ── AMBER: Profile read/update flow ── -->
+
+  <!-- Profile read/update flow — amber -->
+  <line x1="1080" y1="103" x2="1100" y2="193" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <circle cx="1090" cy="148" r="10" fill="#e3b341"/><text x="1090" y="152" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">1</text>
+  <line x1="1100" y1="241" x2="1130" y2="469" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <circle cx="1113" cy="354" r="10" fill="#e3b341"/><text x="1113" y="358" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">2</text>
+  <line x1="1130" y1="525" x2="1110" y2="609" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <circle cx="1120" cy="566" r="10" fill="#e3b341"/><text x="1120" y="570" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">3</text>
+
+  <!-- UserBusiness → UserCountries (for countries-related queries) -->
+  <line x1="1100" y1="525" x2="870" y2="609" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="5,2" marker-end="url(#aa)"/>
+
   <!-- ── VIOLET: Autocomplete ── -->
 
   <!-- AddPlaceForm → GET (CityFunctions) -->
@@ -319,6 +354,7 @@
   <div class="li"><div class="lc" style="background:#a78bfa"></div> Autocomplete — AddPlaceForm typing → CityFunctions → GeocodingBusiness → Photon API</div>
   <div class="li"><div class="lc" style="background:#3fb950"></div> Read data — GET endpoints</div>
   <div class="li"><div class="lc" style="background:#f0883e"></div> Update country — PUT</div>
+  <div class="li"><div class="lc" style="background:#e3b341"></div>User profile — GET/PUT /api/me · display name · home country · state border prefs</div>
   <div class="li" style="color:#475569">- - - dashed arrow: conditional flow &nbsp;&nbsp; - - - dashed oval: SQL VIEW — no write API</div>
 </div>
 
@@ -721,7 +757,7 @@
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body cond">Purpose: country colouring — IsVisited/IsHome determine map fill colour per country</span>
+                <span class="call-body cond">Purpose: country colouring — UserCountries.IsVisited/IsHome determine map fill colour per country (per-user, not global)</span>
               </div>
               <div class="call">
                 <span class="call-prefix">   </span>
@@ -825,6 +861,87 @@
   </div>
 
 </div><!-- /proc-section -->
+
+<div class="proc-section">
+  <h3>Stage 4 — Multi-User &amp; Profiles</h3>
+  <div class="proc-grid">
+
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#2a2208; color:#e3b341">
+        <span style="width:10px;height:10px;border-radius:50%;background:#e3b341;display:inline-block"></span>
+        Get / Update User Profile
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#e3b341;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">ProfilePage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              User opens profile via avatar dropdown in AppShell nav bar<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GET /api/me</code> — loads current display name + email<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PUT /api/me</code> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">{ displayName }</code> — on save
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#e3b341;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">UserFunctions <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserBusiness.GetByEmailAsync(userContext.Email)</code><br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserBusiness.UpdateAsync(userId, UpdateUserDto)</code> — PUT only<br>
+              <span style="font-style:italic;color:#64748b">(cond) UserContext.UserId populated by JwtValidationMiddleware from JWT sub claim</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#e3b341;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">3</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">UserBusiness <span style="background:#0a1a30;color:#79c0ff;border:1px solid #1a3a5f;border-radius:3px;padding:1px 5px;font-size:0.68rem">Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> SELECT from Users WHERE Email = @email (GET)<br>
+              <span style="color:#58a6ff">→</span> ExecuteUpdateAsync SET DisplayName = @displayName (PUT)<br>
+              <span style="color:#3fb950">←</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserDto { Id, Email, DisplayName, CreatedAt }</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#261508; color:#f0883e">
+        <span style="width:10px;height:10px;border-radius:50%;background:#f0883e;display:inline-block"></span>
+        State Border Preference (PUT)
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#f0883e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountriesPage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              User toggles the Borders checkbox in the Countries table<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PUT /api/countries/{id}/borders?value=true|false</code><br>
+              <span style="font-style:italic;color:#64748b">(cond) Available countries: those with GeoJSON sub-national boundary data (BR, US today; others via geoBoundaries API — story #170)</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#f0883e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountryFunctions → CountryBusiness <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">CountryBusiness.SetShowStateBordersAsync(userId, countryId, value)</code><br>
+              <span style="color:#58a6ff">→</span> UPSERT into UserCountries SET ShowStateBorders = @value WHERE UserId = @userId AND CountryId = @countryId<br>
+              <span style="color:#3fb950">←</span> updated UserCountry row<br>
+              <span style="font-style:italic;color:#64748b">(cond) Map immediately re-renders state layer for that country on next zoom</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 </body>
 </html>
