@@ -1,5 +1,6 @@
 using Moq;
 using TripsTracker.Domain;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Process;
 
@@ -16,6 +17,17 @@ public class PlacesProcessTests
         Id: 1, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",
         CountryFlag: "🇧🇷", City: "Itacuruça", StateAbbr: "RJ",
         StateName: "Rio de Janeiro", IsHome: false);
+
+    private static PlacesProcess BuildSut(
+        Mock<IPlaceBusiness> places,
+        Mock<ICountryBusiness> countries,
+        Mock<IGeocodingBusiness> geocoding)
+    {
+        var points = new Mock<IPointsBusiness>();
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(1);
+        return new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
+    }
 
     // ─── AddAsync ─────────────────────────────────────────────────────────────
 
@@ -34,7 +46,7 @@ public class PlacesProcessTests
         places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(AnyPlace());
 
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        var sut = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
@@ -60,7 +72,7 @@ public class PlacesProcessTests
         places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(AnyPlace());
 
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        var sut = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
@@ -86,7 +98,7 @@ public class PlacesProcessTests
         places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(AnyPlace());
 
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        var sut = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("São Paulo", "BR"));
 

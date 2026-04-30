@@ -7,7 +7,7 @@ using TripsTracker.Interfaces.Integration;
 
 namespace TripsTracker.Functions;
 
-public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs, UserContext userContext)
+public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs, UserContext userContext, IPointsBusiness points)
 {
     [Function("GetPlacePhotos")]
     public async Task<IActionResult> GetByPlace(
@@ -37,6 +37,7 @@ public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blob
         await blobs.UploadAsync(blobName, stream, file.ContentType, ct);
 
         var result = await photos.CreateAsync(placeId, blobName, file.FileName, file.ContentType, file.Length, caption, ct);
+        await points.AwardAsync(result.UserId, "photo_uploaded", 5, result.Id, "Photo", ct);
         return new OkObjectResult(result);
     }
 

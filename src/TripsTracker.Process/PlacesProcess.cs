@@ -1,4 +1,5 @@
 using TripsTracker.Domain;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Exceptions;
 using TripsTracker.Interfaces.Process;
@@ -10,12 +11,17 @@ public class PlacesProcess : IPlacesProcess
     private readonly IPlaceBusiness _places;
     private readonly ICountryBusiness _countries;
     private readonly IGeocodingBusiness _geocoding;
+    private readonly IPointsBusiness _points;
+    private readonly IUserContext _userContext;
 
-    public PlacesProcess(IPlaceBusiness places, ICountryBusiness countries, IGeocodingBusiness geocoding)
+    public PlacesProcess(IPlaceBusiness places, ICountryBusiness countries, IGeocodingBusiness geocoding,
+        IPointsBusiness points, IUserContext userContext)
     {
         _places = places;
         _countries = countries;
         _geocoding = geocoding;
+        _points = points;
+        _userContext = userContext;
     }
 
     public async Task<PlaceDto> AddAsync(AddPlaceDto dto, CancellationToken ct = default)
@@ -33,6 +39,9 @@ public class PlacesProcess : IPlacesProcess
             await _countries.SetHomeAsync(country.Id, true, ct);
         else
             await _countries.SetVisitedAsync(country.Id, true, ct);
+
+        if (_userContext.UserId.HasValue)
+            await _points.AwardAsync(_userContext.UserId.Value, "place_added", 10, place.Id, "Place", ct);
 
         return place;
     }

@@ -132,3 +132,70 @@
     color: #e8e8e8;
   }
 }
+
+.pointsMenu {
+  position: relative;
+}
+
+.pointsBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid #334155;
+  background: rgba(251,191,36,0.08);
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: rgba(251,191,36,0.15);
+    border-color: #fbbf24;
+  }
+}
+
+.pointsDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 200px;
+  background: #0d1828;
+  border: 1px solid #1e3050;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.pointsEmpty {
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  color: #475569;
+  font-style: italic;
+}
+
+.pointsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  border-top: 1px solid #1e3050;
+
+  &:first-of-type {
+    border-top: none;
+  }
+}
+
+.pointsEventType {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.pointsValue {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fbbf24;
+}

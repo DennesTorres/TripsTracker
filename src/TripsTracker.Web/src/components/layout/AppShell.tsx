@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
-import { useEnsureUser } from '@/api/hooks';
-import { User, LogOut } from 'lucide-react';
+import { useEnsureUser, usePointsSummary } from '@/api/hooks';
+import { User, LogOut, Star } from 'lucide-react';
 import styles from './AppShell.module.scss';
 
 export type View = 'map' | 'places' | 'countries' | 'profile';
@@ -19,14 +19,20 @@ const TABS: { id: View; label: string }[] = [
 export default function AppShell({ children }: Props) {
   const [view, setView] = useState<View>('map');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pointsOpen, setPointsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const pointsRef = useRef<HTMLDivElement>(null);
   const { instance } = useMsal();
   const { data: user } = useEnsureUser();
+  const { data: pointsData } = usePointsSummary();
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
+      }
+      if (pointsRef.current && !pointsRef.current.contains(e.target as Node)) {
+        setPointsOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -53,6 +59,37 @@ export default function AppShell({ children }: Props) {
           ))}
         </div>
         <div className={styles.spacer} />
+
+        {pointsData !== undefined && (
+          <div className={styles.pointsMenu} ref={pointsRef}>
+            <button
+              className={styles.pointsBtn}
+              onClick={() => setPointsOpen(o => !o)}
+              title="Your points"
+            >
+              <Star size={13} />
+              <span>{pointsData.totalPoints.toLocaleString()}</span>
+            </button>
+            {pointsOpen && (
+              <div className={styles.pointsDropdown}>
+                <div className={styles.dropdownHeader}>
+                  <span className={styles.dropdownName}>{pointsData.totalPoints.toLocaleString()} pts total</span>
+                </div>
+                {pointsData.recentEvents.length === 0 ? (
+                  <div className={styles.pointsEmpty}>No activity yet</div>
+                ) : (
+                  pointsData.recentEvents.map(e => (
+                    <div key={e.id} className={styles.pointsRow}>
+                      <span className={styles.pointsEventType}>{formatEventType(e.eventType)}</span>
+                      <span className={styles.pointsValue}>+{e.points}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className={styles.userMenu} ref={menuRef}>
           <button
             className={styles.avatarBtn}
@@ -80,4 +117,13 @@ export default function AppShell({ children }: Props) {
       <main className={styles.main}>{children(view, setView)}</main>
     </div>
   );
+}
+
+function formatEventType(eventType: string): string {
+  const map: Record<string, string> = {
+    place_added: 'Place added',
+    photo_uploaded: 'Photo uploaded',
+    comment_added: 'Comment added',
+  };
+  return map[eventType] ?? eventType;
 }

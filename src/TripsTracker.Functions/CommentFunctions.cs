@@ -6,7 +6,7 @@ using TripsTracker.Interfaces.Business;
 
 namespace TripsTracker.Functions;
 
-public class CommentFunctions(IPlaceCommentBusiness comments)
+public class CommentFunctions(IPlaceCommentBusiness comments, IPointsBusiness points)
 {
     [Function("GetPlaceComments")]
     public async Task<IActionResult> GetByPlace(
@@ -26,6 +26,7 @@ public class CommentFunctions(IPlaceCommentBusiness comments)
             return new BadRequestObjectResult(new { error = "Comment text is required" });
 
         var result = await comments.CreateAsync(placeId, dto.Text, ct);
+        await points.AwardAsync(result.UserId, "comment_added", 3, result.Id, "Comment", ct);
         return new OkObjectResult(result);
     }
 
