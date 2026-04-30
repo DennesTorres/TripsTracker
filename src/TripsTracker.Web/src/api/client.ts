@@ -11,7 +11,10 @@ apiClient.interceptors.request.use(async config => {
   await msalInitialized;
 
   const account = msalInstance.getActiveAccount();
-  if (!account) return config;
+  if (!account) {
+    await msalInstance.loginRedirect(loginRequest);
+    return config;
+  }
 
   try {
     const tokenResponse = await msalInstance.acquireTokenSilent({
@@ -22,6 +25,8 @@ apiClient.interceptors.request.use(async config => {
   } catch (error) {
     if (error instanceof InteractionRequiredAuthError) {
       await msalInstance.loginRedirect(loginRequest);
+    } else {
+      console.error('[Auth] acquireTokenSilent failed:', error);
     }
   }
   return config;
