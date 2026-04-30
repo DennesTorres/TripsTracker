@@ -4,19 +4,21 @@ import CountryCombobox from '@/components/ui/CountryCombobox';
 import FormInput from '@/components/ui/FormInput';
 import styles from './ProfilePage.module.scss';
 
-export default function ProfilePage() {
+interface Props {
+  onClose?: () => void;
+}
+
+export default function ProfilePage({ onClose }: Props) {
   const { data: user } = useEnsureUser();
   const { data: countries = [] } = useCountries();
   const updateUser = useUpdateUser();
 
   const [displayName, setDisplayName] = useState('');
   const [homeCountry, setHomeCountry] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [savedMessage, setSavedMessage] = useState('');
 
   useEffect(() => {
-    if (user) {
-      setDisplayName(user.displayName ?? '');
-    }
+    if (user) setDisplayName(user.displayName ?? '');
   }, [user]);
 
   useEffect(() => {
@@ -25,16 +27,25 @@ export default function ProfilePage() {
   }, [countries]);
 
   const handleSave = () => {
-    updateUser.mutate({ displayName: displayName || undefined }, {
-      onSuccess: () => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      },
-    });
+    const homeCountryId = countries.find(c => c.isoAlpha2 === homeCountry)?.id;
+    updateUser.mutate(
+      { displayName: displayName || undefined, homeCountryId },
+      {
+        onSuccess: () => {
+          setSavedMessage('Changes saved');
+          setTimeout(() => setSavedMessage(''), 3000);
+        },
+        onError: () => {
+          setSavedMessage('Could not save — home country must be a visited country');
+          setTimeout(() => setSavedMessage(''), 5000);
+        },
+      }
+    );
   };
 
   if (!user) return null;
 
+  const visitedCountries = countries.filter(c => c.isVisited);
   const joinedDate = new Date(user.createdAt).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -42,7 +53,12 @@ export default function ProfilePage() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <h2 className={styles.heading}>Profile</h2>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.heading}>Edit Profile</h2>
+          {onClose && (
+            <button className={styles.closeBtn} onClick={onClose} title="Back to map">✕</button>
+          )}
+        </div>
 
         <div className={styles.field}>
           <FormInput
@@ -56,7 +72,7 @@ export default function ProfilePage() {
         <div className={styles.field}>
           <label className={styles.label}>Home country</label>
           <CountryCombobox
-            countries={countries}
+            countries={visitedCountries}
             value={homeCountry}
             onChange={setHomeCountry}
           />
@@ -72,13 +88,19 @@ export default function ProfilePage() {
           <p className={styles.readOnly}>{joinedDate}</p>
         </div>
 
+        {savedMessage && (
+          <p className={`${styles.savedMsg} ${savedMessage.startsWith('Could') ? styles.savedMsgError : styles.savedMsgOk}`}>
+            {savedMessage}
+          </p>
+        )}
+
         <div className={styles.actions}>
           <button
             className={styles.saveBtn}
             onClick={handleSave}
             disabled={updateUser.isPending}
           >
-            {updateUser.isPending ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
+            {updateUser.isPending ? 'Saving...' : 'Save changes'}
           </button>
         </div>
       </div>

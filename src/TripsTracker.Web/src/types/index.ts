@@ -64,6 +64,7 @@ export interface UserProfile {
 
 export interface UpdateUser {
   displayName?: string;
+  homeCountryId?: number;
 }
 
 export interface ShareLink {
