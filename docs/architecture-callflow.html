@@ -83,9 +83,9 @@
 </head>
 <body>
 <h1>TripsTracker — Architecture Overview</h1>
-<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-04-30 (Stage 4 — stories #47, #48, #84 — multi-user · profiles · state borders)</h2>
+<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-05-01 (Stage 5 — story #49 — public map sharing)</h2>
 
-<svg viewBox="0 0 1560 810" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 1720 810" xmlns="http://www.w3.org/2000/svg"
      font-family="'Segoe UI', Consolas, sans-serif">
   <defs>
     <marker id="ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
@@ -95,32 +95,33 @@
     <marker id="ar" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f85149"/></marker>
     <marker id="av" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#a78bfa"/></marker>
     <marker id="aa" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e3b341"/></marker>
+    <marker id="at" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2dd4bf"/></marker>
   </defs>
 
   <!-- ═══════════════════ LAYER BANDS ═══════════════════ -->
 
   <!-- Frontend  y=25  h=105 -->
-  <rect x="120" y="25"  width="1200" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
+  <rect x="120" y="25"  width="1340" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
   <text x="137" y="43" font-size="10" font-weight="700" letter-spacing="1.8" fill="#f0883e">FRONTEND · React + React Query</text>
 
   <!-- Functions  y=175  h=85 -->
-  <rect x="120" y="175" width="1200" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
+  <rect x="120" y="175" width="1340" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
   <text x="137" y="193" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">AZURE FUNCTIONS · HTTP Triggers</text>
 
   <!-- Process  y=305  h=95 -->
-  <rect x="120" y="305" width="1200" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
+  <rect x="120" y="305" width="1340" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
   <text x="137" y="323" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">PROCESS · TripsTracker.Process</text>
 
   <!-- Business  y=445  h=105 -->
-  <rect x="120" y="445" width="1200" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
+  <rect x="120" y="445" width="1340" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
   <text x="137" y="463" font-size="10" font-weight="700" letter-spacing="1.8" fill="#58a6ff">BUSINESS · TripsTracker.Business · AOP wraps all calls</text>
 
-  <!-- External  x=1240  y=445  h=200 -->
-  <rect x="1240" y="445" width="180" height="200" rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
-  <text x="1064" y="463" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
+  <!-- External  x=1480  y=445  h=200 -->
+  <rect x="1480" y="445" width="180" height="200" rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
+  <text x="1497" y="463" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
 
   <!-- Database  y=595  h=80 -->
-  <rect x="120" y="595" width="1200" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
+  <rect x="120" y="595" width="1340" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
   <text x="137" y="613" font-size="10" font-weight="700" letter-spacing="1.8" fill="#3fb950">DATABASE · Azure SQL · EF Core 10</text>
 
   <!-- ═══════════════════ USER ACTOR ═══════════════════ -->
@@ -134,6 +135,7 @@
   <line x1="108" y1="380" x2="640" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
   <line x1="108" y1="387" x2="840" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
   <line x1="108" y1="394" x2="1080" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="398" x2="1295" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
 
   <!-- ═══════════════════ COMPONENT OVALS ═══════════════════ -->
 
@@ -207,18 +209,19 @@
   <text x="930" y="506" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync · SuggestCitiesAsync</text>
 
   <ellipse cx="1130" cy="497" rx="90" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
-  <text x="1130" y="493" text-anchor="middle" font-size="11" font-weight="bold" fill="#79c0ff">UserBusiness</text>
-  <text x="1130" y="506" text-anchor="middle" font-size="9" fill="#4a80b0">GetByEmailAsync · CreateAsync · UpdateAsync</text>
+  <text x="1130" y="490" text-anchor="middle" font-size="11" font-weight="bold" fill="#79c0ff">UserBusiness</text>
+  <text x="1130" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">GetByIdAsync · GetByEmailAsync</text>
+  <text x="1130" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">CreateAsync · UpdateAsync</text>
 
   <!-- External — Nominatim -->
-  <ellipse cx="1330" cy="487" rx="80" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
-  <text x="1330" y="482" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
-  <text x="1330" y="495" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync</text>
+  <ellipse cx="1570" cy="487" rx="80" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="1570" y="482" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
+  <text x="1570" y="495" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync</text>
 
   <!-- External — Photon -->
-  <ellipse cx="1330" cy="572" rx="80" ry="26" fill="#12091a" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,2"/>
-  <text x="1330" y="567" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Photon API</text>
-  <text x="1330" y="580" text-anchor="middle" font-size="9"  fill="#7c5fa8">photon.komoot.io · SuggestCitiesAsync</text>
+  <ellipse cx="1570" cy="572" rx="80" ry="26" fill="#12091a" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="1570" y="567" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Photon API</text>
+  <text x="1570" y="580" text-anchor="middle" font-size="9"  fill="#7c5fa8">photon.komoot.io · SuggestCitiesAsync</text>
 
   <!-- Database (cy=635) -->
   <ellipse cx="215" cy="635" rx="75"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
@@ -240,6 +243,34 @@
   <ellipse cx="1110" cy="635" rx="80" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
   <text x="1110" y="631" text-anchor="middle" font-size="12" font-weight="bold" fill="#7ee787">Users</text>
   <text x="1110" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">Id · Email · DisplayName · CreatedAt</text>
+
+  <!-- Stage 5 components -->
+  <!-- SharedMapPage (Frontend cy=77) -->
+  <ellipse cx="1295" cy="77" rx="90" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1295" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">SharedMapPage</text>
+  <text x="1295" y="87" text-anchor="middle" font-size="9" fill="#a87040">/#/shared/{token} · read-only map</text>
+
+  <!-- ShareFunctions (Functions cy=217) -->
+  <ellipse cx="1330" cy="217" rx="115" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1330" y="211" text-anchor="middle" font-size="9" font-weight="600" fill="#d2a8ff">POST·GET·DEL /api/share-links</text>
+  <text x="1330" y="222" text-anchor="middle" font-size="9" fill="#d2a8ff">GET /api/shared/{token}</text>
+  <text x="1330" y="232" text-anchor="middle" font-size="8" fill="#8a6fef">ShareFunctions</text>
+
+  <!-- PublicMapProcess (Process cy=352) -->
+  <ellipse cx="950" cy="352" rx="125" ry="28" fill="#19153a" stroke="#8a6fef" stroke-width="1.5"/>
+  <text x="950" y="347" text-anchor="middle" font-size="11" font-weight="600" fill="#d2a8ff">PublicMapProcess · GetSharedMapAsync</text>
+  <text x="950" y="361" text-anchor="middle" font-size="9" fill="#8a6fef">validate token → load owner data (cross-user)</text>
+
+  <!-- ShareLinkBusiness (Business cy=497) -->
+  <ellipse cx="1360" cy="497" rx="95" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1360" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">ShareLinkBusiness</text>
+  <text x="1360" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">CreateAsync · GetUserLinksAsync</text>
+  <text x="1360" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">GetByTokenAsync · GetOwnerIdAsync</text>
+
+  <!-- ShareLinks (Database cy=635) -->
+  <ellipse cx="1385" cy="635" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="1385" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">ShareLinks</text>
+  <text x="1385" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId FK · Token · IsActive · ExpiresAt · ViewCount</text>
 
   <!-- ═══════════════════ OPERATION FLOWS ═══════════════════ -->
 
@@ -263,7 +294,7 @@
   <text x="374" y="367" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">3</text>
 
   <!-- GeocodingBusiness → Nominatim -->
-  <line x1="1022" y1="487" x2="1250" y2="487" stroke="#79c0ff" stroke-width="2" marker-end="url(#ae)"/>
+  <line x1="1022" y1="487" x2="1490" y2="487" stroke="#79c0ff" stroke-width="2" marker-end="url(#ae)"/>
 
   <!-- ④ AddAsync → PlaceBusiness -->
   <line x1="218" y1="380" x2="210" y2="469" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#ab)"/>
@@ -336,6 +367,44 @@
 
   <!-- UserBusiness writes ONLY to Users table; UserCountries is CountryBusiness's domain -->
 
+  <!-- ── TEAL: Public Sharing (Stage 5) ── -->
+
+  <!-- ① MapPage → ShareFunctions (create/manage links) -->
+  <line x1="430" y1="103" x2="1220" y2="193" stroke="#2dd4bf" stroke-width="2" marker-end="url(#at)"/>
+  <circle cx="828" cy="148" r="10" fill="#2dd4bf"/>
+  <text x="828" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">1</text>
+
+  <!-- ② ShareFunctions → ShareLinkBusiness -->
+  <line x1="1330" y1="241" x2="1355" y2="469" stroke="#2dd4bf" stroke-width="2" marker-end="url(#at)"/>
+  <circle cx="1342" cy="355" r="10" fill="#2dd4bf"/>
+  <text x="1342" y="359" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">2</text>
+
+  <!-- ③ ShareLinkBusiness → ShareLinks DB -->
+  <line x1="1360" y1="525" x2="1382" y2="609" stroke="#2dd4bf" stroke-width="2" marker-end="url(#at)"/>
+  <circle cx="1371" cy="566" r="10" fill="#2dd4bf"/>
+  <text x="1371" y="570" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">3</text>
+
+  <!-- ④ SharedMapPage → ShareFunctions (public GET — dashed) -->
+  <line x1="1295" y1="103" x2="1320" y2="193" stroke="#2dd4bf" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#at)"/>
+  <circle cx="1307" cy="148" r="10" fill="#2dd4bf"/>
+  <text x="1307" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">4</text>
+  <text x="1350" y="140" text-anchor="start" font-size="8" fill="#2dd4bf" font-style="italic">public</text>
+
+  <!-- ⑤ ShareFunctions → PublicMapProcess (public GET path) -->
+  <line x1="1218" y1="229" x2="1075" y2="324" stroke="#2dd4bf" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#at)"/>
+  <circle cx="1146" cy="276" r="10" fill="#2dd4bf"/>
+  <text x="1146" y="280" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">5</text>
+
+  <!-- PublicMapProcess → UserBusiness (cross-user, dashed teal) -->
+  <line x1="1075" y1="366" x2="1175" y2="469" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#at)"/>
+  <text x="1140" y="408" text-anchor="middle" font-size="8" fill="#2dd4bf" font-style="italic">cross-user</text>
+
+  <!-- PublicMapProcess → PlaceBusiness (cross-user, dashed teal) -->
+  <line x1="825" y1="375" x2="270" y2="469" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#at)"/>
+
+  <!-- PublicMapProcess → CountryBusiness (cross-user, dashed teal) -->
+  <line x1="855" y1="378" x2="530" y2="469" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#at)"/>
+
   <!-- ── VIOLET: Autocomplete ── -->
 
   <!-- AddPlaceForm → GET (CityFunctions) -->
@@ -346,7 +415,7 @@
   <line x1="726" y1="241" x2="882" y2="469" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#av)"/>
 
   <!-- GeocodingBusiness → Photon -->
-  <line x1="1022" y1="504" x2="1250" y2="559" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#av)"/>
+  <line x1="1022" y1="504" x2="1490" y2="562" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#av)"/>
 
 </svg>
 
@@ -358,7 +427,8 @@
   <div class="li"><div class="lc" style="background:#3fb950"></div> Read data — GET endpoints</div>
   <div class="li"><div class="lc" style="background:#f0883e"></div> Update country — PUT</div>
   <div class="li"><div class="lc" style="background:#e3b341"></div>User profile — GET/PUT /api/me · display name · home country · state border prefs</div>
-  <div class="li" style="color:#475569">- - - dashed arrow: conditional flow &nbsp;&nbsp; - - - dashed oval: SQL VIEW — no write API</div>
+  <div class="li"><div class="lc" style="background:#2dd4bf"></div>Public sharing — create/manage share links · public read-only map (no auth required for shared view)</div>
+  <div class="li" style="color:#475569">- - - dashed arrow: conditional flow or public/cross-user path &nbsp;&nbsp; - - - dashed oval: SQL VIEW — no write API</div>
 </div>
 
 <!-- ═══════════════════ PROCESS DETAIL SECTION ═══════════════════ -->
@@ -937,6 +1007,106 @@
               <span style="color:#58a6ff">→</span> UPSERT into UserCountries SET ShowStateBorders = @value WHERE UserId = @userId AND CountryId = @countryId<br>
               <span style="color:#3fb950">←</span> updated UserCountry row<br>
               <span style="font-style:italic;color:#64748b">(cond) Map immediately re-renders state layer for that country on next zoom</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="proc-section">
+  <h3>Stage 5 — Public Map Sharing</h3>
+  <div class="proc-grid">
+
+    <!-- ── CREATE / MANAGE SHARE LINKS ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a2420; color:#2dd4bf">
+        <span style="width:10px;height:10px;border-radius:50%;background:#2dd4bf;display:inline-block"></span>
+        Create / Manage Share Links
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">MapPage — ShareModal <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              User clicks Share button → ShareModal opens<br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#1e3a2a;color:#2dd4bf;padding:1px 4px;border-radius:2px;font-size:0.72rem">POST</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/share-links</code> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">{expiresAt?}</code><br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#1e3a2a;color:#2dd4bf;padding:1px 4px;border-radius:2px;font-size:0.72rem">GET</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/share-links</code> — list existing links<br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#3a1010;color:#f85149;padding:1px 4px;border-radius:2px;font-size:0.72rem">DELETE</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/share-links/{id}</code> — deactivate
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">ShareFunctions → ShareLinkBusiness <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">ShareLinkBusiness.CreateAsync(dto)</code><br>
+              token = 32-char URL-safe base64 via <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">RandomNumberGenerator.GetBytes(24)</code><br>
+              <span style="color:#2dd4bf">→</span> INSERT INTO ShareLinks → <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">ShareLinkDto</code><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GetUserLinksAsync()</code> WHERE UserId=current ORDER BY CreatedAt DESC<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">DeactivateAsync(id)</code> SET IsActive=false WHERE Id=id AND UserId=current
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW SHARED MAP (PUBLIC) ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a2420; color:#2dd4bf">
+        <span style="width:10px;height:10px;border-radius:50%;background:#2dd4bf;display:inline-block"></span>
+        View Shared Map — public, no auth
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">4</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">SharedMapPage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              Rendered at <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/#/shared/{token}</code> — unauthenticated hash route<br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#1e3a2a;color:#2dd4bf;padding:1px 4px;border-radius:2px;font-size:0.72rem">GET</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/shared/{token}</code> <span style="font-style:italic;color:#64748b">(no Authorization header)</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">5</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">ShareFunctions → PublicMapProcess <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Process</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              JwtValidationMiddleware skips auth (function name "GetSharedMap")<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PublicMapProcess.GetSharedMapAsync(token)</code><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">ShareLinkBusiness.GetByTokenAsync(token)</code> — IsActive AND (ExpiresAt IS NULL OR ExpiresAt &gt; now)<br>
+              <span style="font-style:italic;color:#64748b">(cond) if null → 404</span><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">IncrementViewCountAsync(token)</code> — ViewCount += 1<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GetOwnerIdAsync(token)</code> → ownerId
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">6</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">PublicMapProcess — cross-user queries <span style="background:#0a1a30;color:#79c0ff;border:1px solid #1a3a5f;border-radius:3px;padding:1px 5px;font-size:0.68rem">Process → Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserBusiness.GetByIdAsync(ownerId)</code> → display name<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PlaceBusiness.GetAllForUserAsync(ownerId)</code> <span style="font-style:italic;color:#64748b">(bypasses IUserContext)</span><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">CountryBusiness.GetAllForUserAsync(ownerId)</code><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">VisitedStateBusiness.GetAllForUserAsync(ownerId)</code><br>
+              <span style="color:#2dd4bf">←</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PublicMapDto { OwnerDisplayName, Places, Countries, VisitedStates }</code>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">7</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">SharedMapPage renders <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              Header: TripsTracker brand · "<em>DisplayName</em>'s travel map"<br>
+              Stats: N places · N countries · N continents<br>
+              Read-only WorldMap with owner's places, country fills, state borders
             </div>
           </div>
         </div>
