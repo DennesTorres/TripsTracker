@@ -3,8 +3,9 @@ import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
 import ShareModal from '@/components/share/ShareModal';
+import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
 import { usePlaces, useCountries, useVisitedStates } from '@/api/hooks';
-import { Share2 } from 'lucide-react';
+import { Share2, Compass } from 'lucide-react';
 import styles from './MapPage.module.scss';
 
 export default function MapPage() {
@@ -17,6 +18,7 @@ export default function MapPage() {
   const [brGeo, setBrGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [adding, setAdding] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [discovering, setDiscovering] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -67,6 +69,9 @@ export default function MapPage() {
             <button className={styles.shareBtn} onClick={() => setSharing(true)}>
               <Share2 size={14} /> Share
             </button>
+            <button className={styles.discoverBtn} onClick={() => setDiscovering(true)}>
+              <Compass size={14} /> Discover
+            </button>
           </div>
         )}
       </div>
@@ -75,6 +80,12 @@ export default function MapPage() {
       )}
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
       {sharing && <ShareModal onClose={() => setSharing(false)} />}
+      {discovering && (
+        <DiscoverMapsModal
+          onOpen={token => { window.location.hash = `/shared/${token}`; }}
+          onClose={() => setDiscovering(false)}
+        />
+      )}
     </div>
   );
 }

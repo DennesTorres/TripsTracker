@@ -71,8 +71,15 @@ export interface ShareLink {
   id: number;
   token: string;
   isActive: boolean;
+  requiresLogin: boolean;
   createdAt: string;
   expiresAt?: string;
+  viewCount: number;
+}
+
+export interface PublicShareSummary {
+  token: string;
+  displayName: string;
   viewCount: number;
 }
 

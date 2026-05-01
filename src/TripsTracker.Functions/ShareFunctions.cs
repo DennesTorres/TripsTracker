@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using TripsTracker.Domain;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Process;
 
 namespace TripsTracker.Functions;
 
-public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess publicMap)
+public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess publicMap, IUserContext userContext)
 {
     [Function("CreateShareLink")]
     public async Task<IActionResult> Create(
@@ -45,7 +46,27 @@ public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess pub
         string token,
         CancellationToken ct)
     {
+        var link = await shareLinks.GetByTokenAsync(token, ct);
+        if (link is null) return new NotFoundResult();
+
+        if (link.RequiresLogin && userContext.UserId is null)
+            return new UnauthorizedResult();
+
         var data = await publicMap.GetSharedMapAsync(token, ct);
         return data is not null ? new OkObjectResult(data) : new NotFoundResult();
+    }
+
+    /// <summary>
+    /// Discover public maps — returns active, non-login-required share links.
+    /// JwtValidationMiddleware skips this function by name.
+    /// </summary>
+    [Function("DiscoverMaps")]
+    public async Task<IActionResult> Discover(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "discover")] HttpRequest req,
+        CancellationToken ct)
+    {
+        var query = req.Query["q"].ToString() ?? string.Empty;
+        var results = await shareLinks.DiscoverAsync(query, ct: ct);
+        return new OkObjectResult(results);
     }
 }

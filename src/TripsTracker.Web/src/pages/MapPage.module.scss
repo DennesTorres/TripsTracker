@@ -46,6 +46,26 @@
   }
 }
 
+.discoverBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(125,211,252,0.15);
+    color: #7dd3fc;
+    border-color: rgba(125,211,252,0.3);
+  }
+}
+
 .shareBtn {
   display: flex;
   align-items: center;
