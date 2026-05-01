@@ -86,6 +86,7 @@ export default function AddPlaceForm({ onClose }: Props) {
             value={countryIsoAlpha2}
             onChange={handleCountryChange}
             required
+            allowClear
           />
         </label>
 
