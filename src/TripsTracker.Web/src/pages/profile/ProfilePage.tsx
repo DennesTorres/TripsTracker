@@ -23,7 +23,7 @@ export default function ProfilePage({ onClose }: Props) {
 
   useEffect(() => {
     const home = countries.find(c => c.isHome);
-    if (home) setHomeCountry(home.isoAlpha2);
+    setHomeCountry(home?.isoAlpha2 ?? '');
   }, [countries]);
 
   const handleSave = () => {
@@ -75,6 +75,7 @@ export default function ProfilePage({ onClose }: Props) {
             countries={visitedCountries}
             value={homeCountry}
             onChange={setHomeCountry}
+            allowClear
           />
         </div>
 
