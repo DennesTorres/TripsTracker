@@ -4,16 +4,21 @@ using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Business;
 
 public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
 {
-    private readonly IUserContext _userContext;
+    private const long StorageQuotaBytes = 100L * 1024 * 1024; // 100 MB per user
 
-    public PlacePhotoBusiness(TripsTrackerDbContext context, IUserContext userContext) : base(context)
+    private readonly IUserContext _userContext;
+    private readonly IUserBusiness _users;
+
+    public PlacePhotoBusiness(TripsTrackerDbContext context, IUserContext userContext, IUserBusiness users) : base(context)
     {
         _userContext = userContext;
+        _users = users;
     }
 
     public async Task<PlacePhotoDto> CreateAsync(
@@ -21,6 +26,11 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
         string contentType, long sizeBytes, string? caption,
         CancellationToken ct = default)
     {
+        var userId = _userContext.UserId!.Value;
+        var used = await _users.GetStorageUsedAsync(userId, ct);
+        if (used + sizeBytes > StorageQuotaBytes)
+            throw new BusinessRuleException("Storage quota exceeded (100 MB per user).");
+
         var maxOrder = await BuildBaseQuery()
             .Where(p => p.PlaceId == placeId)
             .MaxAsync(p => (int?)p.SortOrder, ct) ?? 0;
@@ -28,7 +38,7 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
         var photo = new PlacePhoto
         {
             PlaceId = placeId,
-            UserId = _userContext.UserId!.Value,
+            UserId = userId,
             BlobName = blobName,
             OriginalFileName = originalFileName,
             ContentType = contentType,
@@ -38,6 +48,7 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
             UploadedAt = DateTime.UtcNow,
         };
         await InsertAsync(photo, ct);
+        await _users.AddStorageUsedAsync(userId, sizeBytes, ct);
         return new PlacePhotoDto(photo.Id, photo.PlaceId, photo.UserId, photo.OriginalFileName,
             photo.ContentType, photo.SizeBytes, photo.Caption, photo.SortOrder, photo.UploadedAt, 0, 0);
     }
@@ -60,7 +71,17 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
 
     public async Task<bool> DeleteAsync(int photoId, CancellationToken ct = default)
     {
-        var rows = await ExecuteDeleteAsync(p => p.Id == photoId && p.UserId == _userContext.UserId, ct);
+        var userId = _userContext.UserId!.Value;
+        var size = await BuildBaseQuery()
+            .Where(p => p.Id == photoId && p.UserId == userId)
+            .Select(p => (long?)p.SizeBytes)
+            .FirstOrDefaultAsync(ct);
+
+        if (size is null) return false;
+
+        var rows = await ExecuteDeleteAsync(p => p.Id == photoId && p.UserId == userId, ct);
+        if (rows > 0)
+            await _users.AddStorageUsedAsync(userId, -size.Value, ct);
         return rows > 0;
     }
 

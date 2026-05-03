@@ -5,6 +5,8 @@ using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Interfaces;
+using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Tests.Business;
 
@@ -16,13 +18,18 @@ public class PlacePhotoBusinessTests
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
+        public Mock<IUserBusiness> UserBizMock { get; } = new Mock<IUserBusiness>();
         private readonly SqliteConnection _conn;
-        private readonly Mock<IUserContext> _userContextMock = new();
+        private readonly Mock<IUserContext> _userContextMock = new Mock<IUserContext>();
 
-        public PlacePhotoBusiness ForUser(int userId)
+        public PlacePhotoBusiness ForUser(int userId, long storageUsedBytes = 0)
         {
             _userContextMock.Setup(u => u.UserId).Returns(userId);
-            return new PlacePhotoBusiness(Ctx, _userContextMock.Object);
+            UserBizMock.Setup(u => u.GetStorageUsedAsync(userId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(storageUsedBytes);
+            UserBizMock.Setup(u => u.AddStorageUsedAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            return new PlacePhotoBusiness(Ctx, _userContextMock.Object, UserBizMock.Object);
         }
 
         public Fixture()
@@ -201,5 +208,49 @@ public class PlacePhotoBusinessTests
         Assert.IsNotNull(info);
         Assert.AreEqual("abc123.jpg", info.BlobName);
         Assert.AreEqual("image/jpeg", info.ContentType);
+    }
+
+    // ─── Quota enforcement ────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task CreateAsync_ThrowsBusinessRuleException_WhenQuotaExceeded()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<Place>().Add(new Place { Id = 1, City = "A", CountryId = 1, Lon = 0, Lat = 0 });
+        await f.Ctx.SaveChangesAsync();
+
+        const long maxBytes = 100L * 1024 * 1024;
+        var biz = f.ForUser(1, storageUsedBytes: maxBytes);
+
+        await Assert.ThrowsExactlyAsync<BusinessRuleException>(
+            () => biz.CreateAsync(1, "blob", "a.jpg", "image/jpeg", 1, null));
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_UpdatesStorageUsed_AfterSuccess()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<Place>().Add(new Place { Id = 1, City = "A", CountryId = 1, Lon = 0, Lat = 0 });
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).CreateAsync(1, "blob", "a.jpg", "image/jpeg", 5000, null);
+
+        f.UserBizMock.Verify(
+            u => u.AddStorageUsedAsync(1, 5000, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_DecreasesStorageUsed_WhenPhotoDeleted()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<PlacePhoto>().Add(new PlacePhoto { Id = 1, PlaceId = 1, UserId = 1, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, SizeBytes = 5000, UploadedAt = DateTime.UtcNow });
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).DeleteAsync(1);
+
+        f.UserBizMock.Verify(
+            u => u.AddStorageUsedAsync(1, -5000, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

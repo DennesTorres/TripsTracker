@@ -7,4 +7,5 @@ public class User
     public string? DisplayName { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsDiscoverable { get; set; }
+    public long StorageUsedBytes { get; set; }
 }

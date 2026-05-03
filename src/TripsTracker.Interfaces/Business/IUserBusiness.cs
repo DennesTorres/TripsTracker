@@ -9,4 +9,6 @@ public interface IUserBusiness
     Task<UserDto?> UpdateAsync(int userId, UpdateUserDto dto, CancellationToken ct = default);
     Task<UserDto?> GetByIdAsync(int userId, CancellationToken ct = default);
     Task AdoptOrphanedPlacesAsync(int userId, CancellationToken ct = default);
+    Task<long> GetStorageUsedAsync(int userId, CancellationToken ct = default);
+    Task AddStorageUsedAsync(int userId, long deltaBytes, CancellationToken ct = default);
 }

@@ -46,7 +46,8 @@ public class UserBusinessTests
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     Email TEXT NOT NULL, DisplayName TEXT,
                     CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    IsDiscoverable INTEGER NOT NULL DEFAULT 0
+                    IsDiscoverable INTEGER NOT NULL DEFAULT 0,
+                    StorageUsedBytes INTEGER NOT NULL DEFAULT 0
                 )
                 """,
                 "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",
@@ -208,6 +209,47 @@ public class UserBusinessTests
 
         var uc = await f.Ctx.Set<UserCountry>().FirstAsync(uc => uc.UserId == 1 && uc.CountryId == 1);
         Assert.IsTrue(uc.IsVisited, "Existing UserCountry must be updated to IsVisited = true");
+    }
+
+    // ─── Storage quota ────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetStorageUsedAsync_ReturnsZero_ForNewUser()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Users.Add(AnyUser(1, "user@example.com"));
+        await f.Ctx.SaveChangesAsync();
+
+        var used = await f.Biz.GetStorageUsedAsync(1);
+
+        Assert.AreEqual(0L, used);
+    }
+
+    [TestMethod]
+    public async Task AddStorageUsedAsync_IncrementsStorageUsedBytes()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Users.Add(AnyUser(1, "user@example.com"));
+        await f.Ctx.SaveChangesAsync();
+
+        await f.Biz.AddStorageUsedAsync(1, 5_000_000);
+
+        var user = await f.Ctx.Users.AsNoTracking().FirstAsync(u => u.Id == 1);
+        Assert.AreEqual(5_000_000L, user.StorageUsedBytes);
+    }
+
+    [TestMethod]
+    public async Task AddStorageUsedAsync_AccumulatesAndDecrements()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Users.Add(AnyUser(1, "user@example.com"));
+        await f.Ctx.SaveChangesAsync();
+
+        await f.Biz.AddStorageUsedAsync(1, 10_000_000);
+        await f.Biz.AddStorageUsedAsync(1, -3_000_000);
+
+        var user = await f.Ctx.Users.AsNoTracking().FirstAsync(u => u.Id == 1);
+        Assert.AreEqual(7_000_000L, user.StorageUsedBytes);
     }
 
     [TestMethod]

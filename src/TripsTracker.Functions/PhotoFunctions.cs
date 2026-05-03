@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using TripsTracker.Functions.Middleware;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Integration;
 
 namespace TripsTracker.Functions;
 
-public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs)
+public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs, UserContext userContext)
 {
     [Function("GetPlacePhotos")]
     public async Task<IActionResult> GetByPlace(
@@ -29,7 +30,7 @@ public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blob
         if (file.Length > 10 * 1024 * 1024)
             return new BadRequestObjectResult(new { error = "File too large (max 10MB)" });
 
-        var blobName = $"{placeId}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+        var blobName = $"{userContext.UserId}/{placeId}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
         var caption = form.TryGetValue("caption", out var c) ? c.ToString() : null;
 
         using var stream = file.OpenReadStream();

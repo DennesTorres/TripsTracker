@@ -41,7 +41,8 @@ public class ShareLinkBusinessTests
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     Email TEXT NOT NULL, DisplayName TEXT,
                     CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    IsDiscoverable INTEGER NOT NULL DEFAULT 0
+                    IsDiscoverable INTEGER NOT NULL DEFAULT 0,
+                    StorageUsedBytes INTEGER NOT NULL DEFAULT 0
                 )
                 """,
                 "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",

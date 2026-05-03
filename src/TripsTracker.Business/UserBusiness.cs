@@ -51,6 +51,18 @@ public class UserBusiness : BusinessBase<User>, IUserBusiness
             .FirstOrDefaultAsync(ct);
     }
 
+    public Task<long> GetStorageUsedAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(u => u.Id == userId)
+            .Select(u => u.StorageUsedBytes)
+            .FirstOrDefaultAsync(ct);
+
+    public Task AddStorageUsedAsync(int userId, long deltaBytes, CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            u => u.Id == userId,
+            s => s.SetProperty(u => u.StorageUsedBytes, u => u.StorageUsedBytes + deltaBytes),
+            ct);
+
     /// <summary>
     /// Assigns all orphaned places (UserId = 0, created before multi-user migration) to the
     /// newly created user and creates the corresponding UserCountry rows so those countries
