@@ -35,8 +35,8 @@ export default function AppShell({ children }: Props) {
         setPointsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
   }, []);
 
   const handleSignOut = () => {
@@ -121,7 +121,12 @@ export default function AppShell({ children }: Props) {
 
 function formatEventType(eventType: string): string {
   const map: Record<string, string> = {
-    place_added: 'Place added',
+    city_added: 'City added',
+    city_pioneer: 'Pioneer city',
+    country_first: 'First country visit',
+    country_pioneer: 'Pioneer country',
+    continent_first: 'First continent visit',
+    continent_pioneer: 'Pioneer continent',
     photo_uploaded: 'Photo uploaded',
     comment_added: 'Comment added',
   };

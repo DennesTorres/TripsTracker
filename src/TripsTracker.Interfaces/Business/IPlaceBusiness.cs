@@ -12,4 +12,7 @@ public interface IPlaceBusiness
     Task<bool> HasAnyInCountryAsync(int countryId, CancellationToken ct = default);
     Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default);
     Task<List<PlaceDto>> GetAllForUserAsync(int userId, CancellationToken ct = default);
+    Task<bool> HasAnyForCurrentUserInRegionAsync(string region, CancellationToken ct = default);
+    Task<bool> HasAnyGloballyInCountryAsync(int countryId, CancellationToken ct = default);
+    Task<bool> HasAnyGloballyInRegionAsync(string region, CancellationToken ct = default);
 }

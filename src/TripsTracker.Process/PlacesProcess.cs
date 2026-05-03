@@ -31,6 +31,12 @@ public class PlacesProcess : IPlacesProcess
 
         var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
 
+        // Cascade scoring: evaluate tiers BEFORE inserting so counts exclude the new place
+        bool isFirstInCountry = !await _places.HasAnyInCountryAsync(country.Id, ct);
+        bool isFirstInRegion = !await _places.HasAnyForCurrentUserInRegionAsync(country.Region, ct);
+        bool isPioneerCountry = isFirstInCountry && !await _places.HasAnyGloballyInCountryAsync(country.Id, ct);
+        bool isPioneerRegion = isFirstInRegion && !await _places.HasAnyGloballyInRegionAsync(country.Region, ct);
+
         var place = await _places.CreateAsync(
             new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
             ct);
@@ -41,7 +47,29 @@ public class PlacesProcess : IPlacesProcess
             await _countries.SetVisitedAsync(country.Id, true, ct);
 
         if (_userContext.UserId.HasValue)
-            await _points.AwardAsync(_userContext.UserId.Value, "place_added", 10, place.Id, "Place", ct);
+        {
+            var userId = _userContext.UserId.Value;
+            // City tier: 50 personal, 200 pioneer
+            var cityEvent = isPioneerCountry || isPioneerRegion ? "city_pioneer" : "city_added";
+            var cityPoints = isPioneerCountry || isPioneerRegion ? 200 : 50;
+            await _points.AwardAsync(userId, cityEvent, cityPoints, place.Id, "Place", ct);
+
+            // Country tier: 500 personal, 2000 pioneer
+            if (isFirstInCountry)
+            {
+                var countryEvent = isPioneerCountry ? "country_pioneer" : "country_first";
+                var countryPoints = isPioneerCountry ? 2000 : 500;
+                await _points.AwardAsync(userId, countryEvent, countryPoints, country.Id, "Country", ct);
+            }
+
+            // Continent tier: 5000 personal, 20000 pioneer
+            if (isFirstInRegion)
+            {
+                var regionEvent = isPioneerRegion ? "continent_pioneer" : "continent_first";
+                var regionPoints = isPioneerRegion ? 20000 : 5000;
+                await _points.AwardAsync(userId, regionEvent, regionPoints, place.Id, "Place", ct);
+            }
+        }
 
         return place;
     }

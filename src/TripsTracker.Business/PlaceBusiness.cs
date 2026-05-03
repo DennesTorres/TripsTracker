@@ -86,4 +86,18 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
                 c => c.Id,
                 (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
             .ToListAsync(ct);
+
+    public Task<bool> HasAnyForCurrentUserInRegionAsync(string region, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(p => p.UserId == _userContext.UserId)
+            .Join(Context.Set<Country>().AsNoTracking(), p => p.CountryId, c => c.Id, (p, c) => c.Region)
+            .AnyAsync(r => r == region, ct);
+
+    public Task<bool> HasAnyGloballyInCountryAsync(int countryId, CancellationToken ct = default)
+        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId, ct);
+
+    public Task<bool> HasAnyGloballyInRegionAsync(string region, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Join(Context.Set<Country>().AsNoTracking(), p => p.CountryId, c => c.Id, (p, c) => c.Region)
+            .AnyAsync(r => r == region, ct);
 }
