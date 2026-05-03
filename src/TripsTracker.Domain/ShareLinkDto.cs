@@ -7,4 +7,4 @@ public record PublicMapDto(
     List<PlaceDto> Places,
     List<CountryDto> Countries,
     List<VisitedStateDto> VisitedStates);
-public record PublicShareSummaryDto(string Token, string DisplayName, int CountriesVisited, int PlacesCount);
+public record PublicShareSummaryDto(string Token, string DisplayName, int ContinentsVisited, int CountriesVisited, int PlacesCount);

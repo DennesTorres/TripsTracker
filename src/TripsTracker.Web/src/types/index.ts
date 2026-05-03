@@ -81,6 +81,7 @@ export interface ShareLink {
 export interface PublicShareSummary {
   token: string;
   displayName: string;
+  continentsVisited: number;
   countriesVisited: number;
   placesCount: number;
 }

@@ -78,13 +78,19 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
             {
                 x.l.Token,
                 DisplayName = x.u.DisplayName ?? x.u.Email,
+                ContinentsVisited = Context.Set<UserCountry>()
+                    .Where(uc => uc.UserId == x.l.UserId && uc.IsVisited)
+                    .Join(Context.Set<Country>(), uc => uc.CountryId, c => c.Id, (uc, c) => c.Region)
+                    .Distinct()
+                    .Count(),
                 CountriesVisited = Context.Set<UserCountry>().Count(uc => uc.UserId == x.l.UserId && uc.IsVisited),
                 PlacesCount = Context.Set<Place>().Count(p => p.UserId == x.l.UserId),
             })
-            .OrderByDescending(x => x.CountriesVisited)
+            .OrderByDescending(x => x.ContinentsVisited)
+            .ThenByDescending(x => x.CountriesVisited)
             .ThenByDescending(x => x.PlacesCount)
             .Take(limit)
-            .Select(x => new PublicShareSummaryDto(x.Token, x.DisplayName, x.CountriesVisited, x.PlacesCount))
+            .Select(x => new PublicShareSummaryDto(x.Token, x.DisplayName, x.ContinentsVisited, x.CountriesVisited, x.PlacesCount))
             .ToListAsync(ct);
 
     private static string GenerateToken()

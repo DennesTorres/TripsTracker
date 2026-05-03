@@ -35,7 +35,7 @@ export default function DiscoverMapsModal({ onOpen, onClose }: Props) {
             <div key={m.token} className={styles.row}>
               <span className={styles.name}>{m.displayName}</span>
               <span className={styles.stats}>
-                {m.countriesVisited} countries · {m.placesCount} places
+                {m.continentsVisited} continents · {m.countriesVisited} countries · {m.placesCount} places
               </span>
               <button
                 className={styles.viewBtn}
