@@ -33,28 +33,6 @@ public class UserBusiness : BusinessBase<User>, IUserBusiness
         return new UserDto(user.Id, user.Email, user.DisplayName, user.CreatedAt, user.IsDiscoverable);
     }
 
-    public async Task AdoptOrphanedPlacesAsync(int userId, CancellationToken ct = default)
-    {
-        var orphanedPlaces = await Context.Set<Place>()
-            .Where(p => p.UserId == 0)
-            .ToListAsync(ct);
-        if (orphanedPlaces.Count == 0) return;
-        await Context.Set<Place>()
-            .Where(p => p.UserId == 0)
-            .ExecuteUpdateAsync(s => s.SetProperty(p => p.UserId, userId), ct);
-        var countryIds = orphanedPlaces.Select(p => p.CountryId).Distinct();
-        foreach (var countryId in countryIds)
-        {
-            var existing = await Context.Set<UserCountry>()
-                .FirstOrDefaultAsync(uc => uc.UserId == userId && uc.CountryId == countryId, ct);
-            if (existing is null)
-                Context.Set<UserCountry>().Add(new UserCountry { UserId = userId, CountryId = countryId, IsVisited = true, IsHome = false, ShowStateBorders = false });
-            else
-                existing.IsVisited = true;
-        }
-        await Context.SaveChangesAsync(ct);
-    }
-
     public async Task<UserDto?> UpdateAsync(int userId, UpdateUserDto dto, CancellationToken ct = default)
     {
         var rows = await ExecuteUpdateAsync(
