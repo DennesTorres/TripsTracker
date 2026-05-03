@@ -26,6 +26,8 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
             Token = token,
             IsActive = true,
             RequiresLogin = dto.RequiresLogin,
+            // RequiresLogin links are never discoverable regardless of the flag
+            IsDiscoverable = dto.IsDiscoverable && !dto.RequiresLogin,
             CreatedAt = DateTime.UtcNow,
             ExpiresAt = dto.ExpiresAt,
         };
@@ -37,7 +39,7 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
         => BuildBaseQuery()
             .Where(l => l.UserId == _userContext.UserId)
             .OrderByDescending(l => l.CreatedAt)
-            .Select(l => new ShareLinkDto(l.Id, l.Token, l.IsActive, l.RequiresLogin, l.CreatedAt, l.ExpiresAt, l.ViewCount))
+            .Select(l => new ShareLinkDto(l.Id, l.Token, l.IsActive, l.RequiresLogin, l.IsDiscoverable, l.CreatedAt, l.ExpiresAt, l.ViewCount))
             .ToListAsync(ct);
 
     public async Task<bool> DeactivateAsync(int id, CancellationToken ct = default)
@@ -52,7 +54,7 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
     public Task<ShareLinkDto?> GetByTokenAsync(string token, CancellationToken ct = default)
         => BuildBaseQuery()
             .Where(l => l.Token == token && l.IsActive && (l.ExpiresAt == null || l.ExpiresAt > DateTime.UtcNow))
-            .Select(l => new ShareLinkDto(l.Id, l.Token, l.IsActive, l.RequiresLogin, l.CreatedAt, l.ExpiresAt, l.ViewCount))
+            .Select(l => new ShareLinkDto(l.Id, l.Token, l.IsActive, l.RequiresLogin, l.IsDiscoverable, l.CreatedAt, l.ExpiresAt, l.ViewCount))
             .FirstOrDefaultAsync(ct);
 
     public Task IncrementViewCountAsync(string token, CancellationToken ct = default)
@@ -69,12 +71,20 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
 
     public Task<List<PublicShareSummaryDto>> DiscoverAsync(string query, int limit = 20, CancellationToken ct = default)
         => BuildBaseQuery()
-            .Where(l => l.IsActive && !l.RequiresLogin && (l.ExpiresAt == null || l.ExpiresAt > DateTime.UtcNow))
+            .Where(l => l.IsActive && l.IsDiscoverable && (l.ExpiresAt == null || l.ExpiresAt > DateTime.UtcNow))
             .Join(Context.Set<User>(), l => l.UserId, u => u.Id, (l, u) => new { l, u })
             .Where(x => string.IsNullOrEmpty(query) || (x.u.DisplayName != null && x.u.DisplayName.Contains(query)))
-            .OrderByDescending(x => x.l.ViewCount)
+            .Select(x => new
+            {
+                x.l.Token,
+                DisplayName = x.u.DisplayName ?? x.u.Email,
+                CountriesVisited = Context.Set<UserCountry>().Count(uc => uc.UserId == x.l.UserId && uc.IsVisited),
+                PlacesCount = Context.Set<Place>().Count(p => p.UserId == x.l.UserId),
+            })
+            .OrderByDescending(x => x.CountriesVisited)
+            .ThenByDescending(x => x.PlacesCount)
             .Take(limit)
-            .Select(x => new PublicShareSummaryDto(x.l.Token, x.u.DisplayName ?? x.u.Email, x.l.ViewCount))
+            .Select(x => new PublicShareSummaryDto(x.Token, x.DisplayName, x.CountriesVisited, x.PlacesCount))
             .ToListAsync(ct);
 
     private static string GenerateToken()
@@ -82,5 +92,5 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
             .Replace("+", "-").Replace("/", "_").TrimEnd('=');
 
     private static ShareLinkDto ToDto(ShareLink l)
-        => new(l.Id, l.Token, l.IsActive, l.RequiresLogin, l.CreatedAt, l.ExpiresAt, l.ViewCount);
+        => new(l.Id, l.Token, l.IsActive, l.RequiresLogin, l.IsDiscoverable, l.CreatedAt, l.ExpiresAt, l.ViewCount);
 }

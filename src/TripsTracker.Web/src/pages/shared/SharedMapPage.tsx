@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useIsAuthenticated } from '@azure/msal-react';
 import { useSharedMap } from '@/api/hooks';
 import WorldMap from '@/components/map/WorldMap';
 import styles from './SharedMapPage.module.scss';
@@ -9,6 +10,7 @@ interface Props {
 
 export default function SharedMapPage({ token }: Props) {
   const { data, isLoading, error } = useSharedMap(token);
+  const isAuthenticated = useIsAuthenticated();
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   const [usStatesGeoJson, setUsStatesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   const [brazilStatesGeoJson, setBrazilStatesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -34,6 +36,12 @@ export default function SharedMapPage({ token }: Props) {
         <span className={styles.stats}>
           {data.places.length} places · {visitedCount} countries · {continents} continents
         </span>
+        <div className={styles.headerActions}>
+          {isAuthenticated
+            ? <a className={styles.myMapLink} href="#">My map</a>
+            : <a className={styles.myMapLink} href="#">Sign in</a>
+          }
+        </div>
       </div>
       <div className={styles.mapContainer}>
         <WorldMap

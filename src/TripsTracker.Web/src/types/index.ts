@@ -72,6 +72,7 @@ export interface ShareLink {
   token: string;
   isActive: boolean;
   requiresLogin: boolean;
+  isDiscoverable: boolean;
   createdAt: string;
   expiresAt?: string;
   viewCount: number;
@@ -80,7 +81,8 @@ export interface ShareLink {
 export interface PublicShareSummary {
   token: string;
   displayName: string;
-  viewCount: number;
+  countriesVisited: number;
+  placesCount: number;
 }
 
 export interface PublicMapData {

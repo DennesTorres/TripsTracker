@@ -34,7 +34,9 @@ export default function DiscoverMapsModal({ onOpen, onClose }: Props) {
           {maps.map(m => (
             <div key={m.token} className={styles.row}>
               <span className={styles.name}>{m.displayName}</span>
-              <span className={styles.views}>{m.viewCount} views</span>
+              <span className={styles.stats}>
+                {m.countriesVisited} countries · {m.placesCount} places
+              </span>
               <button
                 className={styles.viewBtn}
                 onClick={() => { onOpen(m.token); onClose(); }}

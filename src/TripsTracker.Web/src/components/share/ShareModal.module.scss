@@ -121,3 +121,40 @@
 
   input[type='checkbox'] { cursor: pointer; accent-color: #0078d4; }
 }
+
+.modeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.modeOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  user-select: none;
+  flex-wrap: wrap;
+
+  input[type='radio'] { cursor: pointer; accent-color: #0078d4; margin-top: 2px; }
+
+  span:nth-child(2) { font-weight: 600; color: #e2e8f0; flex: 1; }
+}
+
+.modeSelected {
+  border-color: #0078d4;
+  background: rgba(0, 120, 212, 0.06);
+}
+
+.modeHint {
+  width: 100%;
+  margin-left: 20px;
+  font-size: 0.75rem;
+  color: #475569;
+}
