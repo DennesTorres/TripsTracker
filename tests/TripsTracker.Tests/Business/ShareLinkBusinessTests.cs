@@ -42,7 +42,8 @@ public class ShareLinkBusinessTests
                     Email TEXT NOT NULL, DisplayName TEXT,
                     CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
                     IsDiscoverable INTEGER NOT NULL DEFAULT 0,
-                    StorageUsedBytes INTEGER NOT NULL DEFAULT 0
+                    StorageUsedBytes INTEGER NOT NULL DEFAULT 0,
+                    TotalPoints INTEGER NOT NULL DEFAULT 0
                 )
                 """,
                 "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",
