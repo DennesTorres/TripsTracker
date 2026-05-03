@@ -21,7 +21,9 @@ public class UserProcess : IUserProcess
         var existing = await _users.GetByEmailAsync(email, ct);
         if (existing is not null) return existing;
 
-        return await _users.CreateAsync(email, displayName, ct);
+        var newUser = await _users.CreateAsync(email, displayName, ct);
+        await _users.AdoptOrphanedPlacesAsync(newUser.Id, ct);
+        return newUser;
     }
 
     public async Task<UserDto?> UpdateAsync(int userId, UpdateUserDto dto, CancellationToken ct = default)
