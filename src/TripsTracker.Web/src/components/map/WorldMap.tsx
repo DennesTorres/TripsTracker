@@ -11,6 +11,9 @@ interface Props {
   geoJson: GeoJSON.FeatureCollection;
   usStatesGeoJson: GeoJSON.FeatureCollection;
   brazilStatesGeoJson: GeoJSON.FeatureCollection;
+  arGeoJson?: GeoJSON.FeatureCollection;
+  gbGeoJson?: GeoJSON.FeatureCollection;
+  onToggleStateBorders?: (countryId: number, show: boolean) => void;
 }
 
 // ─── Colours — matched exactly to reference travel-map.html CSS variables ─────
@@ -138,6 +141,9 @@ export default function WorldMap({
   geoJson,
   usStatesGeoJson,
   brazilStatesGeoJson,
+  arGeoJson,
+  gbGeoJson,
+  onToggleStateBorders,
 }: Props) {
   const svgRef      = useRef<SVGSVGElement>(null);
   const tooltipRef  = useRef<HTMLDivElement>(null);
@@ -268,8 +274,15 @@ export default function WorldMap({
     const showBordersCountries = new Set(countries.filter(c => c.showStateBorders).map(c => c.isoAlpha2));
     const brCountry = countries.find(c => c.isoAlpha2 === 'BR');
     const usCountry = countries.find(c => c.isoAlpha2 === 'US');
+    const arCountry = countries.find(c => c.isoAlpha2 === 'AR');
+    const gbCountry = countries.find(c => c.isoAlpha2 === 'GB');
     const visitedBrStates  = new Set(visitedStates.filter(s => s.countryId === brCountry?.id).map(s => s.stateAbbr));
     const visitedUsStates  = new Set(visitedStates.filter(s => s.countryId === usCountry?.id).map(s => s.stateAbbr));
+    // GADM ISO_1 uses "AR-B" format; Nominatim returns "B" — add prefix
+    const visitedArStates  = new Set(visitedStates.filter(s => s.countryId === arCountry?.id).map(s => `AR-${s.stateAbbr}`));
+    // GADM admin-1 for GB is counties; Nominatim returns home nations — no visited highlighting
+    const visitedGbStates  = new Set<string>();
+    void gbCountry; // reference kept for future use
 
     const g = svg.append('g');
 
@@ -294,7 +307,14 @@ export default function WorldMap({
       })
       .attr('stroke', 'rgba(0,0,0,0.4)')
       .attr('stroke-width', 0.35)
-      .attr('vector-effect', 'non-scaling-stroke');
+      .attr('vector-effect', 'non-scaling-stroke')
+      .on('contextmenu', (event: MouseEvent, f: GeoJSON.Feature) => {
+        event.preventDefault();
+        if (!onToggleStateBorders) return;
+        const a2: string = f.properties?.['ISO_A2'] ?? '';
+        const country = countries.find(c => c.isoAlpha2 === a2);
+        if (country) onToggleStateBorders(country.id, !country.showStateBorders);
+      });
 
     // State borders — rendered for countries with showStateBorders enabled
     // Hidden until zoom >= BR_ZOOM_MIN
@@ -332,6 +352,12 @@ export default function WorldMap({
     if (usStatesGeoJson && showBordersCountries.has('US')) {
       renderStateBorders(usStatesGeoJson, 'STUSPS', visitedUsStates, 'brs-us');
     }
+    if (arGeoJson && showBordersCountries.has('AR')) {
+      renderStateBorders(arGeoJson, 'ISO_1', visitedArStates, 'brs-ar');
+    }
+    if (gbGeoJson && showBordersCountries.has('GB')) {
+      renderStateBorders(gbGeoJson, 'ISO_1', visitedGbStates, 'brs-gb');
+    }
 
     // Sphere outline (reference draws this on top of countries)
     g.append('path')
@@ -363,7 +389,7 @@ export default function WorldMap({
 
     svg.call(zoom);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countries, places, visitedStates, geoJson, usStatesGeoJson, brazilStatesGeoJson]);
+  }, [countries, places, visitedStates, geoJson, usStatesGeoJson, brazilStatesGeoJson, arGeoJson, gbGeoJson]);
 
   return (
     <div className={styles.container}>

@@ -22,7 +22,7 @@ export default function CountriesPage() {
   const stateCount = visitedStates.length;
 
   const filtered = countries
-    .filter(c => !visitedOnly || c.isVisited)
+    .filter(c => !visitedOnly || c.isVisited || c.showStateBorders)
     .filter(c => !regionFilter || c.region === regionFilter)
     .sort((a, b) => a.name.localeCompare(b.name));
 

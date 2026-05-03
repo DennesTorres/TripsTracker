@@ -46,6 +46,11 @@ public class UserBusiness : BusinessBase<User>, IUserBusiness
             .FirstOrDefaultAsync(ct);
     }
 
+    /// <summary>
+    /// Assigns all orphaned places (UserId = 0, created before multi-user migration) to the
+    /// newly created user and creates the corresponding UserCountry rows so those countries
+    /// appear as visited on the user's map.
+    /// </summary>
     public async Task AdoptOrphanedPlacesAsync(int userId, CancellationToken ct = default)
     {
         var orphanedPlaces = await Context.Set<Place>()
@@ -54,10 +59,12 @@ public class UserBusiness : BusinessBase<User>, IUserBusiness
 
         if (orphanedPlaces.Count == 0) return;
 
+        // Reassign all orphaned places to the new user
         await Context.Set<Place>()
             .Where(p => p.UserId == 0)
             .ExecuteUpdateAsync(s => s.SetProperty(p => p.UserId, userId), ct);
 
+        // Create UserCountry rows (IsVisited = true) for each distinct country in those places
         var countryIds = orphanedPlaces.Select(p => p.CountryId).Distinct();
         foreach (var countryId in countryIds)
         {
