@@ -86,4 +86,10 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
         }
         await Context.SaveChangesAsync(ct);
     }
+
+    public Task<PlacePhotoBlobInfo?> GetBlobInfoAsync(int photoId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(p => p.Id == photoId)
+            .Select(p => new PlacePhotoBlobInfo(p.Id, p.BlobName, p.ContentType))
+            .FirstOrDefaultAsync(ct);
 }

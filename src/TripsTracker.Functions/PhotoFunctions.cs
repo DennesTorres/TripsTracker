@@ -2,10 +2,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Integration;
 
 namespace TripsTracker.Functions;
 
-public class PhotoFunctions(IPlacePhotoBusiness photos)
+public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs)
 {
     [Function("GetPlacePhotos")]
     public async Task<IActionResult> GetByPlace(
@@ -31,9 +32,29 @@ public class PhotoFunctions(IPlacePhotoBusiness photos)
         var blobName = $"{placeId}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
         var caption = form.TryGetValue("caption", out var c) ? c.ToString() : null;
 
-        // For now, store blob name only — actual blob storage integration in Bicep deployment
+        using var stream = file.OpenReadStream();
+        await blobs.UploadAsync(blobName, stream, file.ContentType, ct);
+
         var result = await photos.CreateAsync(placeId, blobName, file.FileName, file.ContentType, file.Length, caption, ct);
         return new OkObjectResult(result);
+    }
+
+    [Function("GetPhotoBlob")]
+    public async Task<IActionResult> GetBlob(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "photos/{photoId:int}/blob")] HttpRequest req,
+        int photoId,
+        CancellationToken ct)
+    {
+        var photo = await photos.GetBlobInfoAsync(photoId, ct);
+        if (photo is null) return new NotFoundResult();
+
+        var stream = await blobs.DownloadAsync(photo.BlobName, ct);
+        if (stream is null) return new NotFoundResult();
+
+        return new FileStreamResult(stream, photo.ContentType)
+        {
+            EnableRangeProcessing = true,
+        };
     }
 
     [Function("DeletePhoto")]
@@ -42,6 +63,10 @@ public class PhotoFunctions(IPlacePhotoBusiness photos)
         int photoId,
         CancellationToken ct)
     {
+        var photo = await photos.GetBlobInfoAsync(photoId, ct);
+        if (photo is not null)
+            await blobs.DeleteAsync(photo.BlobName, ct);
+
         var ok = await photos.DeleteAsync(photoId, ct);
         return ok ? new OkResult() : new NotFoundResult();
     }

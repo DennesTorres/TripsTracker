@@ -8,4 +8,5 @@ public interface IPlacePhotoBusiness
     Task<List<PlacePhotoDto>> GetByPlaceAsync(int placeId, CancellationToken ct = default);
     Task<bool> DeleteAsync(int photoId, CancellationToken ct = default);
     Task RateAsync(int photoId, byte rating, CancellationToken ct = default);
+    Task<PlacePhotoBlobInfo?> GetBlobInfoAsync(int photoId, CancellationToken ct = default);
 }

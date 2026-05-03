@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
+import PlaceDetailModal from '@/pages/places/PlaceDetailModal';
 import ShareModal from '@/components/share/ShareModal';
 import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
 import { usePlaces, useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
+import type { Place } from '@/types';
 import { Share2, Compass } from 'lucide-react';
 import styles from './MapPage.module.scss';
 
@@ -22,6 +24,7 @@ export default function MapPage() {
   const [adding, setAdding] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [discovering, setDiscovering] = useState(false);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -73,6 +76,7 @@ export default function MapPage() {
             arGeoJson={arGeo ?? undefined}
             gbGeoJson={gbGeo ?? undefined}
             onToggleStateBorders={handleToggleStateBorders}
+            onPlaceClick={place => setSelectedPlace(place)}
           />
         )}
         {!isLoading && !hasError && (
@@ -92,6 +96,7 @@ export default function MapPage() {
       {!isLoading && (
         <StatsBar countries={countries} places={places} />
       )}
+      {selectedPlace && <PlaceDetailModal place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
       {sharing && <ShareModal onClose={() => setSharing(false)} />}
       {discovering && (

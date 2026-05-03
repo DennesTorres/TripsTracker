@@ -14,6 +14,7 @@ interface Props {
   arGeoJson?: GeoJSON.FeatureCollection;
   gbGeoJson?: GeoJSON.FeatureCollection;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
+  onPlaceClick?: (place: Place) => void;
 }
 
 // ─── Colours — matched exactly to reference travel-map.html CSS variables ─────
@@ -144,9 +145,12 @@ export default function WorldMap({
   arGeoJson,
   gbGeoJson,
   onToggleStateBorders,
+  onPlaceClick,
 }: Props) {
-  const svgRef      = useRef<SVGSVGElement>(null);
-  const tooltipRef  = useRef<HTMLDivElement>(null);
+  const svgRef           = useRef<SVGSVGElement>(null);
+  const tooltipRef       = useRef<HTMLDivElement>(null);
+  const onPlaceClickRef  = useRef(onPlaceClick);
+  onPlaceClickRef.current = onPlaceClick;
 
   // Mutable refs used inside zoom handler (never trigger re-render)
   const projRef     = useRef<d3.GeoProjection | null>(null);
@@ -229,7 +233,11 @@ export default function WorldMap({
             .style('left', `${event.clientX - rect.left + 14}px`)
             .style('top', `${event.clientY - rect.top - 32}px`);
         })
-        .on('mouseout', () => tooltip.style('display', 'none'));
+        .on('mouseout', () => tooltip.style('display', 'none'))
+        .on('click', () => {
+          tooltip.style('display', 'none');
+          onPlaceClickRef.current?.(c.places[0]);
+        });
 
       // Store colour on stroke for rescale (unused here but matches reference shape)
       void strokeColor;

@@ -6,7 +6,7 @@ import {
 import { useEnsureUser } from '@/api/hooks';
 import Modal from '@/components/ui/Modal';
 import type { Place, PlacePhoto, PlaceComment } from '@/types';
-import { Trash2, ThumbsUp, ThumbsDown, ImageOff, Star } from 'lucide-react';
+import { Trash2, ThumbsUp, ThumbsDown, Star } from 'lucide-react';
 import styles from './PlaceDetailModal.module.scss';
 
 interface Props {
@@ -94,7 +94,12 @@ function PhotoRow({ photo, onDelete, onRate }: {
   return (
     <div className={styles.photoRow}>
       <div className={styles.photoThumb}>
-        <ImageOff size={20} className={styles.noPreview} />
+        <img
+          src={`${import.meta.env.VITE_API_BASE_URL}/api/photos/${photo.id}/blob`}
+          alt={photo.caption || photo.originalFileName || 'Photo'}
+          className={styles.thumbImg}
+          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
       </div>
       <div className={styles.photoMeta}>
         <span className={styles.photoName}>{photo.caption || photo.originalFileName || 'Untitled'}</span>
