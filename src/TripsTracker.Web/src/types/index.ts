@@ -127,6 +127,12 @@ export interface UserPointsSummary {
   recentEvents: PointEvent[];
 }
 
+export interface LeaderboardEntry {
+  rank: number;
+  displayName: string;
+  totalPoints: number;
+}
+
 export interface PublicMapData {
   ownerDisplayName: string;
   places: Place[];

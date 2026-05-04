@@ -18,4 +18,10 @@ public class PointsFunctions(IPointsBusiness points)
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "me/points/recent")] HttpRequest req,
         CancellationToken ct)
         => new OkObjectResult(await points.GetRecentAsync(20, ct));
+
+    [Function("GetLeaderboard")]
+    public async Task<IActionResult> GetLeaderboard(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leaderboard")] HttpRequest req,
+        CancellationToken ct)
+        => new OkObjectResult(await points.GetLeaderboardAsync(20, ct));
 }

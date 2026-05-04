@@ -55,4 +55,16 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .Take(count)
             .Select(e => new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt))
             .ToListAsync(ct);
+
+    public async Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 20, CancellationToken ct = default)
+    {
+        var rows = await Context.Set<User>().AsNoTracking()
+            .Where(u => u.TotalPoints > 0)
+            .OrderByDescending(u => u.TotalPoints)
+            .Take(limit)
+            .Select(u => new { DisplayName = u.DisplayName ?? u.Email, u.TotalPoints })
+            .ToListAsync(ct);
+
+        return rows.Select((r, i) => new LeaderboardEntryDto(i + 1, r.DisplayName, r.TotalPoints)).ToList();
+    }
 }

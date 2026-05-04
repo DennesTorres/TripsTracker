@@ -160,4 +160,73 @@ public class PointsBusinessTests
         Assert.AreEqual(1, summary.RecentEvents.Count);
         Assert.AreEqual("city_added", summary.RecentEvents[0].EventType);
     }
+
+    // ─── GetLeaderboardAsync ──────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetLeaderboardAsync_RanksUsersByTotalPointsDescending()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().AddRange(
+            new User { Id = 1, Email = "a@x.com", DisplayName = "Alice", CreatedAt = DateTime.UtcNow, TotalPoints = 100 },
+            new User { Id = 2, Email = "b@x.com", DisplayName = "Bob", CreatedAt = DateTime.UtcNow, TotalPoints = 500 },
+            new User { Id = 3, Email = "c@x.com", DisplayName = "Carol", CreatedAt = DateTime.UtcNow, TotalPoints = 250 }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(1).GetLeaderboardAsync();
+
+        Assert.AreEqual(3, result.Count);
+        Assert.AreEqual(1, result[0].Rank);
+        Assert.AreEqual("Bob", result[0].DisplayName);
+        Assert.AreEqual(500, result[0].TotalPoints);
+        Assert.AreEqual(2, result[1].Rank);
+        Assert.AreEqual("Carol", result[1].DisplayName);
+        Assert.AreEqual(3, result[2].Rank);
+        Assert.AreEqual("Alice", result[2].DisplayName);
+    }
+
+    [TestMethod]
+    public async Task GetLeaderboardAsync_ExcludesUsersWithZeroPoints()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().AddRange(
+            new User { Id = 1, Email = "a@x.com", DisplayName = "Alice", CreatedAt = DateTime.UtcNow, TotalPoints = 100 },
+            new User { Id = 2, Email = "b@x.com", DisplayName = "NoPoints", CreatedAt = DateTime.UtcNow, TotalPoints = 0 }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(1).GetLeaderboardAsync();
+
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual("Alice", result[0].DisplayName);
+    }
+
+    [TestMethod]
+    public async Task GetLeaderboardAsync_UsesEmailWhenDisplayNameIsNull()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(
+            new User { Id = 1, Email = "a@x.com", DisplayName = null, CreatedAt = DateTime.UtcNow, TotalPoints = 50 }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(1).GetLeaderboardAsync();
+
+        Assert.AreEqual("a@x.com", result[0].DisplayName);
+    }
+
+    [TestMethod]
+    public async Task GetLeaderboardAsync_RespectsLimit()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().AddRange(Enumerable.Range(1, 5).Select(i =>
+            new User { Id = i, Email = $"u{i}@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = i * 10 }
+        ));
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(1).GetLeaderboardAsync(limit: 3);
+
+        Assert.AreEqual(3, result.Count);
+    }
 }

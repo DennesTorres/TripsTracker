@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { useEnsureUser, usePointsSummary } from '@/api/hooks';
-import { User, LogOut, Star } from 'lucide-react';
+import { User, LogOut, Star, Trophy } from 'lucide-react';
+import LeaderboardModal from './LeaderboardModal';
 import styles from './AppShell.module.scss';
 
 export type View = 'map' | 'places' | 'countries' | 'profile';
@@ -20,6 +21,7 @@ export default function AppShell({ children }: Props) {
   const [view, setView] = useState<View>('map');
   const [menuOpen, setMenuOpen] = useState(false);
   const [pointsOpen, setPointsOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pointsRef = useRef<HTMLDivElement>(null);
   const { instance } = useMsal();
@@ -90,6 +92,14 @@ export default function AppShell({ children }: Props) {
           </div>
         )}
 
+        <button
+          className={styles.leaderboardBtn}
+          onClick={() => setLeaderboardOpen(true)}
+          title="Leaderboard"
+        >
+          <Trophy size={15} />
+        </button>
+
         <div className={styles.userMenu} ref={menuRef}>
           <button
             className={styles.avatarBtn}
@@ -115,6 +125,7 @@ export default function AppShell({ children }: Props) {
         </div>
       </nav>
       <main className={styles.main}>{children(view, setView)}</main>
+      {leaderboardOpen && <LeaderboardModal onClose={() => setLeaderboardOpen(false)} />}
     </div>
   );
 }

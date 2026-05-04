@@ -133,6 +133,25 @@
   }
 }
 
+.leaderboardBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #334155;
+  background: #1e3050;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: #fbbf24;
+    color: #fbbf24;
+  }
+}
+
 .pointsMenu {
   position: relative;
 }
