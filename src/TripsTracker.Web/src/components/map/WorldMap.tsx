@@ -242,8 +242,8 @@ export default function WorldMap({
   const updateStateBorderVisibility = () => {
     if (!statesGRef.current) return;
     const show = currentKRef.current >= BORDERS_ZOOM_MIN;
-    statesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs')
-      .style('display', show ? null : 'none');
+    const paths = statesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs');
+    if (show) paths.style('display', null); else paths.style('display', 'none');
   };
 
   // ── main effect ─────────────────────────────────────────────────────────────

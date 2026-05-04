@@ -36,7 +36,7 @@ public class UserBusinessTests
                 """
                 CREATE TABLE Countries (
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    IsoNumeric INTEGER NOT NULL, IsoAlpha2 TEXT NOT NULL,
+                    IsoNumeric INTEGER NOT NULL, IsoAlpha2 TEXT NOT NULL, IsoAlpha3 TEXT NULL,
                     Flag TEXT NOT NULL, Name TEXT NOT NULL, Region TEXT NOT NULL
                 )
                 """,
