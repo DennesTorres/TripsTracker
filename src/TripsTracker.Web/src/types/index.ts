@@ -21,6 +21,7 @@ export interface Country {
   id: number;
   isoNumeric: number;
   isoAlpha2: string;
+  isoAlpha3?: string;
   flag: string;
   name: string;
   region: string;
@@ -60,19 +61,19 @@ export interface UserProfile {
   email: string;
   displayName?: string;
   createdAt: string;
+  isDiscoverable: boolean;
 }
 
 export interface UpdateUser {
   displayName?: string;
   homeCountryId?: number;
+  isDiscoverable?: boolean;
 }
 
 export interface ShareLink {
   id: number;
   token: string;
   isActive: boolean;
-  requiresLogin: boolean;
-  isDiscoverable: boolean;
   createdAt: string;
   expiresAt?: string;
   viewCount: number;

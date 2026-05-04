@@ -45,7 +45,8 @@ public class UserBusinessTests
                 CREATE TABLE Users (
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     Email TEXT NOT NULL, DisplayName TEXT,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01'
+                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
+                    IsDiscoverable INTEGER NOT NULL DEFAULT 0
                 )
                 """,
                 "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",
@@ -119,6 +120,24 @@ public class UserBusinessTests
     };
 
     #endregion
+
+    // ─── AdoptOrphanedPlacesAsync ─────────────────────────────────────────────
+
+    // ─── UpdateAsync ──────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task UpdateAsync_SetsIsDiscoverable()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Users.Add(AnyUser(1, "u@test.com"));
+        await f.Ctx.SaveChangesAsync();
+
+        var dto = new TripsTracker.Domain.UpdateUserDto(null, null, IsDiscoverable: true);
+        var result = await f.Biz.UpdateAsync(1, dto);
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.IsDiscoverable, "IsDiscoverable must be set to true");
+    }
 
     // ─── AdoptOrphanedPlacesAsync ─────────────────────────────────────────────
 

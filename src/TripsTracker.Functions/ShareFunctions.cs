@@ -2,13 +2,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using TripsTracker.Domain;
-using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Process;
 
 namespace TripsTracker.Functions;
 
-public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess publicMap, IUserContext userContext)
+public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess publicMap)
 {
     [Function("CreateShareLink")]
     public async Task<IActionResult> Create(
@@ -48,9 +47,6 @@ public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess pub
     {
         var link = await shareLinks.GetByTokenAsync(token, ct);
         if (link is null) return new NotFoundResult();
-
-        if (link.RequiresLogin && userContext.UserId is null)
-            return new UnauthorizedResult();
 
         var data = await publicMap.GetSharedMapAsync(token, ct);
         return data is not null ? new OkObjectResult(data) : new NotFoundResult();

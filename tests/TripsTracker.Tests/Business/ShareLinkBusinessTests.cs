@@ -40,7 +40,8 @@ public class ShareLinkBusinessTests
                 CREATE TABLE Users (
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     Email TEXT NOT NULL, DisplayName TEXT,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01'
+                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
+                    IsDiscoverable INTEGER NOT NULL DEFAULT 0
                 )
                 """,
                 "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",
@@ -49,8 +50,6 @@ public class ShareLinkBusinessTests
                     Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     UserId INTEGER NOT NULL, Token TEXT NOT NULL,
                     IsActive INTEGER NOT NULL DEFAULT 1,
-                    RequiresLogin INTEGER NOT NULL DEFAULT 0,
-                    IsDiscoverable INTEGER NOT NULL DEFAULT 0,
                     CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
                     ExpiresAt TEXT,
                     ViewCount INTEGER NOT NULL DEFAULT 0
@@ -103,9 +102,9 @@ public class ShareLinkBusinessTests
         }
     }
 
-    private static User MakeUser(int id, string email, string? displayName = null) => new()
+    private static User MakeUser(int id, string email, string? displayName = null, bool isDiscoverable = true) => new()
     {
-        Id = id, Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow,
+        Id = id, Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow, IsDiscoverable = isDiscoverable,
     };
 
     private static Country MakeCountry(int id, string region) => new()
@@ -117,11 +116,34 @@ public class ShareLinkBusinessTests
     private static ShareLink MakeLink(int id, int userId, string token) => new()
     {
         Id = id, UserId = userId, Token = token,
-        IsActive = true, IsDiscoverable = true, RequiresLogin = false,
+        IsActive = true,
         CreatedAt = DateTime.UtcNow,
     };
 
     #endregion
+
+    // ─── CreateAsync ──────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task CreateAsync_PersistsLink_AndReturnsDto()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Users.Add(MakeUser(1, "u@test.com"));
+        await f.Ctx.SaveChangesAsync();
+
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(1);
+        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+
+        var dto = await biz.CreateAsync(new TripsTracker.Domain.CreateShareLinkDto());
+
+        Assert.IsNotNull(dto);
+        Assert.IsFalse(string.IsNullOrEmpty(dto.Token), "Token must be generated");
+        Assert.IsTrue(dto.IsActive);
+        var inDb = await f.Ctx.ShareLinks.FindAsync(dto.Id);
+        Assert.IsNotNull(inDb);
+        Assert.AreEqual(dto.Token, inDb.Token);
+    }
 
     // ─── DiscoverAsync ────────────────────────────────────────────────────────
 
@@ -195,16 +217,14 @@ public class ShareLinkBusinessTests
     }
 
     [TestMethod]
-    public async Task DiscoverAsync_ExcludesNonDiscoverableLinks()
+    public async Task DiscoverAsync_ExcludesNonDiscoverableUsers()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.Add(MakeUser(1, "u@test.com"));
+        f.Ctx.Users.Add(MakeUser(1, "u@test.com", isDiscoverable: false));
         f.Ctx.Countries.Add(MakeCountry(1, "Europe"));
         await f.Ctx.SaveChangesAsync();
 
-        var link = MakeLink(1, 1, "token-nd");
-        link.IsDiscoverable = false;
-        f.Ctx.ShareLinks.Add(link);
+        f.Ctx.ShareLinks.Add(MakeLink(1, 1, "token-nd"));
         await f.Ctx.SaveChangesAsync();
 
         var results = await f.Biz.DiscoverAsync("");

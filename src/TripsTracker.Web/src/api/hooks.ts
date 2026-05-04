@@ -106,8 +106,8 @@ export function useShareLinks() {
 export function useCreateShareLink() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: { requiresLogin: boolean; isDiscoverable: boolean }) =>
-      apiClient.post<ShareLink>('/api/share-links', dto).then(r => r.data),
+    mutationFn: () =>
+      apiClient.post<ShareLink>('/api/share-links', {}).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['share-links'] }),
   });
 }
