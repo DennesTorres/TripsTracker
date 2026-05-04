@@ -1,0 +1,18 @@
+{
+    "IsEncrypted": false,
+    "Host": {
+        "CORS": "http://localhost:4173,http://localhost:5173",
+        "CORSCredentials": false
+    },
+    "Values": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "BlobStorage__ConnectionString": "UseDevelopmentStorage=true",
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "<your-app-insights-connection-string>",
+        "Database__ConnectionString": "Server=localhost;Database=TripsTracker;Trusted_Connection=True;TrustServerCertificate=True;",
+        "ApplicationInsights__ConnectionString": "<your-app-insights-connection-string>",
+        "Nominatim__UserAgent": "TripsTracker/1.0",
+        "Auth__Authority": "https://login.microsoftonline.com/common/v2.0",
+        "Auth__Audience": "api://<your-app-client-id>"
+    }
+}
