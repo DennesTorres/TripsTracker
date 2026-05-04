@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
 import { usePlaces, useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
 import styles from './MapPage.module.scss';
+
+const GEO_BOUNDARIES_API = 'https://www.geoboundaries.org/api/current/gbOpen';
 
 export default function MapPage() {
   const { data: places = [], isLoading: placesLoading, isError: placesError, refetch: refetchPlaces } = usePlaces();
@@ -12,27 +14,40 @@ export default function MapPage() {
   const setStateBorders = useSetStateBorders();
 
   const [worldGeo, setWorldGeo] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [usGeo, setUsGeo] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [brGeo, setBrGeo] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [arGeo, setArGeo] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [gbGeo, setGbGeo] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [borderGeoCache, setBorderGeoCache] = useState<Record<string, GeoJSON.FeatureCollection>>({});
+  const fetchingRef = useRef<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
 
+  // Load world base map once
   useEffect(() => {
-    Promise.all([
-      fetch('/geo/world-110m.geojson').then(r => r.json()),
-      fetch('/geo/us-states.geojson').then(r => r.json()),
-      fetch('/geo/brazil-states.geojson').then(r => r.json()),
-      fetch('/geo/ar-provinces.geojson').then(r => r.json()),
-      fetch('/geo/gb-counties.geojson').then(r => r.json()),
-    ]).then(([world, us, br, ar, gb]) => {
-      setWorldGeo(world as GeoJSON.FeatureCollection);
-      setUsGeo(us as GeoJSON.FeatureCollection);
-      setBrGeo(br as GeoJSON.FeatureCollection);
-      setArGeo(ar as GeoJSON.FeatureCollection);
-      setGbGeo(gb as GeoJSON.FeatureCollection);
+    fetch('/geo/world-110m.geojson').then(r => r.json()).then(data => {
+      setWorldGeo(data as GeoJSON.FeatureCollection);
     });
   }, []);
+
+  // Fetch geoBoundaries GeoJSON for any country with showStateBorders=true and isoAlpha3
+  useEffect(() => {
+    const toFetch = countries.filter(
+      c => c.showStateBorders && c.isoAlpha3 && !borderGeoCache[c.isoAlpha3] && !fetchingRef.current.has(c.isoAlpha3!)
+    );
+    if (toFetch.length === 0) return;
+
+    toFetch.forEach(async country => {
+      const iso3 = country.isoAlpha3!;
+      fetchingRef.current.add(iso3);
+      try {
+        const meta = await fetch(`${GEO_BOUNDARIES_API}/${iso3}/ADM1/`).then(r => r.json());
+        const dlUrl: string = meta?.gjDownloadURL;
+        if (!dlUrl) return;
+        const geo = await fetch(dlUrl).then(r => r.json()) as GeoJSON.FeatureCollection;
+        setBorderGeoCache(prev => ({ ...prev, [iso3]: geo }));
+      } catch {
+        // Silently ignore fetch failures — borders simply won't render for this country
+      } finally {
+        fetchingRef.current.delete(iso3);
+      }
+    });
+  }, [countries, borderGeoCache]);
 
   const handleToggleStateBorders = useCallback((countryId: number, show: boolean) => {
     setStateBorders.mutate({ id: countryId, show });
@@ -63,10 +78,7 @@ export default function MapPage() {
             places={places}
             visitedStates={visitedStates}
             geoJson={worldGeo!}
-            usStatesGeoJson={usGeo!}
-            brazilStatesGeoJson={brGeo!}
-            arGeoJson={arGeo ?? undefined}
-            gbGeoJson={gbGeo ?? undefined}
+            borderGeoCache={borderGeoCache}
             onToggleStateBorders={handleToggleStateBorders}
           />
         )}

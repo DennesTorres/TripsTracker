@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import type { GeoPermissibleObjects } from 'd3';
 import type { Country, Place, VisitedState } from '@/types';
@@ -9,11 +9,18 @@ interface Props {
   places: Place[];
   visitedStates: VisitedState[];
   geoJson: GeoJSON.FeatureCollection;
-  usStatesGeoJson: GeoJSON.FeatureCollection;
-  brazilStatesGeoJson: GeoJSON.FeatureCollection;
-  arGeoJson?: GeoJSON.FeatureCollection;
-  gbGeoJson?: GeoJSON.FeatureCollection;
+  /** Dynamic border GeoJSON keyed by ISO Alpha-3 code. Loaded on demand by MapPage. */
+  borderGeoCache: Record<string, GeoJSON.FeatureCollection>;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
+  onPlaceClick?: (placeIds: number[]) => void;
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  countryId: number;
+  countryName: string;
+  currentShow: boolean;
 }
 
 // ─── Colours — matched exactly to reference travel-map.html CSS variables ─────
@@ -32,8 +39,8 @@ const BR_STATE_VIS_STROKE   = 'rgba(240,184,74,0.65)';
 const BR_STATE_VIS_FILL     = 'rgba(200,151,58,0.14)';
 const BR_STATE_BASE_FILL    = 'rgba(0,0,0,0.06)';
 
-const CLUSTER_PX  = 28;   // merge threshold in screen pixels
-const BR_ZOOM_MIN = 2.0;  // minimum zoom to show state borders
+const CLUSTER_PX    = 28;   // merge threshold in screen pixels
+const BORDERS_ZOOM_MIN = 2.0;  // minimum zoom to show any state borders
 
 // ─── Clustering — mirrors reference cluster() function exactly ────────────────
 interface ClusterData {
@@ -139,20 +146,23 @@ export default function WorldMap({
   places,
   visitedStates,
   geoJson,
-  usStatesGeoJson,
-  brazilStatesGeoJson,
-  arGeoJson,
-  gbGeoJson,
+  borderGeoCache,
   onToggleStateBorders,
+  onPlaceClick,
 }: Props) {
   const svgRef      = useRef<SVGSVGElement>(null);
   const tooltipRef  = useRef<HTMLDivElement>(null);
+
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [statusLabel, setStatusLabel] = useState<{ country: string; state: string | null }>({ country: '', state: null });
 
   // Mutable refs used inside zoom handler (never trigger re-render)
   const projRef     = useRef<d3.GeoProjection | null>(null);
   const currentKRef = useRef<number>(1);
   const pinsGRef    = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
-  const brStatesGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const statesGRef  = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   // ── recluster — mirrors reference recluster() ──────────────────────────────
   const recluster = () => {
@@ -171,23 +181,18 @@ export default function WorldMap({
       const n = c.places.length;
       const hasHome = c.places.some(p => p.isHome);
 
-      // Pin colour class — matching reference: home > 6+ > 2-5 > 1
       const dotColor = hasHome ? CH_COLOR : n >= 6 ? C3_COLOR : n >= 2 ? C2_COLOR : C1_COLOR;
-      const strokeColor = hasHome ? CH_COLOR : n >= 6 ? C3_COLOR : n >= 2 ? C2_COLOR : C1_COLOR;
 
-      // Group: translate to SVG position, counter-scale (reference pattern)
       const mg = pinsG.append('g')
         .attr('class', 'mg')
         .attr('transform', `translate(${c.x},${c.y}) scale(${s})`);
 
-      // Dot — fixed 4px radius in screen space
       mg.append('circle')
         .attr('r', 4)
         .attr('fill', dotColor)
         .attr('stroke', 'rgba(255,255,255,0.3)')
         .attr('stroke-width', 0.4);
 
-      // Cluster count label (when >1)
       if (n > 1) {
         mg.append('text')
           .attr('text-anchor', 'middle')
@@ -198,15 +203,12 @@ export default function WorldMap({
           .text(n);
       }
 
-      // Hit area for hover (reference uses r=12)
       mg.append('circle')
         .attr('r', 12)
         .attr('fill', 'transparent')
         .style('cursor', 'pointer')
         .on('mouseover', (event: MouseEvent) => {
           const p0 = c.places[0];
-          // Show stateAbbr only for letter-based codes (e.g. "SP", "RJ").
-          // Numeric ISO codes like Poland's "22" are not meaningful to display.
           const cityLabel = (p: Place) => {
             const abbr = p.stateAbbr && !/^\d+$/.test(p.stateAbbr) ? p.stateAbbr : null;
             const state = abbr ?? (p.stateName ? p.stateName.split(' ')[0] : null);
@@ -229,23 +231,19 @@ export default function WorldMap({
             .style('left', `${event.clientX - rect.left + 14}px`)
             .style('top', `${event.clientY - rect.top - 32}px`);
         })
-        .on('mouseout', () => tooltip.style('display', 'none'));
-
-      // Store colour on stroke for rescale (unused here but matches reference shape)
-      void strokeColor;
+        .on('mouseout', () => tooltip.style('display', 'none'))
+        .on('click', () => {
+          if (onPlaceClick) onPlaceClick(c.places.map(p => p.id));
+        });
     });
   };
 
-  // ── updateBrStates — show/hide state borders based on zoom ────────────────
-  const updateBrStates = () => {
-    if (!brStatesGRef.current) return;
-    const show = currentKRef.current >= BR_ZOOM_MIN;
-    const brPaths = brStatesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs');
-    if (show) {
-      brPaths.style('display', null);
-    } else {
-      brPaths.style('display', 'none');
-    }
+  // ── updateStateBorderVisibility — show/hide all state borders based on zoom ──
+  const updateStateBorderVisibility = () => {
+    if (!statesGRef.current) return;
+    const show = currentKRef.current >= BORDERS_ZOOM_MIN;
+    statesGRef.current.selectAll<SVGPathElement, GeoJSON.Feature>('.brs')
+      .style('display', show ? null : 'none');
   };
 
   // ── main effect ─────────────────────────────────────────────────────────────
@@ -258,7 +256,6 @@ export default function WorldMap({
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
-    // Projection — reference formula: Math.min(w/6.1, h/3.2)
     const projection = d3.geoNaturalEarth1()
       .scale(Math.min(width / 6.1, height / 3.2))
       .translate([width / 2, height / 2]);
@@ -270,27 +267,12 @@ export default function WorldMap({
 
     const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
     const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
-    // Build sets for countries with state borders enabled
-    const showBordersCountries = new Set(countries.filter(c => c.showStateBorders).map(c => c.isoAlpha2));
-    const brCountry = countries.find(c => c.isoAlpha2 === 'BR');
-    const usCountry = countries.find(c => c.isoAlpha2 === 'US');
-    const arCountry = countries.find(c => c.isoAlpha2 === 'AR');
-    const gbCountry = countries.find(c => c.isoAlpha2 === 'GB');
-    const visitedBrStates  = new Set(visitedStates.filter(s => s.countryId === brCountry?.id).map(s => s.stateAbbr));
-    const visitedUsStates  = new Set(visitedStates.filter(s => s.countryId === usCountry?.id).map(s => s.stateAbbr));
-    // GADM ISO_1 uses "AR-B" format; Nominatim returns "B" — add prefix
-    const visitedArStates  = new Set(visitedStates.filter(s => s.countryId === arCountry?.id).map(s => `AR-${s.stateAbbr}`));
-    // GADM admin-1 for GB is counties; Nominatim returns home nations — no visited highlighting
-    const visitedGbStates  = new Set<string>();
-    void gbCountry; // reference kept for future use
 
     const g = svg.append('g');
 
-    // Ocean sphere — matches reference: draw actual sphere shape as ocean fill
+    // Ocean sphere
     const sphereD = pathGenerator({ type: 'Sphere' as const }) ?? '';
-    g.append('path')
-      .attr('fill', OCEAN_COLOR)
-      .attr('d', sphereD);
+    g.append('path').attr('fill', OCEAN_COLOR).attr('d', sphereD);
 
     // Countries
     const countriesG = g.append('g');
@@ -308,58 +290,75 @@ export default function WorldMap({
       .attr('stroke', 'rgba(0,0,0,0.4)')
       .attr('stroke-width', 0.35)
       .attr('vector-effect', 'non-scaling-stroke')
+      .on('mouseover', (_event: MouseEvent, f: GeoJSON.Feature) => {
+        const a2: string = f.properties?.['ISO_A2'] ?? '';
+        const country = countries.find(c => c.isoAlpha2 === a2);
+        if (country) setStatusLabel({ country: country.name, state: null });
+      })
+      .on('mouseout', () => setStatusLabel({ country: '', state: null }))
       .on('contextmenu', (event: MouseEvent, f: GeoJSON.Feature) => {
         event.preventDefault();
         if (!onToggleStateBorders) return;
         const a2: string = f.properties?.['ISO_A2'] ?? '';
         const country = countries.find(c => c.isoAlpha2 === a2);
-        if (country) onToggleStateBorders(country.id, !country.showStateBorders);
+        if (!country) return;
+        const rect = svgRef.current!.getBoundingClientRect();
+        setContextMenu({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
+          countryId: country.id,
+          countryName: country.name,
+          currentShow: country.showStateBorders,
+        });
       });
 
-    // State borders — rendered for countries with showStateBorders enabled
-    // Hidden until zoom >= BR_ZOOM_MIN
+    // State borders — dynamic GeoJSON from borderGeoCache, keyed by isoAlpha3
     const statesG = g.append('g');
-    brStatesGRef.current = statesG;
+    statesGRef.current = statesG;
 
-    const renderStateBorders = (
-      geoData: GeoJSON.FeatureCollection,
-      abbrProp: string,
-      visitedSet: Set<string>,
-      cssClass: string,
-    ) => {
-      statesG.selectAll<SVGPathElement, GeoJSON.Feature>(`.${cssClass}`)
-        .data(geoData.features)
-        .join('path')
-        .attr('class', `brs ${cssClass}`)
-        .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
-        .attr('fill', f => {
-          const abbr: string = (f.properties?.[abbrProp] as string) ?? '';
-          return visitedSet.has(abbr) ? BR_STATE_VIS_FILL : BR_STATE_BASE_FILL;
-        })
-        .attr('stroke', f => {
-          const abbr: string = (f.properties?.[abbrProp] as string) ?? '';
-          return visitedSet.has(abbr) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
-        })
-        .attr('stroke-width', 0.5)
-        .attr('vector-effect', 'non-scaling-stroke')
-        .attr('pointer-events', 'none')
-        .style('display', 'none');
-    };
+    countries
+      .filter(c => c.showStateBorders && c.isoAlpha3)
+      .forEach(country => {
+        const geo = borderGeoCache[country.isoAlpha3!];
+        if (!geo) return;
 
-    if (brazilStatesGeoJson && showBordersCountries.has('BR')) {
-      renderStateBorders(brazilStatesGeoJson, 'sigla', visitedBrStates, 'brs-br');
-    }
-    if (usStatesGeoJson && showBordersCountries.has('US')) {
-      renderStateBorders(usStatesGeoJson, 'STUSPS', visitedUsStates, 'brs-us');
-    }
-    if (arGeoJson && showBordersCountries.has('AR')) {
-      renderStateBorders(arGeoJson, 'ISO_1', visitedArStates, 'brs-ar');
-    }
-    if (gbGeoJson && showBordersCountries.has('GB')) {
-      renderStateBorders(gbGeoJson, 'ISO_1', visitedGbStates, 'brs-gb');
-    }
+        // Build visited set: geoBoundaries shapeISO format is "{A2}-{stateAbbr}"
+        const visitedSet = new Set(
+          visitedStates
+            .filter(s => s.countryId === country.id)
+            .map(s => `${country.isoAlpha2}-${s.stateAbbr}`)
+        );
+        const cssClass = `brs-${country.isoAlpha2.toLowerCase()}`;
 
-    // Sphere outline (reference draws this on top of countries)
+        statesG.selectAll<SVGPathElement, GeoJSON.Feature>(`.${cssClass}`)
+          .data(geo.features)
+          .join('path')
+          .attr('class', `brs ${cssClass}`)
+          .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
+          .attr('fill', f => {
+            const iso: string = (f.properties?.['shapeISO'] as string) ?? '';
+            return visitedSet.has(iso) ? BR_STATE_VIS_FILL : BR_STATE_BASE_FILL;
+          })
+          .attr('stroke', f => {
+            const iso: string = (f.properties?.['shapeISO'] as string) ?? '';
+            return visitedSet.has(iso) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
+          })
+          .attr('stroke-width', 0.5)
+          .attr('vector-effect', 'non-scaling-stroke')
+          .style('display', 'none')
+          .on('mouseover', (_event: MouseEvent, f: GeoJSON.Feature) => {
+            const shapeName: string = (f.properties?.['shapeName'] as string) ?? '';
+            setStatusLabel(prev => ({ ...prev, state: shapeName || null }));
+          })
+          .on('mouseout', () => {
+            setStatusLabel(prev => ({ ...prev, state: null }));
+          });
+      });
+
+    // Update border visibility for current zoom
+    updateStateBorderVisibility();
+
+    // Sphere outline (on top of countries)
     g.append('path')
       .attr('fill', 'none')
       .attr('stroke', 'rgba(255,255,255,0.1)')
@@ -370,11 +369,9 @@ export default function WorldMap({
     // Pins layer (topmost)
     const pinsG = g.append('g');
     pinsGRef.current = pinsG;
-
-    // Initial pin render
     recluster();
 
-    // ── zoom — recluster only when k changes (pan-only events skip rebuild) ──
+    // ── zoom ──
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.8, 500])
       .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
@@ -383,18 +380,45 @@ export default function WorldMap({
         g.attr('transform', event.transform.toString());
         if (kChanged) {
           recluster();
-          updateBrStates();
+          updateStateBorderVisibility();
         }
       });
 
     svg.call(zoom);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countries, places, visitedStates, geoJson, usStatesGeoJson, brazilStatesGeoJson, arGeoJson, gbGeoJson]);
+  }, [countries, places, visitedStates, geoJson, borderGeoCache]);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onClick={closeContextMenu}>
       <svg ref={svgRef} className={styles.svg} />
       <div ref={tooltipRef} className={styles.tooltip} />
+      {contextMenu && (
+        <div
+          className={styles.contextMenu}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              onToggleStateBorders?.(contextMenu.countryId, !contextMenu.currentShow);
+              setContextMenu(null);
+            }}
+          >
+            {contextMenu.currentShow ? 'Disable state borders' : 'Enable state borders'} — {contextMenu.countryName}
+          </button>
+        </div>
+      )}
+      {statusLabel.country && (
+        <div className={styles.statusBar}>
+          <span>{statusLabel.country}</span>
+          {statusLabel.state && (
+            <>
+              <span style={{ color: '#4a6080' }}>›</span>
+              <span>{statusLabel.state}</span>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

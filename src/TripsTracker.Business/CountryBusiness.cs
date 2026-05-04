@@ -28,7 +28,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
                 (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
+                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.IsoAlpha3, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
                     uc != null && uc.IsVisited,
                     uc != null && uc.ShowStateBorders))
@@ -48,7 +48,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
                 (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
+                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.IsoAlpha3, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
                     uc != null && uc.IsVisited,
                     uc != null && uc.ShowStateBorders))
@@ -68,7 +68,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
                 (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
+                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.IsoAlpha3, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
                     uc != null && uc.IsVisited,
                     uc != null && uc.ShowStateBorders))
@@ -154,7 +154,7 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
                 (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
+                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.IsoAlpha3, x.c.Flag, x.c.Name, x.c.Region,
                     uc != null && uc.IsHome,
                     uc != null && uc.IsVisited,
                     uc != null && uc.ShowStateBorders))
