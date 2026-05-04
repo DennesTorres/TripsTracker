@@ -63,11 +63,12 @@ public class PlacesProcess : IPlacesProcess
             }
 
             // Continent tier: 5000 personal, 20000 pioneer
+            // Stored as (null, region) so revocation can target the continent event symmetrically
             if (isFirstInRegion)
             {
                 var regionEvent = isPioneerRegion ? "continent_pioneer" : "continent_first";
                 var regionPoints = isPioneerRegion ? 20000 : 5000;
-                await _points.AwardAsync(userId, regionEvent, regionPoints, place.Id, "Place", ct);
+                await _points.AwardAsync(userId, regionEvent, regionPoints, null, country.Region, ct);
             }
         }
 
@@ -90,6 +91,27 @@ public class PlacesProcess : IPlacesProcess
             var hasRemainingHome = await _places.HasHomeInCountryAsync(place.CountryId, ct);
             if (!hasRemainingHome)
                 await _countries.SetHomeAsync(place.CountryId, false, ct);
+        }
+
+        if (_userContext.UserId.HasValue)
+        {
+            var userId = _userContext.UserId.Value;
+
+            // Always revoke city-tier points for this place
+            await _points.RevokeAsync(userId, "city_", place.Id, "Place", ct);
+
+            // Revoke country-tier if no places remain in that country
+            if (!hasRemainingPlaces)
+                await _points.RevokeAsync(userId, "country_", place.CountryId, "Country", ct);
+
+            // Revoke continent-tier if no places remain in that region
+            var country = await _countries.GetByIdAsync(place.CountryId, ct);
+            if (country != null)
+            {
+                var hasRemainingInRegion = await _places.HasAnyForCurrentUserInRegionAsync(country.Region, ct);
+                if (!hasRemainingInRegion)
+                    await _points.RevokeAsync(userId, "continent_", null, country.Region, ct);
+            }
         }
 
         return new DeletePlaceResult(false, null, null);

@@ -36,6 +36,37 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.TotalPoints, u => u.TotalPoints + points), ct);
     }
 
+    public async Task RevokeAsync(int userId, string eventTypePrefix, int? referenceId, string? referenceType, CancellationToken ct = default)
+    {
+        // Find the most recent positive event matching prefix + reference
+        var original = await BuildBaseQuery()
+            .Where(e => e.UserId == userId
+                && e.EventType.StartsWith(eventTypePrefix)
+                && e.ReferenceId == referenceId
+                && e.ReferenceType == referenceType
+                && e.Points > 0)
+            .OrderByDescending(e => e.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (original == null)
+            return;
+
+        var revocation = new PointEvent
+        {
+            UserId = userId,
+            EventType = original.EventType + "_revoked",
+            Points = -original.Points,
+            ReferenceId = referenceId,
+            ReferenceType = referenceType,
+            CreatedAt = DateTime.UtcNow,
+        };
+        await InsertAsync(revocation, ct);
+
+        await Context.Set<User>()
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.TotalPoints, u => u.TotalPoints - original.Points), ct);
+    }
+
     public async Task<UserPointsSummaryDto> GetSummaryAsync(CancellationToken ct = default)
     {
         var userId = _userContext.UserId!.Value;

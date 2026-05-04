@@ -229,4 +229,81 @@ public class PointsBusinessTests
 
         Assert.AreEqual(3, result.Count);
     }
+
+    // ─── RevokeAsync ──────────────────────────────���───────────────────────────
+
+    [TestMethod]
+    public async Task RevokeAsync_InsertsNegativeEvent()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
+        f.Ctx.Set<PointEvent>().Add(new PointEvent
+        {
+            UserId = 1, EventType = "city_added", Points = 50,
+            ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+        });
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).RevokeAsync(1, "city_", 5, "Place");
+
+        var events = await f.Ctx.Set<PointEvent>().OrderBy(e => e.Id).ToListAsync();
+        Assert.AreEqual(2, events.Count);
+        Assert.AreEqual("city_added_revoked", events[1].EventType);
+        Assert.AreEqual(-50, events[1].Points);
+    }
+
+    [TestMethod]
+    public async Task RevokeAsync_DeductsFromTotalPoints()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 2550 });
+        f.Ctx.Set<PointEvent>().AddRange(
+            new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new PointEvent { UserId = 1, EventType = "country_first", Points = 500, ReferenceId = 1, ReferenceType = "Country", CreatedAt = DateTime.UtcNow.AddMinutes(-1) },
+            new PointEvent { UserId = 1, EventType = "continent_first", Points = 2000, ReferenceId = null, ReferenceType = "Americas", CreatedAt = DateTime.UtcNow }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).RevokeAsync(1, "country_", 1, "Country");
+
+        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
+        Assert.AreEqual(2050, user.TotalPoints);
+    }
+
+    [TestMethod]
+    public async Task RevokeAsync_IsNoOp_WhenNoMatchingEvent()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
+        f.Ctx.Set<PointEvent>().Add(new PointEvent
+        {
+            UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow
+        });
+        await f.Ctx.SaveChangesAsync();
+
+        // Wrong referenceId — no match
+        await f.ForUser(1).RevokeAsync(1, "city_", 99, "Place");
+
+        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
+        Assert.AreEqual(50, user.TotalPoints); // unchanged
+        Assert.AreEqual(1, await f.Ctx.Set<PointEvent>().CountAsync()); // no revocation event
+    }
+
+    [TestMethod]
+    public async Task RevokeAsync_MatchesNullReferenceId()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 5000 });
+        f.Ctx.Set<PointEvent>().Add(new PointEvent
+        {
+            UserId = 1, EventType = "continent_first", Points = 5000,
+            ReferenceId = null, ReferenceType = "Americas", CreatedAt = DateTime.UtcNow
+        });
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).RevokeAsync(1, "continent_", null, "Americas");
+
+        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
+        Assert.AreEqual(0, user.TotalPoints);
+    }
 }

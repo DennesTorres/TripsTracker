@@ -18,7 +18,7 @@ public class PlacesProcessTests
         CountryFlag: "🇧🇷", City: "Itacuruça", StateAbbr: "RJ",
         StateName: "Rio de Janeiro", IsHome: false);
 
-    private static PlacesProcess BuildSut(
+    private static (PlacesProcess Sut, Mock<IPointsBusiness> Points) BuildSut(
         Mock<IPlaceBusiness> places,
         Mock<ICountryBusiness> countries,
         Mock<IGeocodingBusiness> geocoding)
@@ -26,27 +26,48 @@ public class PlacesProcessTests
         var points = new Mock<IPointsBusiness>();
         var userContext = new Mock<IUserContext>();
         userContext.Setup(u => u.UserId).Returns(1);
-        return new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
+        return (sut, points);
     }
 
-    // ─── AddAsync ─────────────────────────────────────────────────────────────
-
-    [TestMethod]
-    public async Task AddAsync_AlwaysCallsGeocoding()
+    /// Sets up mocks for a standard add-place call and controls cascade conditions.
+    private static (Mock<IPlaceBusiness> Places, Mock<ICountryBusiness> Countries, Mock<IGeocodingBusiness> Geocoding)
+        StandardMocks(
+            bool hasPlaceInCountry = true,
+            bool hasPlaceInRegion = true,
+            bool anyGloballyInCountry = true,
+            bool anyGloballyInRegion = true)
     {
-        // Geocoding must always be called — there is no coordinate bypass path.
         var places = new Mock<IPlaceBusiness>();
         var countries = new Mock<ICountryBusiness>();
         var geocoding = new Mock<IGeocodingBusiness>();
 
         countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Brazil());
-        geocoding.Setup(g => g.GeocodeAsync("Itacuruça", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
+        geocoding.Setup(g => g.GeocodeAsync(It.IsAny<string>(), It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
         places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(AnyPlace());
+        places.Setup(p => p.HasAnyInCountryAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hasPlaceInCountry);
+        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hasPlaceInRegion);
+        places.Setup(p => p.HasAnyGloballyInCountryAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(anyGloballyInCountry);
+        places.Setup(p => p.HasAnyGloballyInRegionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(anyGloballyInRegion);
 
-        var sut = BuildSut(places, countries, geocoding);
+        return (places, countries, geocoding);
+    }
+
+    // ─── AddAsync — basic ────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task AddAsync_AlwaysCallsGeocoding()
+    {
+        // Geocoding must always be called — there is no coordinate bypass path.
+        var (places, countries, geocoding) = StandardMocks();
+        var (sut, _) = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
@@ -61,18 +82,8 @@ public class PlacesProcessTests
     {
         // The city name stored must come from the geocoding result (Photon canonical name),
         // not directly from the DTO.
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
-
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        geocoding.Setup(g => g.GeocodeAsync("Itacuruça", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
-        places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-
-        var sut = BuildSut(places, countries, geocoding);
+        var (places, countries, geocoding) = StandardMocks();
+        var (sut, _) = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
@@ -87,23 +98,191 @@ public class PlacesProcessTests
     [TestMethod]
     public async Task AddAsync_CallsGeocoding()
     {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
-
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        geocoding.Setup(g => g.GeocodeAsync("São Paulo", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodingResult(-23.55, -46.63, "São Paulo", "SP", "São Paulo", "BR"));
-        places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-
-        var sut = BuildSut(places, countries, geocoding);
+        var (places, countries, geocoding) = StandardMocks();
+        var (sut, _) = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("São Paulo", "BR"));
 
         geocoding.Verify(
             g => g.GeocodeAsync("São Paulo", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ─── AddAsync — cascade scoring ──────────────────────────────────────────
+
+    [TestMethod]
+    public async Task AddAsync_AwardsOnlyCityPoints_WhenNotFirstInCountryOrRegion()
+    {
+        // Not first in country, not first in region → only city_added (50 pts)
+        var (places, countries, geocoding) = StandardMocks(
+            hasPlaceInCountry: true, hasPlaceInRegion: true);
+        var (sut, points) = BuildSut(places, countries, geocoding);
+
+        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+
+        points.Verify(p => p.AwardAsync(1, "city_added", 50, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, It.Is<string>(e => e.StartsWith("country")), It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        points.Verify(p => p.AwardAsync(1, It.Is<string>(e => e.StartsWith("continent")), It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task AddAsync_AwardsCountryFirst_WhenFirstInCountryPersonally()
+    {
+        // First in country for this user, but other users already have places there → personal 500
+        var (places, countries, geocoding) = StandardMocks(
+            hasPlaceInCountry: false, hasPlaceInRegion: true,
+            anyGloballyInCountry: true);
+        var (sut, points) = BuildSut(places, countries, geocoding);
+
+        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+
+        points.Verify(p => p.AwardAsync(1, "city_added", 50, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "country_first", 500, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task AddAsync_AwardsCountryPioneer_WhenFirstInCountryGlobally()
+    {
+        // No user has ever visited this country → pioneer, 2000 + city_pioneer 200
+        var (places, countries, geocoding) = StandardMocks(
+            hasPlaceInCountry: false, hasPlaceInRegion: true,
+            anyGloballyInCountry: false);
+        var (sut, points) = BuildSut(places, countries, geocoding);
+
+        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+
+        points.Verify(p => p.AwardAsync(1, "city_pioneer", 200, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "country_pioneer", 2000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "city_added", It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        points.Verify(p => p.AwardAsync(1, "country_first", It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task AddAsync_AwardsContinentFirst_WhenFirstInRegionPersonally()
+    {
+        // First in this continent for this user, but others already have places there → personal 5000
+        var (places, countries, geocoding) = StandardMocks(
+            hasPlaceInCountry: true, hasPlaceInRegion: false,
+            anyGloballyInRegion: true);
+        var (sut, points) = BuildSut(places, countries, geocoding);
+
+        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+
+        points.Verify(p => p.AwardAsync(1, "city_added", 50, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "continent_first", 5000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task AddAsync_AwardsContinentPioneer_WhenFirstInRegionGlobally()
+    {
+        // No user has ever visited this continent → pioneer, 20000 + city_pioneer 200
+        var (places, countries, geocoding) = StandardMocks(
+            hasPlaceInCountry: true, hasPlaceInRegion: false,
+            anyGloballyInCountry: true, anyGloballyInRegion: false);
+        var (sut, points) = BuildSut(places, countries, geocoding);
+
+        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+
+        points.Verify(p => p.AwardAsync(1, "city_pioneer", 200, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "continent_pioneer", 20000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "city_added", It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task AddAsync_AwardsAllTiers_WhenFirstInCountryAndRegionGlobally()
+    {
+        // Global pioneer for both country AND region → city_pioneer + country_pioneer + continent_pioneer
+        var (places, countries, geocoding) = StandardMocks(
+            hasPlaceInCountry: false, hasPlaceInRegion: false,
+            anyGloballyInCountry: false, anyGloballyInRegion: false);
+        var (sut, points) = BuildSut(places, countries, geocoding);
+
+        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+
+        points.Verify(p => p.AwardAsync(1, "city_pioneer", 200, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "country_pioneer", 2000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.AwardAsync(1, "continent_pioneer", 20000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ─── DeleteAsync — cascade revocation ────────────────────────────────────
+
+    private static (PlacesProcess Sut, Mock<IPointsBusiness> Points) BuildDeleteSut(
+        bool hasRemainingInCountry, bool hasRemainingInRegion)
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+        var points = new Mock<IPointsBusiness>();
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(1);
+
+        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AnyPlace());
+        places.Setup(p => p.DeleteAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hasRemainingInCountry);
+        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hasRemainingInRegion);
+        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Brazil());
+        countries.Setup(c => c.SetVisitedAsync(1, false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CountryDto?)null);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
+        return (sut, points);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_RevokesPlacePoints_Always()
+    {
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.RevokeAsync(1, "city_", 1, "Place", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_RevokesCountryPoints_WhenLastPlaceInCountry()
+    {
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.RevokeAsync(1, "country_", 1, "Country", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_DoesNotRevokeCountryPoints_WhenOtherPlacesInCountry()
+    {
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.RevokeAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_RevokesRegionPoints_WhenLastPlaceInRegion()
+    {
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: false);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.RevokeAsync(1, "continent_", It.Is<int?>(v => v == null), "Americas", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_DoesNotRevokeRegionPoints_WhenOtherPlacesInRegion()
+    {
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.RevokeAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
