@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripsTracker.Data;
 
@@ -11,9 +12,11 @@ using TripsTracker.Data;
 namespace TripsTracker.Data.Migrations
 {
     [DbContext(typeof(TripsTrackerDbContext))]
-    partial class TripsTrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260505023746_AddOriginalEventIdToPointEvents")]
+    partial class AddOriginalEventIdToPointEvents
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,6 +62,9 @@ namespace TripsTracker.Data.Migrations
 
                     b.Property<string>("IsoAlpha2")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IsoAlpha3")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("IsoNumeric")

@@ -46,6 +46,7 @@ public class PointsBusinessTests
                     Points INTEGER NOT NULL DEFAULT 0,
                     ReferenceId INTEGER,
                     ReferenceType TEXT,
+                    OriginalEventId INTEGER,
                     CreatedAt TEXT NOT NULL DEFAULT '0001-01-01'
                 )",
                 "CREATE INDEX IX_PointEvents_UserId ON PointEvents (UserId)",
@@ -230,7 +231,111 @@ public class PointsBusinessTests
         Assert.AreEqual(3, result.Count);
     }
 
-    // ─── RevokeAsync ──────────────────────────────���───────────────────────────
+    // ─── GetRecentAsync ───────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetRecentAsync_ExcludesOriginalEvents_WhenRevoked()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 0 });
+        var original = new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 1, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-2) };
+        f.Ctx.Set<PointEvent>().Add(original);
+        await f.Ctx.SaveChangesAsync();
+        // Add revocation that references the original
+        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = 1, EventType = "city_added_revoked", Points = -50, ReferenceId = 1, ReferenceType = "Place", OriginalEventId = original.Id, CreatedAt = DateTime.UtcNow.AddMinutes(-1) });
+        await f.Ctx.SaveChangesAsync();
+
+        var summary = await f.ForUser(1).GetSummaryAsync();
+
+        Assert.AreEqual(0, summary.RecentEvents.Count, "Original events that have been revoked should not appear in recent events");
+    }
+
+    [TestMethod]
+    public async Task GetRecentAsync_ExcludesRevokedEvents()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 0 });
+        f.Ctx.Set<PointEvent>().AddRange(
+            new PointEvent { UserId = 1, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow.AddMinutes(-3) },
+            new PointEvent { UserId = 1, EventType = "city_added_revoked", Points = -50, CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new PointEvent { UserId = 1, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        var summary = await f.ForUser(1).GetSummaryAsync();
+
+        Assert.AreEqual(2, summary.RecentEvents.Count, "Revoked events should be excluded from recent events");
+        Assert.IsFalse(summary.RecentEvents.Any(e => e.EventType.EndsWith("_revoked")),
+            "No revoked events should appear in recent events");
+    }
+
+    // ─── RevokeAsync ──────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task RevokeAsync_SetsOriginalEventId()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
+        var original = new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-1) };
+        f.Ctx.Set<PointEvent>().Add(original);
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).RevokeAsync(1, "city_", 5, "Place");
+
+        var events = await f.Ctx.Set<PointEvent>().OrderBy(e => e.Id).ToListAsync();
+        Assert.AreEqual(2, events.Count);
+        Assert.AreEqual(original.Id, events[1].OriginalEventId, "Revocation must link back to the original event via OriginalEventId");
+    }
+
+    [TestMethod]
+    public async Task ReassignAsync_RevokesOldAndAwardsWithNewReference()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 500 });
+        var original = new PointEvent { UserId = 1, EventType = "country_first", Points = 500, ReferenceId = 10, ReferenceType = "Country", CreatedAt = DateTime.UtcNow.AddMinutes(-1) };
+        f.Ctx.Set<PointEvent>().Add(original);
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).ReassignAsync(1, "country_", 10, "Country", 20, "Country");
+
+        var events = await f.Ctx.Set<PointEvent>().OrderBy(e => e.Id).ToListAsync();
+        Assert.AreEqual(3, events.Count);
+        // E2 is the revocation of E1
+        Assert.AreEqual("country_first_revoked", events[1].EventType);
+        Assert.AreEqual(original.Id, events[1].OriginalEventId);
+        // E3 is the re-award with the new reference
+        Assert.AreEqual("country_first", events[2].EventType);
+        Assert.AreEqual(500, events[2].Points);
+        Assert.AreEqual(20, events[2].ReferenceId);
+        Assert.AreEqual("Country", events[2].ReferenceType);
+    }
+
+    [TestMethod]
+    public async Task ReassignAsync_IsNoOp_WhenNoMatchingEvent()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
+        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow });
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).ReassignAsync(1, "country_", 99, "Country", 20, "Country");
+
+        Assert.AreEqual(1, await f.Ctx.Set<PointEvent>().CountAsync(), "No changes when no matching event");
+    }
+
+    [TestMethod]
+    public async Task ReassignAsync_PreservesTotalPoints_NetZero()
+    {
+        await using var f = new Fixture();
+        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 500 });
+        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = 1, EventType = "country_first", Points = 500, ReferenceId = 10, ReferenceType = "Country", CreatedAt = DateTime.UtcNow });
+        await f.Ctx.SaveChangesAsync();
+
+        await f.ForUser(1).ReassignAsync(1, "country_", 10, "Country", 20, "Country");
+
+        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
+        Assert.AreEqual(500, user.TotalPoints, "Reassignment is net-zero — total points unchanged");
+    }
 
     [TestMethod]
     public async Task RevokeAsync_InsertsNegativeEvent()

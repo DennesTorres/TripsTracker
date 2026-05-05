@@ -58,6 +58,7 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             Points = -original.Points,
             ReferenceId = referenceId,
             ReferenceType = referenceType,
+            OriginalEventId = original.Id,
             CreatedAt = DateTime.UtcNow,
         };
         await InsertAsync(revocation, ct);
@@ -79,13 +80,41 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
         return new UserPointsSummaryDto(total, recent);
     }
 
-    public Task<List<PointEventDto>> GetRecentAsync(int count = 20, CancellationToken ct = default)
-        => BuildBaseQuery()
-            .Where(e => e.UserId == _userContext.UserId)
+    public async Task<List<PointEventDto>> GetRecentAsync(int count = 20, CancellationToken ct = default)
+    {
+        var revokedOriginalIds = await BuildBaseQuery()
+            .Where(e => e.UserId == _userContext.UserId && e.OriginalEventId != null)
+            .Select(e => e.OriginalEventId!.Value)
+            .ToListAsync(ct);
+
+        return await BuildBaseQuery()
+            .Where(e => e.UserId == _userContext.UserId
+                && !e.EventType.EndsWith("_revoked")
+                && !revokedOriginalIds.Contains(e.Id))
             .OrderByDescending(e => e.CreatedAt)
             .Take(count)
             .Select(e => new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt))
             .ToListAsync(ct);
+    }
+
+    public async Task ReassignAsync(int userId, string eventTypePrefix, int? oldReferenceId, string? oldReferenceType,
+        int? newReferenceId, string? newReferenceType, CancellationToken ct = default)
+    {
+        var original = await BuildBaseQuery()
+            .Where(e => e.UserId == userId
+                && e.EventType.StartsWith(eventTypePrefix)
+                && e.ReferenceId == oldReferenceId
+                && e.ReferenceType == oldReferenceType
+                && e.Points > 0)
+            .OrderByDescending(e => e.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (original == null)
+            return;
+
+        await RevokeAsync(userId, eventTypePrefix, oldReferenceId, oldReferenceType, ct);
+        await AwardAsync(userId, original.EventType, original.Points, newReferenceId, newReferenceType, ct);
+    }
 
     public async Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 20, CancellationToken ct = default)
     {

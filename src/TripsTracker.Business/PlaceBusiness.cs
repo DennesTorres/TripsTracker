@@ -100,4 +100,23 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
         => BuildBaseQuery()
             .Join(Context.Set<Country>().AsNoTracking(), p => p.CountryId, c => c.Id, (p, c) => c.Region)
             .AnyAsync(r => r == region, ct);
+
+    public Task<PlaceDto?> GetFirstForCurrentUserInCountryAsync(int countryId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(p => p.CountryId == countryId && p.UserId == _userContext.UserId)
+            .OrderBy(p => p.Id)
+            .Join(Context.Set<Country>().AsNoTracking(),
+                p => p.CountryId,
+                c => c.Id,
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
+            .FirstOrDefaultAsync(ct);
+
+    public Task<PlaceDto?> GetFirstForCurrentUserInRegionAsync(string region, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(p => p.UserId == _userContext.UserId)
+            .Join(Context.Set<Country>().AsNoTracking(), p => p.CountryId, c => c.Id, (p, c) => new { Place = p, Country = c })
+            .Where(x => x.Country.Region == region)
+            .OrderBy(x => x.Place.Id)
+            .Select(x => new PlaceDto(x.Place.Id, x.Place.Lon, x.Place.Lat, x.Place.CountryId, x.Country.Name, x.Country.Flag, x.Place.City, x.Place.StateAbbr, x.Place.StateName, x.Place.IsHome))
+            .FirstOrDefaultAsync(ct);
 }

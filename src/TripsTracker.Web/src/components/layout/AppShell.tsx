@@ -82,7 +82,7 @@ export default function AppShell({ children }: Props) {
                 ) : (
                   pointsData.recentEvents.map(e => (
                     <div key={e.id} className={styles.pointsRow}>
-                      <span className={styles.pointsEventType}>{formatEventType(e.eventType)}</span>
+                      <span className={styles.pointsEventType} title={getEventDescription(e.eventType)}>{formatEventType(e.eventType)}</span>
                       <span className={styles.pointsValue}>+{e.points}</span>
                     </div>
                   ))
@@ -142,4 +142,18 @@ function formatEventType(eventType: string): string {
     comment_added: 'Comment added',
   };
   return map[eventType] ?? eventType;
+}
+
+function getEventDescription(eventType: string): string {
+  const map: Record<string, string> = {
+    city_added: 'You added a new city to your trip history',
+    city_pioneer: 'You were the first person globally to visit this city',
+    country_first: 'First city you visited in this country',
+    country_pioneer: 'You were the first person globally to visit any city in this country',
+    continent_first: 'First country you visited in this continent',
+    continent_pioneer: 'You were the first person globally to visit any country in this continent',
+    photo_uploaded: 'You uploaded a photo',
+    comment_added: 'You added a comment',
+  };
+  return map[eventType] ?? '';
 }

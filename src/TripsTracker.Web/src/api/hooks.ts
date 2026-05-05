@@ -41,6 +41,7 @@ export function useDeletePlace() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['places'] });
       qc.invalidateQueries({ queryKey: ['countries'], refetchType: 'all' });
+      qc.invalidateQueries({ queryKey: ['points'] });
     },
   });
 }

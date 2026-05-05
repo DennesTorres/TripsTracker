@@ -54,21 +54,20 @@ public class PlacesProcess : IPlacesProcess
             var cityPoints = isPioneerCountry || isPioneerRegion ? 200 : 50;
             await _points.AwardAsync(userId, cityEvent, cityPoints, place.Id, "Place", ct);
 
-            // Country tier: 500 personal, 2000 pioneer
+            // Country tier: 500 personal, 2000 pioneer — stored as (place.Id, "Country") to enable reassignment
             if (isFirstInCountry)
             {
                 var countryEvent = isPioneerCountry ? "country_pioneer" : "country_first";
                 var countryPoints = isPioneerCountry ? 2000 : 500;
-                await _points.AwardAsync(userId, countryEvent, countryPoints, country.Id, "Country", ct);
+                await _points.AwardAsync(userId, countryEvent, countryPoints, place.Id, "Country", ct);
             }
 
-            // Continent tier: 5000 personal, 20000 pioneer
-            // Stored as (null, region) so revocation can target the continent event symmetrically
+            // Continent tier: 5000 personal, 20000 pioneer — stored as (place.Id, "Continent") to enable reassignment
             if (isFirstInRegion)
             {
                 var regionEvent = isPioneerRegion ? "continent_pioneer" : "continent_first";
                 var regionPoints = isPioneerRegion ? 20000 : 5000;
-                await _points.AwardAsync(userId, regionEvent, regionPoints, null, country.Region, ct);
+                await _points.AwardAsync(userId, regionEvent, regionPoints, place.Id, "Continent", ct);
             }
         }
 
@@ -100,17 +99,33 @@ public class PlacesProcess : IPlacesProcess
             // Always revoke city-tier points for this place
             await _points.RevokeAsync(userId, "city_", place.Id, "Place", ct);
 
-            // Revoke country-tier if no places remain in that country
+            // Country tier: stored as (place.Id, "Country") — revoke or reassign
             if (!hasRemainingPlaces)
-                await _points.RevokeAsync(userId, "country_", place.CountryId, "Country", ct);
+            {
+                await _points.RevokeAsync(userId, "country_", place.Id, "Country", ct);
+            }
+            else
+            {
+                var survivingInCountry = await _places.GetFirstForCurrentUserInCountryAsync(place.CountryId, ct);
+                if (survivingInCountry != null)
+                    await _points.ReassignAsync(userId, "country_", place.Id, "Country", survivingInCountry.Id, "Country", ct);
+            }
 
-            // Revoke continent-tier if no places remain in that region
+            // Continent tier: stored as (place.Id, "Continent") — revoke or reassign
             var country = await _countries.GetByIdAsync(place.CountryId, ct);
             if (country != null)
             {
                 var hasRemainingInRegion = await _places.HasAnyForCurrentUserInRegionAsync(country.Region, ct);
                 if (!hasRemainingInRegion)
-                    await _points.RevokeAsync(userId, "continent_", null, country.Region, ct);
+                {
+                    await _points.RevokeAsync(userId, "continent_", place.Id, "Continent", ct);
+                }
+                else
+                {
+                    var survivingInRegion = await _places.GetFirstForCurrentUserInRegionAsync(country.Region, ct);
+                    if (survivingInRegion != null)
+                        await _points.ReassignAsync(userId, "continent_", place.Id, "Continent", survivingInRegion.Id, "Continent", ct);
+                }
             }
         }
 

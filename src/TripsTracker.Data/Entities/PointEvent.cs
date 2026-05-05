@@ -10,5 +10,6 @@ public class PointEvent
     public int Points { get; set; }
     public int? ReferenceId { get; set; }
     [MaxLength(50)] public string? ReferenceType { get; set; }
+    public int? OriginalEventId { get; set; }
     public DateTime CreatedAt { get; set; }
 }

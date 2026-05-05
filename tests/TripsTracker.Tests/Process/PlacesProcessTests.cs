@@ -207,7 +207,8 @@ public class PlacesProcessTests
     // ─── DeleteAsync — cascade revocation ────────────────────────────────────
 
     private static (PlacesProcess Sut, Mock<IPointsBusiness> Points) BuildDeleteSut(
-        bool hasRemainingInCountry, bool hasRemainingInRegion)
+        bool hasRemainingInCountry, bool hasRemainingInRegion,
+        PlaceDto? survivingInCountry = null, PlaceDto? survivingInRegion = null)
     {
         var places = new Mock<IPlaceBusiness>();
         var countries = new Mock<ICountryBusiness>();
@@ -226,6 +227,10 @@ public class PlacesProcessTests
             .ReturnsAsync(hasRemainingInRegion);
         places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
+        places.Setup(p => p.GetFirstForCurrentUserInCountryAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(survivingInCountry);
+        places.Setup(p => p.GetFirstForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(survivingInRegion);
 
         countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Brazil());
@@ -235,6 +240,11 @@ public class PlacesProcessTests
         var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
         return (sut, points);
     }
+
+    private static PlaceDto SurvivingPlace() => new(
+        Id: 2, Lon: -46.6, Lat: -23.5, CountryId: 1, CountryName: "Brazil",
+        CountryFlag: "🇧🇷", City: "São Paulo", StateAbbr: "SP",
+        StateName: "São Paulo", IsHome: false);
 
     [TestMethod]
     public async Task DeleteAsync_RevokesPlacePoints_Always()
@@ -249,40 +259,100 @@ public class PlacesProcessTests
     [TestMethod]
     public async Task DeleteAsync_RevokesCountryPoints_WhenLastPlaceInCountry()
     {
+        // Country tier is stored as (place.Id, "Country") — revocation uses place.Id
         var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true);
 
         await sut.DeleteAsync(1);
 
-        points.Verify(p => p.RevokeAsync(1, "country_", 1, "Country", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.RevokeAsync(1, "country_", AnyPlace().Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [TestMethod]
-    public async Task DeleteAsync_DoesNotRevokeCountryPoints_WhenOtherPlacesInCountry()
+    public async Task DeleteAsync_ReassignsCountryPoints_WhenOtherPlacesInCountry()
     {
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true);
+        var surviving = SurvivingPlace();
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true, survivingInCountry: surviving);
 
         await sut.DeleteAsync(1);
 
+        points.Verify(p => p.ReassignAsync(1, "country_", AnyPlace().Id, "Country", surviving.Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
         points.Verify(p => p.RevokeAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [TestMethod]
     public async Task DeleteAsync_RevokesRegionPoints_WhenLastPlaceInRegion()
     {
+        // Continent tier is stored as (place.Id, "Continent") — revocation uses place.Id
         var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: false);
 
         await sut.DeleteAsync(1);
 
-        points.Verify(p => p.RevokeAsync(1, "continent_", It.Is<int?>(v => v == null), "Americas", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.RevokeAsync(1, "continent_", AnyPlace().Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [TestMethod]
-    public async Task DeleteAsync_DoesNotRevokeRegionPoints_WhenOtherPlacesInRegion()
+    public async Task DeleteAsync_ReassignsContinentPoints_WhenOtherPlacesInRegion()
     {
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true);
+        var surviving = SurvivingPlace();
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true, survivingInRegion: surviving);
 
         await sut.DeleteAsync(1);
 
+        points.Verify(p => p.ReassignAsync(1, "continent_", AnyPlace().Id, "Continent", surviving.Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.RevokeAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ─── DeleteAsync — edge cases (R5 #5 scenarios) ──────────────────────────
+
+    [TestMethod]
+    public async Task DeleteAsync_RevokesAllTiers_WhenOnlyPlaceInCountryAndRegion()
+    {
+        // Last place in country AND region → both country and continent revoked (not reassigned)
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: false);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.RevokeAsync(1, "city_", AnyPlace().Id, "Place", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.RevokeAsync(1, "country_", AnyPlace().Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.RevokeAsync(1, "continent_", AnyPlace().Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.ReassignAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_DoesNotReassignCountry_WhenNoSurvivingPlaceFound()
+    {
+        // hasRemainingInCountry=true but GetFirstForCurrentUser returns null (race condition guard)
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true, survivingInCountry: null);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.ReassignAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_DoesNotReassignContinent_WhenNoSurvivingPlaceFound()
+    {
+        // hasRemainingInRegion=true but GetFirstForCurrentUser returns null (race condition guard)
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true, survivingInRegion: null);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.ReassignAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_ReassignsBothCountryAndContinent_WhenBothHaveRemainingPlaces()
+    {
+        // Places remain in both country and region → both tiers reassigned, none revoked
+        var surviving = SurvivingPlace();
+        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true,
+            survivingInCountry: surviving, survivingInRegion: surviving);
+
+        await sut.DeleteAsync(1);
+
+        points.Verify(p => p.ReassignAsync(1, "country_", AnyPlace().Id, "Country", surviving.Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.ReassignAsync(1, "continent_", AnyPlace().Id, "Continent", surviving.Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
+        points.Verify(p => p.RevokeAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         points.Verify(p => p.RevokeAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
