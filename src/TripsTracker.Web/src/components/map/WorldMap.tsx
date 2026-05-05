@@ -40,7 +40,7 @@ const BR_STATE_VIS_FILL     = 'rgba(200,151,58,0.14)';
 const BR_STATE_BASE_FILL    = 'rgba(0,0,0,0.06)';
 
 const CLUSTER_PX    = 28;   // merge threshold in screen pixels
-const BORDERS_ZOOM_MIN = 2.0;  // minimum zoom to show any state borders
+const BORDERS_ZOOM_MIN = 1.0;  // minimum zoom to show any state borders
 
 // ─── Clustering — mirrors reference cluster() function exactly ────────────────
 interface ClusterData {
@@ -261,14 +261,16 @@ export default function WorldMap({
       .translate([width / 2, height / 2]);
 
     projRef.current    = projection;
-    currentKRef.current = 1;
+    // Preserve current zoom level across effect re-runs (e.g. when borderGeoCache changes)
+    const savedTransform = svgRef.current ? d3.zoomTransform(svgRef.current) : d3.zoomIdentity;
+    currentKRef.current = savedTransform.k;
 
     const pathGenerator = d3.geoPath().projection(projection);
 
     const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
     const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
 
-    const g = svg.append('g');
+    const g = svg.append('g').attr('transform', savedTransform.toString());
 
     // Ocean sphere
     const sphereD = pathGenerator({ type: 'Sphere' as const }) ?? '';
@@ -408,17 +410,19 @@ export default function WorldMap({
           </button>
         </div>
       )}
-      {statusLabel.country && (
-        <div className={styles.statusBar}>
-          <span>{statusLabel.country}</span>
-          {statusLabel.state && (
-            <>
-              <span style={{ color: '#4a6080' }}>›</span>
-              <span>{statusLabel.state}</span>
-            </>
-          )}
-        </div>
-      )}
+      <div className={styles.statusBar}>
+        {statusLabel.country && (
+          <>
+            <span>{statusLabel.country}</span>
+            {statusLabel.state && (
+              <>
+                <span style={{ color: '#6a8aaa' }}>›</span>
+                <span>{statusLabel.state}</span>
+              </>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
