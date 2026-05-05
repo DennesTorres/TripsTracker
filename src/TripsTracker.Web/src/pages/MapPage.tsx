@@ -94,23 +94,25 @@ export default function MapPage() {
             </button>
           </div>
         )}
+        {popup && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 29 }} onClick={() => setPopup(null)} />
+            <PlacePopup
+              places={popup.places}
+              x={popup.x}
+              y={popup.y}
+              onClose={() => setPopup(null)}
+              onSeeMore={place => { setPopup(null); setSelectedPlace(place); }}
+            />
+          </>
+        )}
+        {selectedPlace && (
+          <PlaceDetailPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+        )}
       </div>
       {!isLoading && (
         <StatsBar countries={countries} places={places} />
       )}
-      {popup && (
-        <>
-          <div style={{ position: 'absolute', inset: 0, zIndex: 29 }} onClick={() => setPopup(null)} />
-          <PlacePopup
-            places={popup.places}
-            x={popup.x}
-            y={popup.y}
-            onClose={() => setPopup(null)}
-            onSeeMore={place => { setPopup(null); setSelectedPlace(place); }}
-          />
-        </>
-      )}
-      {selectedPlace && <PlaceDetailPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
       {sharing && <ShareModal onClose={() => setSharing(false)} />}
       {discovering && (

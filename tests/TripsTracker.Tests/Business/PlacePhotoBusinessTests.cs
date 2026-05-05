@@ -107,20 +107,19 @@ public class PlacePhotoBusinessTests
     }
 
     [TestMethod]
-    public async Task GetByPlaceAsync_FiltersToCurrentUser()
+    public async Task GetByPlaceAsync_ReturnsPhotos_FromAllUsers()
     {
         await using var f = new Fixture();
         f.Ctx.Set<Place>().Add(new Place { Id = 1, City = "A", CountryId = 1, Lon = 0, Lat = 0 });
         f.Ctx.Set<PlacePhoto>().AddRange(
             new PlacePhoto { Id = 1, PlaceId = 1, UserId = 1, BlobName = "u1.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow },
-            new PlacePhoto { Id = 2, PlaceId = 1, UserId = 2, BlobName = "u2.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow }
+            new PlacePhoto { Id = 2, PlaceId = 1, UserId = 2, BlobName = "u2.jpg", ContentType = "image/jpeg", SortOrder = 2, UploadedAt = DateTime.UtcNow }
         );
         await f.Ctx.SaveChangesAsync();
 
         var photos = await f.ForUser(1).GetByPlaceAsync(1);
 
-        Assert.AreEqual(1, photos.Count);
-        Assert.AreEqual(1, photos[0].UserId);
+        Assert.AreEqual(2, photos.Count, "Photos from all users should be returned");
     }
 
     [TestMethod]

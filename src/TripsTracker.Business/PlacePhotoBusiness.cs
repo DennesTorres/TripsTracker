@@ -55,7 +55,7 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
 
     public Task<List<PlacePhotoDto>> GetByPlaceAsync(int placeId, CancellationToken ct = default)
         => BuildBaseQuery()
-            .Where(p => p.PlaceId == placeId && p.UserId == _userContext.UserId)
+            .Where(p => p.PlaceId == placeId)
             .OrderBy(p => p.SortOrder)
             .GroupJoin(
                 Context.Set<PhotoRating>().AsNoTracking(),

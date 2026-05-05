@@ -12,7 +12,7 @@ interface Props {
 
 export default function PlacePopup({ places, x, y, onClose, onSeeMore }: Props) {
   return (
-    <div className={styles.popup} style={{ left: x, top: y }}>
+    <div className={styles.popup} style={{ left: x, top: y }} onClick={e => e.stopPropagation()}>
       <button className={styles.closeBtn} onClick={onClose}>×</button>
       {places.length === 1 ? (
         <SinglePreview place={places[0]} onSeeMore={() => onSeeMore(places[0])} />

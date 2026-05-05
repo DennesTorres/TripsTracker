@@ -38,7 +38,7 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
 
     public Task<List<PlaceCommentDto>> GetByPlaceAsync(int placeId, CancellationToken ct = default)
         => BuildBaseQuery()
-            .Where(c => c.PlaceId == placeId && c.UserId == _userContext.UserId)
+            .Where(c => c.PlaceId == placeId)
             .OrderByDescending(c => c.CreatedAt)
             .Join(Context.Set<User>().AsNoTracking(),
                 c => c.UserId,
