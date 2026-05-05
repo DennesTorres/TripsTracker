@@ -147,6 +147,7 @@ export function useUpdateUser() {
     onSuccess: (data) => {
       qc.setQueryData(['me'], data);
       qc.invalidateQueries({ queryKey: ['countries'] });
+      qc.invalidateQueries({ queryKey: ['discover-maps'] });
     },
   });
 }
