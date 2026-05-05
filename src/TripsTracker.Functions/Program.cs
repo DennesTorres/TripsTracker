@@ -18,6 +18,9 @@ using TripsTracker.Tools.Registration;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
+// Validate required configuration up-front — fails fast with a clear message if missing
+BlobStorageStartupValidator.Validate(builder.Configuration);
+
 builder.ConfigureFunctionsWebApplication();
 builder.UseMiddleware<JwtValidationMiddleware>();
 
