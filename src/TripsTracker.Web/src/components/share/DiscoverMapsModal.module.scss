@@ -56,19 +56,19 @@
   min-width: 0;
 }
 
-.name {
-  font-size: 0.88rem;
-  font-weight: 500;
+.stats {
+  font-size: 1rem;
+  font-weight: 600;
   color: #e2e8f0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.stats {
-  font-size: 0.75rem;
+.name {
+  font-size: 0.78rem;
   color: #64748b;
-  margin-top: 3px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
