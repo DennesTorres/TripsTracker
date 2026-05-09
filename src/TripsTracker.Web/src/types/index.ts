@@ -21,7 +21,6 @@ export interface Country {
   id: number;
   isoNumeric: number;
   isoAlpha2: string;
-  isoAlpha3?: string;
   flag: string;
   name: string;
   region: string;

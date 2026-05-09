@@ -29,6 +29,7 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         {
             e.HasIndex(c => c.IsoNumeric).IsUnique();
             e.HasIndex(c => c.Name);
+            e.Property(c => c.IsoAlpha3).HasMaxLength(3);
         });
 
         modelBuilder.Entity<VisitedState>(e =>

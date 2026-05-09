@@ -107,72 +107,36 @@ public class CountryBusinessTests
     #endregion
 
     [TestMethod]
-    public async Task GetAllAsync_IncludesIsoAlpha3_WhenPopulated()
-    {
-        await using var f = new Fixture();
-        f.Ctx.Set<Country>().Add(CountryWithIso3(1, "GB", "GBR"));
-        await f.Ctx.SaveChangesAsync();
-
-        var result = await f.Biz.GetAllAsync();
-
-        Assert.AreEqual(1, result.Count);
-        Assert.AreEqual("GBR", result[0].IsoAlpha3);
-    }
-
-    [TestMethod]
-    public async Task GetAllAsync_IsoAlpha3IsNull_WhenNotPopulated()
-    {
-        await using var f = new Fixture();
-        f.Ctx.Set<Country>().Add(CountryWithoutIso3(1, "GB"));
-        await f.Ctx.SaveChangesAsync();
-
-        var result = await f.Biz.GetAllAsync();
-
-        Assert.AreEqual(1, result.Count);
-        Assert.IsNull(result[0].IsoAlpha3);
-    }
-
-    [TestMethod]
-    public async Task GetByIdAsync_IncludesIsoAlpha3_WhenPopulated()
-    {
-        await using var f = new Fixture();
-        f.Ctx.Set<Country>().Add(CountryWithIso3(1, "PT", "PRT"));
-        await f.Ctx.SaveChangesAsync();
-
-        var result = await f.Biz.GetByIdAsync(1);
-
-        Assert.IsNotNull(result);
-        Assert.AreEqual("PRT", result.IsoAlpha3);
-    }
-
-    [TestMethod]
-    public async Task GetByIsoAlpha2Async_IncludesIsoAlpha3_WhenPopulated()
+    public async Task GetIsoAlpha3Async_ReturnsIsoAlpha3_WhenCountryExists()
     {
         await using var f = new Fixture();
         f.Ctx.Set<Country>().Add(CountryWithIso3(1, "DE", "DEU"));
         await f.Ctx.SaveChangesAsync();
 
-        var result = await f.Biz.GetByIsoAlpha2Async("DE");
+        var result = await f.Biz.GetIsoAlpha3Async(1);
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual("DEU", result.IsoAlpha3);
+        Assert.AreEqual("DEU", result);
     }
 
     [TestMethod]
-    public async Task GetAllAsync_ReturnsIsoAlpha3ForMultipleCountries()
+    public async Task GetIsoAlpha3Async_ReturnsNull_WhenIsoAlpha3NotSet()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<Country>().AddRange(
-            CountryWithIso3(1, "GB", "GBR"),
-            CountryWithIso3(2, "AR", "ARG"),
-            CountryWithoutIso3(3, "XX"));
+        f.Ctx.Set<Country>().Add(CountryWithoutIso3(1, "XX"));
         await f.Ctx.SaveChangesAsync();
 
-        var result = await f.Biz.GetAllAsync();
+        var result = await f.Biz.GetIsoAlpha3Async(1);
 
-        Assert.AreEqual(3, result.Count);
-        Assert.AreEqual("GBR", result.First(c => c.IsoAlpha2 == "GB").IsoAlpha3);
-        Assert.AreEqual("ARG", result.First(c => c.IsoAlpha2 == "AR").IsoAlpha3);
-        Assert.IsNull(result.First(c => c.IsoAlpha2 == "XX").IsoAlpha3);
+        Assert.IsNull(result);
+    }
+
+    [TestMethod]
+    public async Task GetIsoAlpha3Async_ReturnsNull_WhenCountryNotFound()
+    {
+        await using var f = new Fixture();
+
+        var result = await f.Biz.GetIsoAlpha3Async(999);
+
+        Assert.IsNull(result);
     }
 }

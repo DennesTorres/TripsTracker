@@ -9,8 +9,8 @@ interface Props {
   places: Place[];
   visitedStates: VisitedState[];
   geoJson: GeoJSON.FeatureCollection;
-  /** Dynamic border GeoJSON keyed by ISO Alpha-3 code. Loaded on demand by MapPage. */
-  borderGeoCache: Record<string, GeoJSON.FeatureCollection>;
+  /** Dynamic border GeoJSON keyed by country ID. Loaded on demand by MapPage. */
+  borderGeoCache: Record<number, GeoJSON.FeatureCollection>;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
   onPlaceClick?: (placeIds: number[]) => void;
 }
@@ -174,6 +174,11 @@ export default function WorldMap({
 
     pinsG.selectAll('.mg').remove();
 
+    const countryTotals = places.reduce<Record<number, number>>((acc, p) => {
+      acc[p.countryId] = (acc[p.countryId] ?? 0) + 1;
+      return acc;
+    }, {});
+
     const clusters = separateCollocatedClusters(buildClusters(places, proj, k), k);
     const s = 1 / k; // counter-scale so dots stay 4px on screen
 
@@ -214,9 +219,11 @@ export default function WorldMap({
             const state = abbr ?? (p.stateName ? p.stateName.split(' ')[0] : null);
             return state ? `${p.city} (${state})` : p.city;
           };
+          const total = countryTotals[p0.countryId] ?? n;
+          const countLabel = n < total ? `${n}/${total}` : `${n}`;
           const html = n === 1
             ? `<strong>${cityLabel(p0)}</strong><br/>${p0.countryName}`
-            : `<strong>${n} places in ${p0.countryName}</strong><br/>${
+            : `<strong>${countLabel} places in ${p0.countryName}</strong><br/>${
                 c.places.map(p => cityLabel(p)).join('<br/>')
               }`;
           tooltip.style('display', 'block').html(html);
@@ -314,14 +321,14 @@ export default function WorldMap({
         });
       });
 
-    // State borders — dynamic GeoJSON from borderGeoCache, keyed by isoAlpha3
+    // State borders — dynamic GeoJSON from borderGeoCache, keyed by country ID
     const statesG = g.append('g');
     statesGRef.current = statesG;
 
     countries
-      .filter(c => c.showStateBorders && c.isoAlpha3)
+      .filter(c => c.showStateBorders)
       .forEach(country => {
-        const geo = borderGeoCache[country.isoAlpha3!];
+        const geo = borderGeoCache[country.id];
         if (!geo) return;
 
         // Build visited set: geoBoundaries shapeISO format is "{A2}-{stateAbbr}"
