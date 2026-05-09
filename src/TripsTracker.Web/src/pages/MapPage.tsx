@@ -35,7 +35,7 @@ export default function MapPage() {
       fetchingRef.current.add(country.id);
       try {
         const response = await apiClient.get<GeoJSON.FeatureCollection>(
-          `countries/${country.id}/borders`
+          `/api/countries/${country.id}/borders`
         );
         if (response.data) {
           setBorderGeoCache(prev => ({ ...prev, [country.id]: response.data }));
