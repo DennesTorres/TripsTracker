@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
+using System.Transactions;
 using TripsTracker.Data;
 using TripsTracker.Interfaces.Configuration;
 
@@ -53,34 +53,24 @@ public class BaseContextTests
         await ctx.Database.EnsureCreatedAsync();
     }
 
-    [ClassCleanup]
-    public static async Task ClassCleanup()
-    {
-        await using var ctx = new TestDbContext(_options);
-        await ctx.Database.EnsureDeletedAsync();
-    }
-
     private sealed class Fixture : IAsyncDisposable
     {
         public TestDbContext Ctx { get; }
-        private IDbContextTransaction? _transaction;
+        private readonly TransactionScope _scope;
 
         public Fixture()
         {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TestDbContext(_options);
         }
 
-        public async Task BeginTransactionAsync()
-            => _transaction = await Ctx.Database.BeginTransactionAsync();
-
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
             await Ctx.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
         }
     }
 
@@ -97,7 +87,6 @@ public class BaseContextTests
     public async Task BaseContext_CanAddAndRetrieveEntities()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         f.Ctx.TestEntities.Add(new TestEntity { Id = 1, CreatedAt = DateTime.UtcNow });
         await f.Ctx.SaveChangesAsync();
 
