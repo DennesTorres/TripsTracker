@@ -12,9 +12,13 @@ export default function SharedMapPage({ token }: Props) {
   const { data, isLoading, error } = useSharedMap(token);
   const isAuthenticated = useIsAuthenticated();
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [usStatesGeoJson, setUsStatesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [brazilStatesGeoJson, setBrazilStatesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
 
   useEffect(() => {
     fetch('/geo/world-110m.geojson').then(r => r.json()).then(setGeoJson);
+    fetch('/geo/us-states.geojson').then(r => r.json()).then(setUsStatesGeoJson);
+    fetch('/geo/brazil-states.geojson').then(r => r.json()).then(setBrazilStatesGeoJson);
   }, []);
 
   if (isLoading) return <div className={styles.loading}>Loading shared map...</div>;
@@ -45,7 +49,8 @@ export default function SharedMapPage({ token }: Props) {
           places={data.places}
           visitedStates={data.visitedStates}
           geoJson={geoJson}
-          borderGeoCache={{}}
+          usStatesGeoJson={usStatesGeoJson!}
+          brazilStatesGeoJson={brazilStatesGeoJson!}
         />
       </div>
     </div>
