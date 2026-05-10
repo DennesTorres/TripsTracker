@@ -1,10 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
-using TripsTracker.Domain;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
@@ -17,7 +15,7 @@ public class CountryBusinessTests
     private static DbContextOptions<TripsTrackerDbContext> _options = null!;
 
     [ClassInitialize]
-    public static async Task ClassInitialize(TestContext _)
+    public static void ClassInitialize(TestContext _)
     {
         var config = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", optional: false)
@@ -25,49 +23,37 @@ public class CountryBusinessTests
             .Build();
 
         var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
-        var connStr = System.Text.RegularExpressions.Regex.Replace(
-            dbOpts.ConnectionString,
-            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
-            "Database=TripsTracker_Test_Countries");
-
         _options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
-            .UseSqlServer(connStr)
+            .UseSqlServer(dbOpts.ConnectionString)
             .Options;
-
-        await using var ctx = new TripsTrackerDbContext(_options);
-        await ctx.Database.EnsureCreatedAsync();
-    }
-
-    [ClassCleanup]
-    public static async Task ClassCleanup()
-    {
-        await using var ctx = new TripsTrackerDbContext(_options);
-        await ctx.Database.EnsureDeletedAsync();
     }
 
     private sealed class Fixture : IAsyncDisposable
     {
         public CountryBusiness Biz { get; }
         public TripsTrackerDbContext Ctx { get; }
-        private IDbContextTransaction? _transaction;
+        private readonly List<int> _trackedCountryIds = [];
 
-        public Fixture(int userId = 1)
+        public Fixture()
         {
             Ctx = new TripsTrackerDbContext(_options);
-            var userContext = new FakeUserContext(userId);
-            Biz = new CountryBusiness(Ctx, userContext);
+            Biz = new CountryBusiness(Ctx, new FakeUserContext(1));
         }
 
-        public async Task BeginTransactionAsync()
-            => _transaction = await Ctx.Database.BeginTransactionAsync();
+        public async Task<Country> AddCountryAsync(Country country)
+        {
+            Ctx.Set<Country>().Add(country);
+            await Ctx.SaveChangesAsync();
+            _trackedCountryIds.Add(country.Id);
+            return country;
+        }
 
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
+            if (_trackedCountryIds.Count > 0)
+                await Ctx.Set<Country>()
+                    .Where(c => _trackedCountryIds.Contains(c.Id))
+                    .ExecuteDeleteAsync();
             await Ctx.DisposeAsync();
         }
     }
@@ -79,14 +65,16 @@ public class CountryBusinessTests
         public bool IsAuthenticated => true;
     }
 
+    // Use IsoAlpha2 codes outside the real ISO 3166-1 range to avoid conflicts with seeded data.
+    // Real numeric codes are 004–894; these produce values > 8000.
     private static Country CountryWithIso3(string iso2, string iso3) => new()
     {
         IsoNumeric = (int)iso2[0] * 100 + (int)iso2[1],
         IsoAlpha2 = iso2,
         IsoAlpha3 = iso3,
         Flag = "🏳",
-        Name = $"Country {iso2}",
-        Region = "Europe",
+        Name = $"Test Country {iso2}",
+        Region = "Test",
     };
 
     private static Country CountryWithoutIso3(string iso2) => new()
@@ -95,8 +83,8 @@ public class CountryBusinessTests
         IsoAlpha2 = iso2,
         IsoAlpha3 = null,
         Flag = "🏳",
-        Name = $"Country {iso2}",
-        Region = "Europe",
+        Name = $"Test Country {iso2}",
+        Region = "Test",
     };
 
     #endregion
@@ -105,24 +93,18 @@ public class CountryBusinessTests
     public async Task GetIsoAlpha3Async_ReturnsIsoAlpha3_WhenCountryExists()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
-        var country = CountryWithIso3("DE", "DEU");
-        f.Ctx.Set<Country>().Add(country);
-        await f.Ctx.SaveChangesAsync();
+        var country = await f.AddCountryAsync(CountryWithIso3("X1", "XT1"));
 
         var result = await f.Biz.GetIsoAlpha3Async(country.Id);
 
-        Assert.AreEqual("DEU", result);
+        Assert.AreEqual("XT1", result);
     }
 
     [TestMethod]
     public async Task GetIsoAlpha3Async_ReturnsNull_WhenIsoAlpha3NotSet()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
-        var country = CountryWithoutIso3("XX");
-        f.Ctx.Set<Country>().Add(country);
-        await f.Ctx.SaveChangesAsync();
+        var country = await f.AddCountryAsync(CountryWithoutIso3("X2"));
 
         var result = await f.Biz.GetIsoAlpha3Async(country.Id);
 
@@ -133,9 +115,8 @@ public class CountryBusinessTests
     public async Task GetIsoAlpha3Async_ReturnsNull_WhenCountryNotFound()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
 
-        var result = await f.Biz.GetIsoAlpha3Async(999);
+        var result = await f.Biz.GetIsoAlpha3Async(999_999);
 
         Assert.IsNull(result);
     }
