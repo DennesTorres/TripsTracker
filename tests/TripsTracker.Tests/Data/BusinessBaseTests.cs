@@ -1,6 +1,8 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using TripsTracker.Data;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Data;
 
@@ -22,6 +24,12 @@ public class BusinessBaseTests
     {
         public TestDbContext(DbContextOptions<TestDbContext> options) : base(options) { }
         public DbSet<TripEntity> Trips => Set<TripEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<TripEntity>().Property(t => t.Id).ValueGeneratedNever();
+        }
     }
 
     private class TripBusiness : BusinessBase<TripEntity>
@@ -56,31 +64,60 @@ public class BusinessBaseTests
                 .FirstOrDefaultAsync(ct);
     }
 
-    /// <summary>
-    /// SQLite in-memory fixture — supports ExecuteUpdate/ExecuteDelete unlike the EF InMemory provider.
-    /// </summary>
+    private static DbContextOptions<TestDbContext> _options = null!;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_BusinessBase");
+
+        _options = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlServer(connStr)
+            .Options;
+
+        await using var ctx = new TestDbContext(_options);
+        await ctx.Database.EnsureCreatedAsync();
+    }
+
+    [ClassCleanup]
+    public static async Task ClassCleanup()
+    {
+        await using var ctx = new TestDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public TripBusiness Biz { get; }
         public TestDbContext Ctx { get; }
-        private readonly SqliteConnection _conn;
+        private IDbContextTransaction? _transaction;
 
         public Fixture()
         {
-            _conn = new SqliteConnection("Data Source=:memory:");
-            _conn.Open();
-            var options = new DbContextOptionsBuilder<TestDbContext>()
-                .UseSqlite(_conn)
-                .Options;
-            Ctx = new TestDbContext(options);
-            Ctx.Database.EnsureCreated();
+            Ctx = new TestDbContext(_options);
             Biz = new TripBusiness(Ctx);
         }
 
+        public async Task BeginTransactionAsync()
+            => _transaction = await Ctx.Database.BeginTransactionAsync();
+
         public async ValueTask DisposeAsync()
         {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+            }
             await Ctx.DisposeAsync();
-            await _conn.DisposeAsync();
         }
     }
 
@@ -92,6 +129,7 @@ public class BusinessBaseTests
     public async Task InsertAsync_SavesEntityToDatabase()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
 
         await f.Biz.InsertTripAsync(new TripEntity { Id = 1, Name = "Paris" });
 
@@ -104,6 +142,7 @@ public class BusinessBaseTests
     public async Task InsertAsync_ContextStateIsCleanAfterSave()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
 
         await f.Biz.InsertTripAsync(new TripEntity { Id = 1, Name = "Paris" });
 
@@ -119,6 +158,7 @@ public class BusinessBaseTests
     public async Task GetByIdAsync_ReturnsMatchingDomainProjection()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Trips.Add(new TripEntity { Id = 1, Name = "Rome" });
         await f.Ctx.SaveChangesAsync();
 
@@ -133,6 +173,7 @@ public class BusinessBaseTests
     public async Task GetByIdAsync_ReturnsNull_WhenNotFound()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
 
         var result = await f.Biz.GetTripByIdAsync(99);
 
@@ -143,6 +184,7 @@ public class BusinessBaseTests
     public async Task GetByIdAsync_ExcludesSoftDeletedEntities()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Trips.Add(new TripEntity { Id = 1, Name = "Deleted Trip", IsDeleted = true });
         await f.Ctx.SaveChangesAsync();
 
@@ -159,6 +201,7 @@ public class BusinessBaseTests
     public async Task ExecuteUpdateAsync_UpdatesFieldsWithoutLoadingRecord()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Trips.Add(new TripEntity { Id = 1, Name = "Old Name" });
         await f.Ctx.SaveChangesAsync();
         f.Ctx.ChangeTracker.Clear();
@@ -174,6 +217,7 @@ public class BusinessBaseTests
     public async Task ExecuteUpdateAsync_ReturnsZero_WhenNoMatchingRows()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
 
         var affected = await f.Biz.UpdateTripNameAsync(99, "New Name");
 
@@ -188,6 +232,7 @@ public class BusinessBaseTests
     public async Task ExecuteDeleteAsync_DeletesMatchingRows()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Trips.Add(new TripEntity { Id = 1, Name = "To Delete" });
         await f.Ctx.SaveChangesAsync();
         f.Ctx.ChangeTracker.Clear();
@@ -203,6 +248,7 @@ public class BusinessBaseTests
     public async Task ExecuteDeleteAsync_ReturnsZero_WhenNoMatchingRows()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
 
         var affected = await f.Biz.HardDeleteTripAsync(99);
 
@@ -217,6 +263,7 @@ public class BusinessBaseTests
     public async Task BuildBaseQuery_ExcludesSoftDeletedEntities()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Trips.AddRange(
             new TripEntity { Id = 1, Name = "Active", IsDeleted = false },
             new TripEntity { Id = 2, Name = "Deleted", IsDeleted = true });
@@ -232,6 +279,7 @@ public class BusinessBaseTests
     public async Task BuildBaseQuery_WithFilter_ReturnsMatchingDomain()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Trips.AddRange(
             new TripEntity { Id = 1, Name = "Berlin" },
             new TripEntity { Id = 2, Name = "Tokyo" });
