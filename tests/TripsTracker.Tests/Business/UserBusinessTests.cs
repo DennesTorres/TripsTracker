@@ -35,10 +35,13 @@ public class UserBusinessTests
 
         await using var ctx = new TripsTrackerDbContext(_options);
         await ctx.Database.EnsureCreatedAsync();
-        // Disable FK constraints so orphaned places (UserId=0, no matching User row) can be
-        // inserted — mirroring the production state before the multi-user migration added the FK.
-        await ctx.Database.ExecuteSqlRawAsync(
-            "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
+        // Insert a sentinel User with Id=0 so orphaned places (UserId=0, pre-migration state)
+        // satisfy the FK constraint without disabling it.
+        await ctx.Database.ExecuteSqlRawAsync(@"
+            SET IDENTITY_INSERT Users ON;
+            INSERT INTO Users (Id, Email, CreatedAt, IsDiscoverable, StorageUsedBytes, TotalPoints)
+            VALUES (0, 'orphan@system.local', GETUTCDATE(), 0, 0, 0);
+            SET IDENTITY_INSERT Users OFF;");
     }
 
     [ClassCleanup]

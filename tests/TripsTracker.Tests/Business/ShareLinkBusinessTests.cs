@@ -37,8 +37,6 @@ public class ShareLinkBusinessTests
 
         await using var ctx = new TripsTrackerDbContext(_options);
         await ctx.Database.EnsureCreatedAsync();
-        await ctx.Database.ExecuteSqlRawAsync(
-            "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
     }
 
     [ClassCleanup]

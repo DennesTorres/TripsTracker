@@ -16,6 +16,10 @@ public class PlaceCommentBusinessTests
     #region Fixture
 
     private static DbContextOptions<TripsTrackerDbContext> _options = null!;
+    private static int _placeId;
+    private static int _place2Id;
+    private static int _user1Id;
+    private static int _user2Id;
 
     [ClassInitialize]
     public static async Task ClassInitialize(TestContext _)
@@ -37,8 +41,24 @@ public class PlaceCommentBusinessTests
 
         await using var ctx = new TripsTrackerDbContext(_options);
         await ctx.Database.EnsureCreatedAsync();
-        await ctx.Database.ExecuteSqlRawAsync(
-            "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
+
+        // Seed FK parents shared across all tests in this class
+        var country = new Country { IsoNumeric = 9001, IsoAlpha2 = "ZZ", Flag = "🏳", Name = "TestCountry", Region = "Test" };
+        ctx.Countries.Add(country);
+        var u1 = new User { Email = "seed1@comments.test", CreatedAt = DateTime.UtcNow };
+        var u2 = new User { Email = "seed2@comments.test", CreatedAt = DateTime.UtcNow };
+        ctx.Users.AddRange(u1, u2);
+        await ctx.SaveChangesAsync();
+
+        var p1 = new Place { City = "SeedCity1", CountryId = country.Id, UserId = u1.Id, Lon = 0, Lat = 0 };
+        var p2 = new Place { City = "SeedCity2", CountryId = country.Id, UserId = u1.Id, Lon = 0, Lat = 0 };
+        ctx.Places.AddRange(p1, p2);
+        await ctx.SaveChangesAsync();
+
+        _placeId = p1.Id;
+        _place2Id = p2.Id;
+        _user1Id = u1.Id;
+        _user2Id = u2.Id;
     }
 
     [ClassCleanup]
@@ -103,12 +123,12 @@ public class PlaceCommentBusinessTests
         f.Ctx.Users.AddRange(alice, bob);
         await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PlaceComment>().AddRange(
-            MakeComment(1, alice.Id, "Alice's comment"),
-            MakeComment(1, bob.Id, "Bob's comment")
+            MakeComment(_placeId, alice.Id, "Alice's comment"),
+            MakeComment(_placeId, bob.Id, "Bob's comment")
         );
         await f.Ctx.SaveChangesAsync();
 
-        var comments = await f.ForUser(alice.Id).GetByPlaceAsync(1);
+        var comments = await f.ForUser(alice.Id).GetByPlaceAsync(_placeId);
 
         Assert.AreEqual(2, comments.Count, "Comments from all users should be returned");
     }
@@ -122,15 +142,15 @@ public class PlaceCommentBusinessTests
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PlaceComment>().AddRange(
-            MakeComment(1, user.Id, "Place 1 comment"),
-            MakeComment(2, user.Id, "Place 2 comment")
+            MakeComment(_placeId, user.Id, "Place 1 comment"),
+            MakeComment(_place2Id, user.Id, "Place 2 comment")
         );
         await f.Ctx.SaveChangesAsync();
 
-        var comments = await f.ForUser(user.Id).GetByPlaceAsync(1);
+        var comments = await f.ForUser(user.Id).GetByPlaceAsync(_placeId);
 
         Assert.AreEqual(1, comments.Count);
-        Assert.AreEqual(1, comments[0].PlaceId);
+        Assert.AreEqual(_placeId, comments[0].PlaceId);
     }
 
     // ─── DeleteAsync ──────────────────────────────────────────────────────────
@@ -140,11 +160,11 @@ public class PlaceCommentBusinessTests
     {
         await using var f = new Fixture();
         await f.BeginTransactionAsync();
-        var comment = MakeComment(1, 2, "Other user's comment");
+        var comment = MakeComment(_placeId, _user2Id, "Other user's comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
 
-        var deleted = await f.ForUser(1).DeleteAsync(comment.Id);
+        var deleted = await f.ForUser(_user1Id).DeleteAsync(comment.Id);
 
         Assert.IsFalse(deleted);
         Assert.AreEqual(1, await f.Ctx.Set<PlaceComment>().CountAsync());
@@ -155,11 +175,11 @@ public class PlaceCommentBusinessTests
     {
         await using var f = new Fixture();
         await f.BeginTransactionAsync();
-        var comment = MakeComment(1, 1, "My comment");
+        var comment = MakeComment(_placeId, _user1Id, "My comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
 
-        var deleted = await f.ForUser(1).DeleteAsync(comment.Id);
+        var deleted = await f.ForUser(_user1Id).DeleteAsync(comment.Id);
 
         Assert.IsTrue(deleted);
         Assert.AreEqual(0, await f.Ctx.Set<PlaceComment>().CountAsync());
@@ -172,13 +192,13 @@ public class PlaceCommentBusinessTests
     {
         await using var f = new Fixture();
         await f.BeginTransactionAsync();
-        var comment = MakeComment(1, 2, "A comment");
+        var comment = MakeComment(_placeId, _user2Id, "A comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).VoteAsync(comment.Id, isUpvote: true);
+        await f.ForUser(_user1Id).VoteAsync(comment.Id, isUpvote: true);
 
-        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == 1 && r.CommentId == comment.Id);
+        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == _user1Id && r.CommentId == comment.Id);
         Assert.IsTrue(vote.IsUpvote);
     }
 
@@ -187,15 +207,15 @@ public class PlaceCommentBusinessTests
     {
         await using var f = new Fixture();
         await f.BeginTransactionAsync();
-        var comment = MakeComment(1, 2, "A comment");
+        var comment = MakeComment(_placeId, _user2Id, "A comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
-        f.Ctx.Set<CommentRating>().Add(new CommentRating { UserId = 1, CommentId = comment.Id, IsUpvote = true, CreatedAt = DateTime.UtcNow });
+        f.Ctx.Set<CommentRating>().Add(new CommentRating { UserId = _user1Id, CommentId = comment.Id, IsUpvote = true, CreatedAt = DateTime.UtcNow });
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).VoteAsync(comment.Id, isUpvote: false);
+        await f.ForUser(_user1Id).VoteAsync(comment.Id, isUpvote: false);
 
-        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == 1 && r.CommentId == comment.Id);
+        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == _user1Id && r.CommentId == comment.Id);
         Assert.IsFalse(vote.IsUpvote);
         Assert.AreEqual(1, await f.Ctx.Set<CommentRating>().CountAsync());
     }
