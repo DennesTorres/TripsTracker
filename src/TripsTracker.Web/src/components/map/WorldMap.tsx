@@ -236,7 +236,7 @@ export default function WorldMap({
         .on('mouseout', () => tooltip.style('display', 'none'))
         .on('click', (event: MouseEvent) => {
           tooltip.style('display', 'none');
-          const rect = svg.node()!.getBoundingClientRect();
+          const rect = svgRef.current!.getBoundingClientRect();
           onPlaceClickRef.current?.(c.places, event.clientX - rect.left, event.clientY - rect.top);
         });
 
