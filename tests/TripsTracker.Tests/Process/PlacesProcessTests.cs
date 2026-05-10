@@ -9,7 +9,7 @@ namespace TripsTracker.Tests.Process;
 public class PlacesProcessTests
 {
     private static CountryDto Brazil() => new(
-        Id: 1, IsoNumeric: 76, IsoAlpha2: "BR", IsoAlpha3: "BRA", Flag: "🇧🇷",
+        Id: 1, IsoNumeric: 76, IsoAlpha2: "BR", Flag: "🇧🇷",
         Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false, ShowStateBorders: false);
 
     private static PlaceDto AnyPlace() => new(
