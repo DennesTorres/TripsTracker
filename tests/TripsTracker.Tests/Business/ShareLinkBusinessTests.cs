@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
@@ -39,50 +39,37 @@ public class ShareLinkBusinessTests
         await ctx.Database.EnsureCreatedAsync();
     }
 
-    [ClassCleanup]
-    public static async Task ClassCleanup()
-    {
-        await using var ctx = new TripsTrackerDbContext(_options);
-        await ctx.Database.EnsureDeletedAsync();
-    }
+    // No ClassCleanup: TransactionScope rollback leaves the DB empty after each test.
+    // EnsureCreatedAsync in ClassInitialize is idempotent — the DB persists across runs.
 
     private sealed class Fixture : IAsyncDisposable
     {
         public ShareLinkBusiness Biz { get; }
         public TripsTrackerDbContext Ctx { get; }
-        private IDbContextTransaction? _transaction;
+        private readonly TransactionScope _scope;
 
         public Fixture()
         {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
             var userContext = new Mock<IUserContext>();
             userContext.Setup(u => u.UserId).Returns((int?)null);
             Biz = new ShareLinkBusiness(Ctx, userContext.Object);
         }
 
-        public async Task BeginTransactionAsync()
-            => _transaction = await Ctx.Database.BeginTransactionAsync();
-
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
             await Ctx.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
         }
     }
 
     private static User MakeUser(string email, string? displayName = null, bool isDiscoverable = true) => new()
     {
         Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow, IsDiscoverable = isDiscoverable,
-    };
-
-    private static Country MakeCountry(string region) => new()
-    {
-        IsoNumeric = 0, IsoAlpha2 = "XX",
-        Flag = "🏳", Name = region, Region = region,
     };
 
     private static ShareLink MakeLink(int userId, string token) => new()
@@ -100,7 +87,6 @@ public class ShareLinkBusinessTests
     public async Task CreateAsync_PersistsLink_AndReturnsDto()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@test.com");
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -129,7 +115,6 @@ public class ShareLinkBusinessTests
         // User C: 2 continents, 20 countries
         // Expected order: B (3 continents, 12 countries), A (3 continents, 10 countries), C (2 continents)
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
 
         // Seed countries by region — IsoAlpha2/IsoNumeric uniqueness handled by FK disable
         var americas = Enumerable.Range(0, 10).Select(i => new Country { IsoNumeric = 1000 + i, IsoAlpha2 = $"A{i}", Flag = "🏳", Name = $"Am{i}", Region = "Americas" }).ToList();
@@ -174,7 +159,6 @@ public class ShareLinkBusinessTests
     public async Task DiscoverAsync_ExcludesInactiveLinks()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@test.com");
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -193,7 +177,6 @@ public class ShareLinkBusinessTests
     public async Task DiscoverAsync_ExcludesNonDiscoverableUsers()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@test.com", isDiscoverable: false);
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -210,7 +193,6 @@ public class ShareLinkBusinessTests
     public async Task DiscoverAsync_FiltersBy_DisplayNameQuery()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var alice = MakeUser("a@test.com", "Alice");
         var bob = MakeUser("b@test.com", "Bob");
         f.Ctx.Users.AddRange(alice, bob);
