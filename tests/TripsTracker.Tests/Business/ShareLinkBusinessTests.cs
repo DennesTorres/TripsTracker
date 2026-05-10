@@ -1,10 +1,12 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Interfaces;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
 
@@ -13,109 +15,79 @@ public class ShareLinkBusinessTests
 {
     #region Fixture
 
+    private static DbContextOptions<TripsTrackerDbContext> _options = null!;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_ShareLinks");
+
+        _options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
+            .UseSqlServer(connStr)
+            .Options;
+
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureCreatedAsync();
+    }
+
+    [ClassCleanup]
+    public static async Task ClassCleanup()
+    {
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public ShareLinkBusiness Biz { get; }
         public TripsTrackerDbContext Ctx { get; }
-        private readonly SqliteConnection _conn;
+        private IDbContextTransaction? _transaction;
 
         public Fixture()
         {
-            _conn = new SqliteConnection("Data Source=:memory:");
-            _conn.Open();
-
-            // Create schema manually: same structure as TripsTrackerDbContext but without FK
-            // constraints so we avoid GETUTCDATE() evaluation and FK ordering issues.
-            var ddl = new[]
-            {
-                """
-                CREATE TABLE Countries (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    IsoNumeric INTEGER NOT NULL, IsoAlpha2 TEXT NOT NULL,
-                    Flag TEXT NOT NULL, Name TEXT NOT NULL, Region TEXT NOT NULL
-                )
-                """,
-                "CREATE UNIQUE INDEX IX_Countries_IsoNumeric ON Countries (IsoNumeric)",
-                """
-                CREATE TABLE Users (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    Email TEXT NOT NULL, DisplayName TEXT,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    IsDiscoverable INTEGER NOT NULL DEFAULT 0
-                )
-                """,
-                "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",
-                """
-                CREATE TABLE ShareLinks (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    UserId INTEGER NOT NULL, Token TEXT NOT NULL,
-                    IsActive INTEGER NOT NULL DEFAULT 1,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    ExpiresAt TEXT,
-                    ViewCount INTEGER NOT NULL DEFAULT 0
-                )
-                """,
-                "CREATE UNIQUE INDEX IX_ShareLinks_Token ON ShareLinks (Token)",
-                "CREATE INDEX IX_ShareLinks_UserId ON ShareLinks (UserId)",
-                """
-                CREATE TABLE UserCountries (
-                    UserId INTEGER NOT NULL, CountryId INTEGER NOT NULL,
-                    IsHome INTEGER NOT NULL DEFAULT 0,
-                    IsVisited INTEGER NOT NULL DEFAULT 0,
-                    ShowStateBorders INTEGER NOT NULL DEFAULT 0,
-                    PRIMARY KEY (UserId, CountryId)
-                )
-                """,
-                "CREATE INDEX IX_UserCountries_UserId ON UserCountries (UserId)",
-                """
-                CREATE TABLE Places (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    Lon REAL NOT NULL, Lat REAL NOT NULL, CountryId INTEGER NOT NULL,
-                    City TEXT NOT NULL, StateAbbr TEXT, StateName TEXT,
-                    IsHome INTEGER NOT NULL DEFAULT 0, UserId INTEGER NOT NULL DEFAULT 0
-                )
-                """,
-                "CREATE INDEX IX_Places_CountryId ON Places (CountryId)",
-                "CREATE INDEX IX_Places_UserId ON Places (UserId)",
-            };
-            foreach (var sql in ddl)
-            {
-                using var cmd = _conn.CreateCommand();
-                cmd.CommandText = sql;
-                cmd.ExecuteNonQuery();
-            }
-
-            var options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
-                .UseSqlite(_conn)
-                .Options;
-            Ctx = new TripsTrackerDbContext(options);
-
+            Ctx = new TripsTrackerDbContext(_options);
             var userContext = new Mock<IUserContext>();
             userContext.Setup(u => u.UserId).Returns((int?)null);
             Biz = new ShareLinkBusiness(Ctx, userContext.Object);
         }
 
+        public async Task BeginTransactionAsync()
+            => _transaction = await Ctx.Database.BeginTransactionAsync();
+
         public async ValueTask DisposeAsync()
         {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+            }
             await Ctx.DisposeAsync();
-            await _conn.DisposeAsync();
         }
     }
 
-    private static User MakeUser(int id, string email, string? displayName = null, bool isDiscoverable = true) => new()
+    private static User MakeUser(string email, string? displayName = null, bool isDiscoverable = true) => new()
     {
-        Id = id, Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow, IsDiscoverable = isDiscoverable,
+        Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow, IsDiscoverable = isDiscoverable,
     };
 
-    private static Country MakeCountry(int id, string region) => new()
+    private static Country MakeCountry(string region) => new()
     {
-        Id = id, IsoNumeric = id, IsoAlpha2 = $"C{id:D2}",
-        Flag = "🏳", Name = $"Country{id}", Region = region,
+        IsoNumeric = 0, IsoAlpha2 = "XX",
+        Flag = "🏳", Name = region, Region = region,
     };
 
-    private static ShareLink MakeLink(int id, int userId, string token) => new()
+    private static ShareLink MakeLink(int userId, string token) => new()
     {
-        Id = id, UserId = userId, Token = token,
+        UserId = userId, Token = token,
         IsActive = true,
         CreatedAt = DateTime.UtcNow,
     };
@@ -128,11 +100,13 @@ public class ShareLinkBusinessTests
     public async Task CreateAsync_PersistsLink_AndReturnsDto()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.Add(MakeUser(1, "u@test.com"));
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
 
         var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(1);
+        userContext.Setup(u => u.UserId).Returns(user.Id);
         var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
 
         var dto = await biz.CreateAsync(new TripsTracker.Domain.CreateShareLinkDto());
@@ -155,39 +129,37 @@ public class ShareLinkBusinessTests
         // User C: 2 continents, 20 countries
         // Expected order: B (3 continents, 12 countries), A (3 continents, 10 countries), C (2 continents)
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
 
-        // Seed countries: 3 regions × enough countries
-        // Regions: "Americas", "Europe", "Asia"
-        int cId = 1;
-        // Americas: 1-10
-        for (int i = 0; i < 10; i++) f.Ctx.Countries.Add(MakeCountry(cId++, "Americas"));
-        // Europe: 11-20
-        for (int i = 0; i < 10; i++) f.Ctx.Countries.Add(MakeCountry(cId++, "Europe"));
-        // Asia: 21-30
-        for (int i = 0; i < 10; i++) f.Ctx.Countries.Add(MakeCountry(cId++, "Asia"));
+        // Seed countries by region — unique IsoNumeric and IsoAlpha2 per entry
+        var americas = Enumerable.Range(0, 10).Select(i => new Country { IsoNumeric = 1000 + i, IsoAlpha2 = $"A{i}", Flag = "🏳", Name = $"Am{i}", Region = "Americas" }).ToList();
+        var europe = Enumerable.Range(0, 10).Select(i => new Country { IsoNumeric = 2000 + i, IsoAlpha2 = $"E{i}", Flag = "🏳", Name = $"Eu{i}", Region = "Europe" }).ToList();
+        var asia = Enumerable.Range(0, 10).Select(i => new Country { IsoNumeric = 3000 + i, IsoAlpha2 = $"S{i}", Flag = "🏳", Name = $"As{i}", Region = "Asia" }).ToList();
+        f.Ctx.Countries.AddRange(americas);
+        f.Ctx.Countries.AddRange(europe);
+        f.Ctx.Countries.AddRange(asia);
 
-        // Users
-        f.Ctx.Users.Add(MakeUser(1, "a@test.com", "User A"));
-        f.Ctx.Users.Add(MakeUser(2, "b@test.com", "User B"));
-        f.Ctx.Users.Add(MakeUser(3, "c@test.com", "User C"));
+        var userA = MakeUser("a@test.com", "User A");
+        var userB = MakeUser("b@test.com", "User B");
+        var userC = MakeUser("c@test.com", "User C");
+        f.Ctx.Users.AddRange(userA, userB, userC);
         await f.Ctx.SaveChangesAsync();
 
-        // User A: Americas(1-5) + Europe(11-14) + Asia(21) = 10 countries, 3 continents
-        foreach (var id in new[] { 1, 2, 3, 4, 5, 11, 12, 13, 14, 21 })
-            f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = 1, CountryId = id, IsVisited = true });
+        // User A: Americas(0-4) + Europe(0-3) + Asia(0) = 10 countries, 3 continents
+        foreach (var c in americas.Take(5).Concat(europe.Take(4)).Concat(asia.Take(1)))
+            f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = userA.Id, CountryId = c.Id, IsVisited = true });
 
-        // User B: Americas(1-5) + Europe(11-15) + Asia(21,22) = 12 countries, 3 continents
-        foreach (var id in new[] { 1, 2, 3, 4, 5, 11, 12, 13, 14, 15, 21, 22 })
-            f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = 2, CountryId = id, IsVisited = true });
+        // User B: Americas(0-4) + Europe(0-4) + Asia(0,1) = 12 countries, 3 continents
+        foreach (var c in americas.Take(5).Concat(europe.Take(5)).Concat(asia.Take(2)))
+            f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = userB.Id, CountryId = c.Id, IsVisited = true });
 
-        // User C: Americas(1-10) + Europe(11-20) = 20 countries, 2 continents
-        foreach (var id in Enumerable.Range(1, 10).Concat(Enumerable.Range(11, 10)))
-            f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = 3, CountryId = id, IsVisited = true });
+        // User C: Americas(0-9) + Europe(0-9) = 20 countries, 2 continents
+        foreach (var c in americas.Concat(europe))
+            f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = userC.Id, CountryId = c.Id, IsVisited = true });
 
-        // Share links
-        f.Ctx.ShareLinks.Add(MakeLink(1, 1, "token-a"));
-        f.Ctx.ShareLinks.Add(MakeLink(2, 2, "token-b"));
-        f.Ctx.ShareLinks.Add(MakeLink(3, 3, "token-c"));
+        f.Ctx.ShareLinks.Add(MakeLink(userA.Id, "token-a"));
+        f.Ctx.ShareLinks.Add(MakeLink(userB.Id, "token-b"));
+        f.Ctx.ShareLinks.Add(MakeLink(userC.Id, "token-c"));
         await f.Ctx.SaveChangesAsync();
 
         var results = await f.Biz.DiscoverAsync("");
@@ -202,11 +174,12 @@ public class ShareLinkBusinessTests
     public async Task DiscoverAsync_ExcludesInactiveLinks()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.Add(MakeUser(1, "u@test.com"));
-        f.Ctx.Countries.Add(MakeCountry(1, "Europe"));
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        var inactive = MakeLink(1, 1, "token-inactive");
+        var inactive = MakeLink(user.Id, "token-inactive");
         inactive.IsActive = false;
         f.Ctx.ShareLinks.Add(inactive);
         await f.Ctx.SaveChangesAsync();
@@ -220,11 +193,12 @@ public class ShareLinkBusinessTests
     public async Task DiscoverAsync_ExcludesNonDiscoverableUsers()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.Add(MakeUser(1, "u@test.com", isDiscoverable: false));
-        f.Ctx.Countries.Add(MakeCountry(1, "Europe"));
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@test.com", isDiscoverable: false);
+        f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        f.Ctx.ShareLinks.Add(MakeLink(1, 1, "token-nd"));
+        f.Ctx.ShareLinks.Add(MakeLink(user.Id, "token-nd"));
         await f.Ctx.SaveChangesAsync();
 
         var results = await f.Biz.DiscoverAsync("");
@@ -236,10 +210,12 @@ public class ShareLinkBusinessTests
     public async Task DiscoverAsync_FiltersBy_DisplayNameQuery()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.AddRange(MakeUser(1, "a@test.com", "Alice"), MakeUser(2, "b@test.com", "Bob"));
-        f.Ctx.Countries.Add(MakeCountry(1, "Europe"));
+        await f.BeginTransactionAsync();
+        var alice = MakeUser("a@test.com", "Alice");
+        var bob = MakeUser("b@test.com", "Bob");
+        f.Ctx.Users.AddRange(alice, bob);
         await f.Ctx.SaveChangesAsync();
-        f.Ctx.ShareLinks.AddRange(MakeLink(1, 1, "tok-alice"), MakeLink(2, 2, "tok-bob"));
+        f.Ctx.ShareLinks.AddRange(MakeLink(alice.Id, "tok-alice"), MakeLink(bob.Id, "tok-bob"));
         await f.Ctx.SaveChangesAsync();
 
         var results = await f.Biz.DiscoverAsync("Alice");
