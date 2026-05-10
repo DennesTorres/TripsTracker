@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
@@ -36,20 +36,14 @@ public class PointsBusinessTests
             .Options;
 
         await using var ctx = new TripsTrackerDbContext(_options);
-        await ctx.Database.EnsureCreatedAsync();
-    }
-
-    [ClassCleanup]
-    public static async Task ClassCleanup()
-    {
-        await using var ctx = new TripsTrackerDbContext(_options);
         await ctx.Database.EnsureDeletedAsync();
+        await ctx.Database.EnsureCreatedAsync();
     }
 
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private IDbContextTransaction? _transaction;
+        private readonly TransactionScope _scope;
         private readonly Mock<IUserContext> _userContextMock = new();
 
         public PointsBusiness ForUser(int userId)
@@ -60,20 +54,19 @@ public class PointsBusinessTests
 
         public Fixture()
         {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
+            Ctx.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
         }
-
-        public async Task BeginTransactionAsync()
-            => _transaction = await Ctx.Database.BeginTransactionAsync();
 
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
+            Ctx.Database.CloseConnection();
             await Ctx.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
         }
     }
 
@@ -88,7 +81,6 @@ public class PointsBusinessTests
     public async Task AwardAsync_CreatesPointEvent()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com");
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -107,7 +99,6 @@ public class PointsBusinessTests
     public async Task AwardAsync_UpdatesCachedTotalPoints()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 100);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -122,7 +113,6 @@ public class PointsBusinessTests
     public async Task AwardAsync_AccumulatesMultipleAwards()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com");
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -141,7 +131,6 @@ public class PointsBusinessTests
     public async Task GetSummaryAsync_ReturnsTotalAndRecentEvents()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 550);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -162,7 +151,6 @@ public class PointsBusinessTests
     public async Task GetSummaryAsync_OnlyReturnsCurrentUserEvents()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var u1 = MakeUser("u1@x.com", totalPoints: 50);
         var u2 = MakeUser("u2@x.com", totalPoints: 500);
         f.Ctx.Set<User>().AddRange(u1, u2);
@@ -186,7 +174,6 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_RanksUsersByTotalPointsDescending()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var alice = MakeUser("a@x.com", totalPoints: 100, displayName: "Alice");
         var bob = MakeUser("b@x.com", totalPoints: 500, displayName: "Bob");
         var carol = MakeUser("c@x.com", totalPoints: 250, displayName: "Carol");
@@ -209,7 +196,6 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_ExcludesUsersWithZeroPoints()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var alice = MakeUser("a@x.com", totalPoints: 100, displayName: "Alice");
         var noPoints = MakeUser("b@x.com", totalPoints: 0, displayName: "NoPoints");
         f.Ctx.Set<User>().AddRange(alice, noPoints);
@@ -225,7 +211,6 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_UsesEmailWhenDisplayNameIsNull()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("a@x.com", totalPoints: 50);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -239,7 +224,6 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_RespectsLimit()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         f.Ctx.Set<User>().AddRange(Enumerable.Range(1, 5).Select(i =>
             MakeUser($"u{i}@x.com", totalPoints: i * 10)
         ));
@@ -257,7 +241,6 @@ public class PointsBusinessTests
     public async Task GetRecentAsync_ExcludesOriginalEvents_WhenRevoked()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com");
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -276,7 +259,6 @@ public class PointsBusinessTests
     public async Task GetRecentAsync_ExcludesRevokedEvents()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com");
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -300,7 +282,6 @@ public class PointsBusinessTests
     public async Task RevokeAsync_SetsOriginalEventId()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 50);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -319,7 +300,6 @@ public class PointsBusinessTests
     public async Task ReassignAsync_RevokesOldAndAwardsWithNewReference()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 500);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -343,7 +323,6 @@ public class PointsBusinessTests
     public async Task ReassignAsync_IsNoOp_WhenNoMatchingEvent()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 50);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -359,7 +338,6 @@ public class PointsBusinessTests
     public async Task ReassignAsync_PreservesTotalPoints_NetZero()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 500);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -376,7 +354,6 @@ public class PointsBusinessTests
     public async Task RevokeAsync_InsertsNegativeEvent()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 50);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -399,7 +376,6 @@ public class PointsBusinessTests
     public async Task RevokeAsync_DeductsFromTotalPoints()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 2550);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -420,7 +396,6 @@ public class PointsBusinessTests
     public async Task RevokeAsync_IsNoOp_WhenNoMatchingEvent()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 50);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -441,7 +416,6 @@ public class PointsBusinessTests
     public async Task RevokeAsync_MatchesNullReferenceId()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("u@x.com", totalPoints: 5000);
         f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
