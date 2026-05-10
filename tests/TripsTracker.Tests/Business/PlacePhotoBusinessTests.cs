@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
@@ -43,6 +43,7 @@ public class PlacePhotoBusinessTests
             .Options;
 
         await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
         await ctx.Database.EnsureCreatedAsync();
 
         // Seed FK parents shared across all tests in this class
@@ -65,23 +66,21 @@ public class PlacePhotoBusinessTests
         _user3Id = u3.Id;
     }
 
-    [ClassCleanup]
-    public static async Task ClassCleanup()
-    {
-        await using var ctx = new TripsTrackerDbContext(_options);
-        await ctx.Database.EnsureDeletedAsync();
-    }
-
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
         public Mock<IUserBusiness> UserBizMock { get; } = new Mock<IUserBusiness>();
         private readonly Mock<IUserContext> _userContextMock = new Mock<IUserContext>();
-        private IDbContextTransaction? _transaction;
+        private readonly TransactionScope _scope;
 
         public Fixture()
         {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
+            Ctx.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
         }
 
         public PlacePhotoBusiness ForUser(int userId, long storageUsedBytes = 0)
@@ -94,17 +93,11 @@ public class PlacePhotoBusinessTests
             return new PlacePhotoBusiness(Ctx, _userContextMock.Object, UserBizMock.Object);
         }
 
-        public async Task BeginTransactionAsync()
-            => _transaction = await Ctx.Database.BeginTransactionAsync();
-
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
+            Ctx.Database.CloseConnection();
             await Ctx.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
         }
     }
 
@@ -114,7 +107,6 @@ public class PlacePhotoBusinessTests
     public async Task CreateAsync_SetsSortOrder_Incrementally()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var place = new Place { City = "A", CountryId = _countryId, UserId = _user1Id, Lon = 0, Lat = 0 };
         f.Ctx.Set<Place>().Add(place);
         await f.Ctx.SaveChangesAsync();
@@ -131,7 +123,6 @@ public class PlacePhotoBusinessTests
     public async Task GetByPlaceAsync_ReturnsPhotos_FromAllUsers()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var place = new Place { City = "A", CountryId = _countryId, UserId = _user1Id, Lon = 0, Lat = 0 };
         f.Ctx.Set<Place>().Add(place);
         await f.Ctx.SaveChangesAsync();
@@ -150,7 +141,6 @@ public class PlacePhotoBusinessTests
     public async Task GetByPlaceAsync_IncludesAverageRating()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var place = new Place { City = "A", CountryId = _countryId, UserId = _user1Id, Lon = 0, Lat = 0 };
         f.Ctx.Set<Place>().Add(place);
         await f.Ctx.SaveChangesAsync();
@@ -174,7 +164,6 @@ public class PlacePhotoBusinessTests
     public async Task DeleteAsync_ReturnsFalse_WhenPhotoOwnedByOtherUser()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user2Id, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();
@@ -189,7 +178,6 @@ public class PlacePhotoBusinessTests
     public async Task DeleteAsync_ReturnsTrue_AndRemovesPhoto()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user1Id, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();
@@ -204,7 +192,6 @@ public class PlacePhotoBusinessTests
     public async Task RateAsync_CreatesRating_WhenNoneExists()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user2Id, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();
@@ -219,7 +206,6 @@ public class PlacePhotoBusinessTests
     public async Task RateAsync_UpdatesRating_WhenAlreadyRated()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user2Id, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();
@@ -237,7 +223,6 @@ public class PlacePhotoBusinessTests
     public async Task GetBlobInfoAsync_ReturnsBlobInfo()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user1Id, BlobName = "abc123.jpg", ContentType = "image/jpeg", SortOrder = 1, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();
@@ -255,7 +240,6 @@ public class PlacePhotoBusinessTests
     public async Task CreateAsync_ThrowsBusinessRuleException_WhenQuotaExceeded()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var place = new Place { City = "A", CountryId = _countryId, UserId = _user1Id, Lon = 0, Lat = 0 };
         f.Ctx.Set<Place>().Add(place);
         await f.Ctx.SaveChangesAsync();
@@ -271,7 +255,6 @@ public class PlacePhotoBusinessTests
     public async Task CreateAsync_UpdatesStorageUsed_AfterSuccess()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var place = new Place { City = "A", CountryId = _countryId, UserId = _user1Id, Lon = 0, Lat = 0 };
         f.Ctx.Set<Place>().Add(place);
         await f.Ctx.SaveChangesAsync();
@@ -287,7 +270,6 @@ public class PlacePhotoBusinessTests
     public async Task DeleteAsync_DecreasesStorageUsed_WhenPhotoDeleted()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user1Id, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, SizeBytes = 5000, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();

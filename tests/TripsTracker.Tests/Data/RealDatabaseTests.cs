@@ -78,10 +78,13 @@ public class RealDatabaseTests
                 TransactionScopeOption.Required,
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
                 TransactionScopeAsyncFlowOption.Enabled);
+            Context.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
         }
 
         public async ValueTask DisposeAsync()
         {
+            if (_scope != null)
+                Context.Database.CloseConnection();
             await Context.DisposeAsync();
             _scope?.Dispose(); // no Complete() → automatic rollback
         }
