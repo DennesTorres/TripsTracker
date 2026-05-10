@@ -157,10 +157,11 @@ export default function WorldMap({
   const [statusLabel, setStatusLabel] = useState<{ country: string; state: string | null }>({ country: '', state: null });
 
   // Mutable refs used inside zoom handler (never trigger re-render)
-  const projRef     = useRef<d3.GeoProjection | null>(null);
-  const currentKRef = useRef<number>(1);
-  const pinsGRef    = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
-  const statesGRef  = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const projRef          = useRef<d3.GeoProjection | null>(null);
+  const pathGeneratorRef = useRef<d3.GeoPath | null>(null);
+  const currentKRef      = useRef<number>(1);
+  const pinsGRef         = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const statesGRef       = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
@@ -253,7 +254,9 @@ export default function WorldMap({
     if (show) paths.style('display', null); else paths.style('display', 'none');
   };
 
-  // ── main effect ─────────────────────────────────────────────────────────────
+  // ── main effect — ocean, country fills, sphere, pins, zoom ─────────────────
+  // borderGeoCache is intentionally excluded: border updates are handled by the
+  // separate border effect below, so a new fetch does not wipe country fills.
   useEffect(() => {
     if (!svgRef.current || !geoJson) return;
 
@@ -268,11 +271,11 @@ export default function WorldMap({
       .translate([width / 2, height / 2]);
 
     projRef.current    = projection;
-    // Preserve current zoom level across effect re-runs (e.g. when borderGeoCache changes)
     const savedTransform = svgRef.current ? d3.zoomTransform(svgRef.current) : d3.zoomIdentity;
     currentKRef.current = savedTransform.k;
 
     const pathGenerator = d3.geoPath().projection(projection);
+    pathGeneratorRef.current = pathGenerator;
 
     const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
     const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
@@ -321,9 +324,49 @@ export default function WorldMap({
         });
       });
 
-    // State borders — dynamic GeoJSON from borderGeoCache, keyed by country ID
+    // State borders container — populated by the border effect below
     const statesG = g.append('g');
     statesGRef.current = statesG;
+
+    // Sphere outline (on top of countries and borders)
+    g.append('path')
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.1)')
+      .attr('stroke-width', 0.7)
+      .attr('vector-effect', 'non-scaling-stroke')
+      .attr('d', sphereD);
+
+    // Pins layer (topmost)
+    const pinsG = g.append('g');
+    pinsGRef.current = pinsG;
+    recluster();
+
+    // ── zoom ──
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.8, 500])
+      .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+        const kChanged = event.transform.k !== currentKRef.current;
+        currentKRef.current = event.transform.k;
+        g.attr('transform', event.transform.toString());
+        if (kChanged) {
+          recluster();
+          updateStateBorderVisibility();
+        }
+      });
+
+    svg.call(zoom);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countries, places, visitedStates, geoJson]);
+
+  // ── border effect — updates statesG only, never clears the main SVG ─────────
+  // Runs when borderGeoCache changes (new fetch completed) without re-rendering
+  // country fills, sphere, or pins.
+  useEffect(() => {
+    const statesG = statesGRef.current;
+    const pathGenerator = pathGeneratorRef.current;
+    if (!statesG || !pathGenerator) return;
+
+    statesG.selectAll('.brs').remove();
 
     countries
       .filter(c => c.showStateBorders)
@@ -364,38 +407,9 @@ export default function WorldMap({
           });
       });
 
-    // Update border visibility for current zoom
     updateStateBorderVisibility();
-
-    // Sphere outline (on top of countries)
-    g.append('path')
-      .attr('fill', 'none')
-      .attr('stroke', 'rgba(255,255,255,0.1)')
-      .attr('stroke-width', 0.7)
-      .attr('vector-effect', 'non-scaling-stroke')
-      .attr('d', sphereD);
-
-    // Pins layer (topmost)
-    const pinsG = g.append('g');
-    pinsGRef.current = pinsG;
-    recluster();
-
-    // ── zoom ──
-    const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.8, 500])
-      .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
-        const kChanged = event.transform.k !== currentKRef.current;
-        currentKRef.current = event.transform.k;
-        g.attr('transform', event.transform.toString());
-        if (kChanged) {
-          recluster();
-          updateStateBorderVisibility();
-        }
-      });
-
-    svg.call(zoom);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countries, places, visitedStates, geoJson, borderGeoCache]);
+  }, [borderGeoCache, countries, visitedStates]);
 
   return (
     <div className={styles.container} onClick={closeContextMenu}>
