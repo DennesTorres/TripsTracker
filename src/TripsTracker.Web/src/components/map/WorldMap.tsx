@@ -14,7 +14,7 @@ interface Props {
   arGeoJson?: GeoJSON.FeatureCollection;
   gbGeoJson?: GeoJSON.FeatureCollection;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
-  onPlaceClick?: (place: Place) => void;
+  onPlaceClick?: (places: Place[], screenX: number, screenY: number) => void;
 }
 
 // ─── Colours — matched exactly to reference travel-map.html CSS variables ─────
@@ -234,9 +234,10 @@ export default function WorldMap({
             .style('top', `${event.clientY - rect.top - 32}px`);
         })
         .on('mouseout', () => tooltip.style('display', 'none'))
-        .on('click', () => {
+        .on('click', (event: MouseEvent) => {
           tooltip.style('display', 'none');
-          onPlaceClickRef.current?.(c.places[0]);
+          const rect = svg.node()!.getBoundingClientRect();
+          onPlaceClickRef.current?.(c.places, event.clientX - rect.left, event.clientY - rect.top);
         });
 
       // Store colour on stroke for rescale (unused here but matches reference shape)

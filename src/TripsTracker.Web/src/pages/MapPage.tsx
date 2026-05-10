@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
-import PlaceDetailModal from '@/pages/places/PlaceDetailModal';
+import PlacePopup from '@/pages/places/PlacePopup';
+import PlaceDetailPanel from '@/pages/places/PlaceDetailPanel';
 import ShareModal from '@/components/share/ShareModal';
 import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
 import { usePlaces, useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
@@ -24,6 +25,7 @@ export default function MapPage() {
   const [adding, setAdding] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [discovering, setDiscovering] = useState(false);
+  const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
 
   useEffect(() => {
@@ -76,7 +78,7 @@ export default function MapPage() {
             arGeoJson={arGeo ?? undefined}
             gbGeoJson={gbGeo ?? undefined}
             onToggleStateBorders={handleToggleStateBorders}
-            onPlaceClick={place => setSelectedPlace(place)}
+            onPlaceClick={(places, screenX, screenY) => setPopup({ places, x: screenX, y: screenY })}
           />
         )}
         {!isLoading && !hasError && (
@@ -96,7 +98,19 @@ export default function MapPage() {
       {!isLoading && (
         <StatsBar countries={countries} places={places} />
       )}
-      {selectedPlace && <PlaceDetailModal place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
+      {popup && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, zIndex: 29 }} onClick={() => setPopup(null)} />
+          <PlacePopup
+            places={popup.places}
+            x={popup.x}
+            y={popup.y}
+            onClose={() => setPopup(null)}
+            onSeeMore={place => { setPopup(null); setSelectedPlace(place); }}
+          />
+        </>
+      )}
+      {selectedPlace && <PlaceDetailPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />}
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
       {sharing && <ShareModal onClose={() => setSharing(false)} />}
       {discovering && (
