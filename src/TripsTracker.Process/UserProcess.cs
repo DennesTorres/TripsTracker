@@ -22,7 +22,6 @@ public class UserProcess : IUserProcess
         if (existing is not null) return existing;
 
         var newUser = await _users.CreateAsync(email, displayName, ct);
-        await _users.AdoptOrphanedPlacesAsync(newUser.Id, ct);
         return newUser;
     }
 
