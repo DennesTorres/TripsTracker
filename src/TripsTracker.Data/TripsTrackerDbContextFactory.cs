@@ -12,7 +12,7 @@ public class TripsTrackerDbContextFactory : IDesignTimeDbContextFactory<TripsTra
     public TripsTrackerDbContext CreateDbContext(string[] args)
     {
         var options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
-            .UseSqlServer("Server=localhost;Database=TripsTracker_Stage5;Trusted_Connection=True;TrustServerCertificate=True;")
+            .UseSqlServer("Server=localhost;Database=TripsTracker_Stage6;Trusted_Connection=True;TrustServerCertificate=True;")
             .Options;
 
         return new TripsTrackerDbContext(options);

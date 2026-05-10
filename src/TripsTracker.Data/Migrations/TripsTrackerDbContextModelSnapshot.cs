@@ -255,10 +255,6 @@ namespace TripsTracker.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("RequiresLogin")
-                        .HasColumnType("bit");
-
-
                     b.Property<string>("Token")
                         .IsRequired()
                         .HasMaxLength(32)
