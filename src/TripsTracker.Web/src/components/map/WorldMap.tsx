@@ -167,6 +167,10 @@ export default function WorldMap({
     const clusters = separateCollocatedClusters(buildClusters(places, proj, k), k);
     const s = 1 / k; // counter-scale so dots stay 4px on screen
 
+    // Total places per country across all clusters (for partial-cluster tooltip)
+    const countryTotals = new Map<string, number>();
+    places.forEach(p => countryTotals.set(p.countryName, (countryTotals.get(p.countryName) ?? 0) + 1));
+
     clusters.forEach(c => {
       const n = c.places.length;
       const hasHome = c.places.some(p => p.isHome);
@@ -212,9 +216,11 @@ export default function WorldMap({
             const state = abbr ?? (p.stateName ? p.stateName.split(' ')[0] : null);
             return state ? `${p.city} (${state})` : p.city;
           };
+          const total = countryTotals.get(p0.countryName) ?? n;
+          const countLabel = n < total ? `${n}/${total}` : `${n}`;
           const html = n === 1
             ? `<strong>${cityLabel(p0)}</strong><br/>${p0.countryName}`
-            : `<strong>${n} places in ${p0.countryName}</strong><br/>${
+            : `<strong>${countLabel} places in ${p0.countryName}</strong><br/>${
                 c.places.map(p => cityLabel(p)).join('<br/>')
               }`;
           tooltip.style('display', 'block').html(html);
