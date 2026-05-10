@@ -1,10 +1,12 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Interfaces;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
 
@@ -13,10 +15,43 @@ public class PointsBusinessTests
 {
     #region Fixture
 
+    private static DbContextOptions<TripsTrackerDbContext> _options = null!;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_Points");
+
+        _options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
+            .UseSqlServer(connStr)
+            .Options;
+
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureCreatedAsync();
+        await ctx.Database.ExecuteSqlRawAsync(
+            "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
+    }
+
+    [ClassCleanup]
+    public static async Task ClassCleanup()
+    {
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private readonly SqliteConnection _conn;
+        private IDbContextTransaction? _transaction;
         private readonly Mock<IUserContext> _userContextMock = new();
 
         public PointsBusiness ForUser(int userId)
@@ -27,53 +62,27 @@ public class PointsBusinessTests
 
         public Fixture()
         {
-            _conn = new SqliteConnection("Data Source=:memory:");
-            _conn.Open();
-
-            var ddl = new[]
-            {
-                @"CREATE TABLE Users (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    Email TEXT NOT NULL DEFAULT '',
-                    DisplayName TEXT,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    IsDiscoverable INTEGER NOT NULL DEFAULT 0,
-                    StorageUsedBytes INTEGER NOT NULL DEFAULT 0,
-                    TotalPoints INTEGER NOT NULL DEFAULT 0
-                )",
-                @"CREATE TABLE PointEvents (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    UserId INTEGER NOT NULL,
-                    EventType TEXT NOT NULL DEFAULT '',
-                    Points INTEGER NOT NULL DEFAULT 0,
-                    ReferenceId INTEGER,
-                    ReferenceType TEXT,
-                    OriginalEventId INTEGER,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01'
-                )",
-                "CREATE INDEX IX_PointEvents_UserId ON PointEvents (UserId)",
-                "CREATE INDEX IX_PointEvents_EventType ON PointEvents (EventType)",
-            };
-
-            foreach (var sql in ddl)
-            {
-                using var cmd = _conn.CreateCommand();
-                cmd.CommandText = sql;
-                cmd.ExecuteNonQuery();
-            }
-
-            var options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
-                .UseSqlite(_conn)
-                .Options;
-            Ctx = new TripsTrackerDbContext(options);
+            Ctx = new TripsTrackerDbContext(_options);
         }
+
+        public async Task BeginTransactionAsync()
+            => _transaction = await Ctx.Database.BeginTransactionAsync();
 
         public async ValueTask DisposeAsync()
         {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+            }
             await Ctx.DisposeAsync();
-            await _conn.DisposeAsync();
         }
     }
+
+    private static User MakeUser(string email, int totalPoints = 0, string? displayName = null) => new()
+    {
+        Email = email, CreatedAt = DateTime.UtcNow, TotalPoints = totalPoints, DisplayName = displayName,
+    };
 
     #endregion
 
@@ -81,13 +90,15 @@ public class PointsBusinessTests
     public async Task AwardAsync_CreatesPointEvent()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com");
+        f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).AwardAsync(1, "city_added", 50, 99, "Place");
+        await f.ForUser(user.Id).AwardAsync(user.Id, "city_added", 50, 99, "Place");
 
         var evt = await f.Ctx.Set<PointEvent>().SingleAsync();
-        Assert.AreEqual(1, evt.UserId);
+        Assert.AreEqual(user.Id, evt.UserId);
         Assert.AreEqual("city_added", evt.EventType);
         Assert.AreEqual(50, evt.Points);
         Assert.AreEqual(99, evt.ReferenceId);
@@ -98,29 +109,33 @@ public class PointsBusinessTests
     public async Task AwardAsync_UpdatesCachedTotalPoints()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 100 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 100);
+        f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).AwardAsync(1, "city_added", 50);
+        await f.ForUser(user.Id).AwardAsync(user.Id, "city_added", 50);
 
-        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
-        Assert.AreEqual(150, user.TotalPoints);
+        var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
+        Assert.AreEqual(150, updated.TotalPoints);
     }
 
     [TestMethod]
     public async Task AwardAsync_AccumulatesMultipleAwards()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com");
+        f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        var biz = f.ForUser(1);
-        await biz.AwardAsync(1, "city_added", 50);
-        await biz.AwardAsync(1, "country_first", 500);
-        await biz.AwardAsync(1, "continent_first", 5000);
+        var biz = f.ForUser(user.Id);
+        await biz.AwardAsync(user.Id, "city_added", 50);
+        await biz.AwardAsync(user.Id, "country_first", 500);
+        await biz.AwardAsync(user.Id, "continent_first", 5000);
 
-        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
-        Assert.AreEqual(5550, user.TotalPoints);
+        var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
+        Assert.AreEqual(5550, updated.TotalPoints);
         Assert.AreEqual(3, await f.Ctx.Set<PointEvent>().CountAsync());
     }
 
@@ -128,18 +143,20 @@ public class PointsBusinessTests
     public async Task GetSummaryAsync_ReturnsTotalAndRecentEvents()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 550 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 550);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().AddRange(
-            new PointEvent { UserId = 1, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
-            new PointEvent { UserId = 1, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
+            new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new PointEvent { UserId = user.Id, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
         );
         await f.Ctx.SaveChangesAsync();
 
-        var summary = await f.ForUser(1).GetSummaryAsync();
+        var summary = await f.ForUser(user.Id).GetSummaryAsync();
 
         Assert.AreEqual(550, summary.TotalPoints);
         Assert.AreEqual(2, summary.RecentEvents.Count);
-        // Recent events ordered descending by CreatedAt: country_first first
         Assert.AreEqual("country_first", summary.RecentEvents[0].EventType);
     }
 
@@ -147,17 +164,18 @@ public class PointsBusinessTests
     public async Task GetSummaryAsync_OnlyReturnsCurrentUserEvents()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().AddRange(
-            new User { Id = 1, Email = "u1@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 },
-            new User { Id = 2, Email = "u2@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 500 }
-        );
+        await f.BeginTransactionAsync();
+        var u1 = MakeUser("u1@x.com", totalPoints: 50);
+        var u2 = MakeUser("u2@x.com", totalPoints: 500);
+        f.Ctx.Set<User>().AddRange(u1, u2);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().AddRange(
-            new PointEvent { UserId = 1, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow },
-            new PointEvent { UserId = 2, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow }
+            new PointEvent { UserId = u1.Id, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow },
+            new PointEvent { UserId = u2.Id, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow }
         );
         await f.Ctx.SaveChangesAsync();
 
-        var summary = await f.ForUser(1).GetSummaryAsync();
+        var summary = await f.ForUser(u1.Id).GetSummaryAsync();
 
         Assert.AreEqual(50, summary.TotalPoints);
         Assert.AreEqual(1, summary.RecentEvents.Count);
@@ -170,14 +188,14 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_RanksUsersByTotalPointsDescending()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().AddRange(
-            new User { Id = 1, Email = "a@x.com", DisplayName = "Alice", CreatedAt = DateTime.UtcNow, TotalPoints = 100 },
-            new User { Id = 2, Email = "b@x.com", DisplayName = "Bob", CreatedAt = DateTime.UtcNow, TotalPoints = 500 },
-            new User { Id = 3, Email = "c@x.com", DisplayName = "Carol", CreatedAt = DateTime.UtcNow, TotalPoints = 250 }
-        );
+        await f.BeginTransactionAsync();
+        var alice = MakeUser("a@x.com", totalPoints: 100, displayName: "Alice");
+        var bob = MakeUser("b@x.com", totalPoints: 500, displayName: "Bob");
+        var carol = MakeUser("c@x.com", totalPoints: 250, displayName: "Carol");
+        f.Ctx.Set<User>().AddRange(alice, bob, carol);
         await f.Ctx.SaveChangesAsync();
 
-        var result = await f.ForUser(1).GetLeaderboardAsync();
+        var result = await f.ForUser(alice.Id).GetLeaderboardAsync();
 
         Assert.AreEqual(3, result.Count);
         Assert.AreEqual(1, result[0].Rank);
@@ -193,13 +211,13 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_ExcludesUsersWithZeroPoints()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().AddRange(
-            new User { Id = 1, Email = "a@x.com", DisplayName = "Alice", CreatedAt = DateTime.UtcNow, TotalPoints = 100 },
-            new User { Id = 2, Email = "b@x.com", DisplayName = "NoPoints", CreatedAt = DateTime.UtcNow, TotalPoints = 0 }
-        );
+        await f.BeginTransactionAsync();
+        var alice = MakeUser("a@x.com", totalPoints: 100, displayName: "Alice");
+        var noPoints = MakeUser("b@x.com", totalPoints: 0, displayName: "NoPoints");
+        f.Ctx.Set<User>().AddRange(alice, noPoints);
         await f.Ctx.SaveChangesAsync();
 
-        var result = await f.ForUser(1).GetLeaderboardAsync();
+        var result = await f.ForUser(alice.Id).GetLeaderboardAsync();
 
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual("Alice", result[0].DisplayName);
@@ -209,12 +227,12 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_UsesEmailWhenDisplayNameIsNull()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(
-            new User { Id = 1, Email = "a@x.com", DisplayName = null, CreatedAt = DateTime.UtcNow, TotalPoints = 50 }
-        );
+        await f.BeginTransactionAsync();
+        var user = MakeUser("a@x.com", totalPoints: 50);
+        f.Ctx.Set<User>().Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        var result = await f.ForUser(1).GetLeaderboardAsync();
+        var result = await f.ForUser(user.Id).GetLeaderboardAsync();
 
         Assert.AreEqual("a@x.com", result[0].DisplayName);
     }
@@ -223,12 +241,14 @@ public class PointsBusinessTests
     public async Task GetLeaderboardAsync_RespectsLimit()
     {
         await using var f = new Fixture();
+        await f.BeginTransactionAsync();
         f.Ctx.Set<User>().AddRange(Enumerable.Range(1, 5).Select(i =>
-            new User { Id = i, Email = $"u{i}@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = i * 10 }
+            MakeUser($"u{i}@x.com", totalPoints: i * 10)
         ));
         await f.Ctx.SaveChangesAsync();
+        var anyUser = await f.Ctx.Set<User>().FirstAsync();
 
-        var result = await f.ForUser(1).GetLeaderboardAsync(limit: 3);
+        var result = await f.ForUser(anyUser.Id).GetLeaderboardAsync(limit: 3);
 
         Assert.AreEqual(3, result.Count);
     }
@@ -239,15 +259,17 @@ public class PointsBusinessTests
     public async Task GetRecentAsync_ExcludesOriginalEvents_WhenRevoked()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 0 });
-        var original = new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 1, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-2) };
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com");
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+        var original = new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, ReferenceId = 1, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-2) };
         f.Ctx.Set<PointEvent>().Add(original);
         await f.Ctx.SaveChangesAsync();
-        // Add revocation that references the original
-        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = 1, EventType = "city_added_revoked", Points = -50, ReferenceId = 1, ReferenceType = "Place", OriginalEventId = original.Id, CreatedAt = DateTime.UtcNow.AddMinutes(-1) });
+        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = user.Id, EventType = "city_added_revoked", Points = -50, ReferenceId = 1, ReferenceType = "Place", OriginalEventId = original.Id, CreatedAt = DateTime.UtcNow.AddMinutes(-1) });
         await f.Ctx.SaveChangesAsync();
 
-        var summary = await f.ForUser(1).GetSummaryAsync();
+        var summary = await f.ForUser(user.Id).GetSummaryAsync();
 
         Assert.AreEqual(0, summary.RecentEvents.Count, "Original events that have been revoked should not appear in recent events");
     }
@@ -256,15 +278,18 @@ public class PointsBusinessTests
     public async Task GetRecentAsync_ExcludesRevokedEvents()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 0 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com");
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().AddRange(
-            new PointEvent { UserId = 1, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow.AddMinutes(-3) },
-            new PointEvent { UserId = 1, EventType = "city_added_revoked", Points = -50, CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
-            new PointEvent { UserId = 1, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
+            new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow.AddMinutes(-3) },
+            new PointEvent { UserId = user.Id, EventType = "city_added_revoked", Points = -50, CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new PointEvent { UserId = user.Id, EventType = "country_first", Points = 500, CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
         );
         await f.Ctx.SaveChangesAsync();
 
-        var summary = await f.ForUser(1).GetSummaryAsync();
+        var summary = await f.ForUser(user.Id).GetSummaryAsync();
 
         Assert.AreEqual(2, summary.RecentEvents.Count, "Revoked events should be excluded from recent events");
         Assert.IsFalse(summary.RecentEvents.Any(e => e.EventType.EndsWith("_revoked")),
@@ -277,12 +302,15 @@ public class PointsBusinessTests
     public async Task RevokeAsync_SetsOriginalEventId()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
-        var original = new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-1) };
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 50);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+        var original = new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-1) };
         f.Ctx.Set<PointEvent>().Add(original);
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).RevokeAsync(1, "city_", 5, "Place");
+        await f.ForUser(user.Id).RevokeAsync(user.Id, "city_", 5, "Place");
 
         var events = await f.Ctx.Set<PointEvent>().OrderBy(e => e.Id).ToListAsync();
         Assert.AreEqual(2, events.Count);
@@ -293,19 +321,20 @@ public class PointsBusinessTests
     public async Task ReassignAsync_RevokesOldAndAwardsWithNewReference()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 500 });
-        var original = new PointEvent { UserId = 1, EventType = "country_first", Points = 500, ReferenceId = 10, ReferenceType = "Country", CreatedAt = DateTime.UtcNow.AddMinutes(-1) };
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 500);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+        var original = new PointEvent { UserId = user.Id, EventType = "country_first", Points = 500, ReferenceId = 10, ReferenceType = "Country", CreatedAt = DateTime.UtcNow.AddMinutes(-1) };
         f.Ctx.Set<PointEvent>().Add(original);
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).ReassignAsync(1, "country_", 10, "Country", 20, "Country");
+        await f.ForUser(user.Id).ReassignAsync(user.Id, "country_", 10, "Country", 20, "Country");
 
         var events = await f.Ctx.Set<PointEvent>().OrderBy(e => e.Id).ToListAsync();
         Assert.AreEqual(3, events.Count);
-        // E2 is the revocation of E1
         Assert.AreEqual("country_first_revoked", events[1].EventType);
         Assert.AreEqual(original.Id, events[1].OriginalEventId);
-        // E3 is the re-award with the new reference
         Assert.AreEqual("country_first", events[2].EventType);
         Assert.AreEqual(500, events[2].Points);
         Assert.AreEqual(20, events[2].ReferenceId);
@@ -316,11 +345,14 @@ public class PointsBusinessTests
     public async Task ReassignAsync_IsNoOp_WhenNoMatchingEvent()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
-        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 50);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow });
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).ReassignAsync(1, "country_", 99, "Country", 20, "Country");
+        await f.ForUser(user.Id).ReassignAsync(user.Id, "country_", 99, "Country", 20, "Country");
 
         Assert.AreEqual(1, await f.Ctx.Set<PointEvent>().CountAsync(), "No changes when no matching event");
     }
@@ -329,29 +361,35 @@ public class PointsBusinessTests
     public async Task ReassignAsync_PreservesTotalPoints_NetZero()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 500 });
-        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = 1, EventType = "country_first", Points = 500, ReferenceId = 10, ReferenceType = "Country", CreatedAt = DateTime.UtcNow });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 500);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.Set<PointEvent>().Add(new PointEvent { UserId = user.Id, EventType = "country_first", Points = 500, ReferenceId = 10, ReferenceType = "Country", CreatedAt = DateTime.UtcNow });
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).ReassignAsync(1, "country_", 10, "Country", 20, "Country");
+        await f.ForUser(user.Id).ReassignAsync(user.Id, "country_", 10, "Country", 20, "Country");
 
-        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
-        Assert.AreEqual(500, user.TotalPoints, "Reassignment is net-zero — total points unchanged");
+        var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
+        Assert.AreEqual(500, updated.TotalPoints, "Reassignment is net-zero — total points unchanged");
     }
 
     [TestMethod]
     public async Task RevokeAsync_InsertsNegativeEvent()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 50);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().Add(new PointEvent
         {
-            UserId = 1, EventType = "city_added", Points = 50,
+            UserId = user.Id, EventType = "city_added", Points = 50,
             ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-1)
         });
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).RevokeAsync(1, "city_", 5, "Place");
+        await f.ForUser(user.Id).RevokeAsync(user.Id, "city_", 5, "Place");
 
         var events = await f.Ctx.Set<PointEvent>().OrderBy(e => e.Id).ToListAsync();
         Assert.AreEqual(2, events.Count);
@@ -363,54 +401,62 @@ public class PointsBusinessTests
     public async Task RevokeAsync_DeductsFromTotalPoints()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 2550 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 2550);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().AddRange(
-            new PointEvent { UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
-            new PointEvent { UserId = 1, EventType = "country_first", Points = 500, ReferenceId = 1, ReferenceType = "Country", CreatedAt = DateTime.UtcNow.AddMinutes(-1) },
-            new PointEvent { UserId = 1, EventType = "continent_first", Points = 2000, ReferenceId = null, ReferenceType = "Americas", CreatedAt = DateTime.UtcNow }
+            new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow.AddMinutes(-2) },
+            new PointEvent { UserId = user.Id, EventType = "country_first", Points = 500, ReferenceId = 1, ReferenceType = "Country", CreatedAt = DateTime.UtcNow.AddMinutes(-1) },
+            new PointEvent { UserId = user.Id, EventType = "continent_first", Points = 2000, ReferenceId = null, ReferenceType = "Americas", CreatedAt = DateTime.UtcNow }
         );
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).RevokeAsync(1, "country_", 1, "Country");
+        await f.ForUser(user.Id).RevokeAsync(user.Id, "country_", 1, "Country");
 
-        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
-        Assert.AreEqual(2050, user.TotalPoints);
+        var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
+        Assert.AreEqual(2050, updated.TotalPoints);
     }
 
     [TestMethod]
     public async Task RevokeAsync_IsNoOp_WhenNoMatchingEvent()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 50 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 50);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().Add(new PointEvent
         {
-            UserId = 1, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow
+            UserId = user.Id, EventType = "city_added", Points = 50, ReferenceId = 5, ReferenceType = "Place", CreatedAt = DateTime.UtcNow
         });
         await f.Ctx.SaveChangesAsync();
 
-        // Wrong referenceId — no match
-        await f.ForUser(1).RevokeAsync(1, "city_", 99, "Place");
+        await f.ForUser(user.Id).RevokeAsync(user.Id, "city_", 99, "Place");
 
-        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
-        Assert.AreEqual(50, user.TotalPoints); // unchanged
-        Assert.AreEqual(1, await f.Ctx.Set<PointEvent>().CountAsync()); // no revocation event
+        var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
+        Assert.AreEqual(50, updated.TotalPoints);
+        Assert.AreEqual(1, await f.Ctx.Set<PointEvent>().CountAsync());
     }
 
     [TestMethod]
     public async Task RevokeAsync_MatchesNullReferenceId()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<User>().Add(new User { Id = 1, Email = "u@x.com", CreatedAt = DateTime.UtcNow, TotalPoints = 5000 });
+        await f.BeginTransactionAsync();
+        var user = MakeUser("u@x.com", totalPoints: 5000);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PointEvent>().Add(new PointEvent
         {
-            UserId = 1, EventType = "continent_first", Points = 5000,
+            UserId = user.Id, EventType = "continent_first", Points = 5000,
             ReferenceId = null, ReferenceType = "Americas", CreatedAt = DateTime.UtcNow
         });
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).RevokeAsync(1, "continent_", null, "Americas");
+        await f.ForUser(user.Id).RevokeAsync(user.Id, "continent_", null, "Americas");
 
-        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == 1);
-        Assert.AreEqual(0, user.TotalPoints);
+        var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
+        Assert.AreEqual(0, updated.TotalPoints);
     }
 }

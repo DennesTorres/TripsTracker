@@ -1,10 +1,12 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Interfaces;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
 
@@ -13,11 +15,49 @@ public class PlaceCommentBusinessTests
 {
     #region Fixture
 
+    private static DbContextOptions<TripsTrackerDbContext> _options = null!;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_Comments");
+
+        _options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
+            .UseSqlServer(connStr)
+            .Options;
+
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureCreatedAsync();
+        await ctx.Database.ExecuteSqlRawAsync(
+            "EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'");
+    }
+
+    [ClassCleanup]
+    public static async Task ClassCleanup()
+    {
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private readonly SqliteConnection _conn;
         private readonly Mock<IUserContext> _userContextMock = new();
+        private IDbContextTransaction? _transaction;
+
+        public Fixture()
+        {
+            Ctx = new TripsTrackerDbContext(_options);
+        }
 
         public PlaceCommentBusiness ForUser(int userId)
         {
@@ -25,76 +65,28 @@ public class PlaceCommentBusinessTests
             return new PlaceCommentBusiness(Ctx, _userContextMock.Object);
         }
 
-        public Fixture()
-        {
-            _conn = new SqliteConnection("Data Source=:memory:");
-            _conn.Open();
-
-            var ddl = new[]
-            {
-                @"CREATE TABLE Users (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    Email TEXT NOT NULL, DisplayName TEXT,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    StorageUsedBytes INTEGER NOT NULL DEFAULT 0,
-                    IsDiscoverable INTEGER NOT NULL DEFAULT 0,
-                    TotalPoints INTEGER NOT NULL DEFAULT 0
-                )",
-                "CREATE UNIQUE INDEX IX_Users_Email ON Users (Email)",
-                @"CREATE TABLE Places (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    Lon REAL NOT NULL DEFAULT 0, Lat REAL NOT NULL DEFAULT 0,
-                    CountryId INTEGER NOT NULL DEFAULT 0,
-                    City TEXT NOT NULL DEFAULT '', StateAbbr TEXT, StateName TEXT,
-                    IsHome INTEGER NOT NULL DEFAULT 0, UserId INTEGER NOT NULL DEFAULT 0
-                )",
-                @"CREATE TABLE PlaceComments (
-                    Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    PlaceId INTEGER NOT NULL,
-                    UserId INTEGER NOT NULL,
-                    Text TEXT NOT NULL DEFAULT '',
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    UpdatedAt TEXT
-                )",
-                "CREATE INDEX IX_PlaceComments_PlaceId ON PlaceComments (PlaceId)",
-                "CREATE INDEX IX_PlaceComments_UserId ON PlaceComments (UserId)",
-                @"CREATE TABLE CommentRatings (
-                    UserId INTEGER NOT NULL,
-                    CommentId INTEGER NOT NULL,
-                    IsUpvote INTEGER NOT NULL DEFAULT 1,
-                    CreatedAt TEXT NOT NULL DEFAULT '0001-01-01',
-                    PRIMARY KEY (UserId, CommentId)
-                )",
-            };
-
-            foreach (var sql in ddl)
-            {
-                using var cmd = _conn.CreateCommand();
-                cmd.CommandText = sql;
-                cmd.ExecuteNonQuery();
-            }
-
-            var options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
-                .UseSqlite(_conn)
-                .Options;
-            Ctx = new TripsTrackerDbContext(options);
-        }
+        public async Task BeginTransactionAsync()
+            => _transaction = await Ctx.Database.BeginTransactionAsync();
 
         public async ValueTask DisposeAsync()
         {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+            }
             await Ctx.DisposeAsync();
-            await _conn.DisposeAsync();
         }
     }
 
-    private static User MakeUser(int id, string email, string? displayName = null) => new()
+    private static User MakeUser(string email, string? displayName = null) => new()
     {
-        Id = id, Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow,
+        Email = email, DisplayName = displayName, CreatedAt = DateTime.UtcNow,
     };
 
-    private static PlaceComment MakeComment(int id, int placeId, int userId, string text) => new()
+    private static PlaceComment MakeComment(int placeId, int userId, string text) => new()
     {
-        Id = id, PlaceId = placeId, UserId = userId, Text = text, CreatedAt = DateTime.UtcNow,
+        PlaceId = placeId, UserId = userId, Text = text, CreatedAt = DateTime.UtcNow,
     };
 
     #endregion
@@ -105,17 +97,18 @@ public class PlaceCommentBusinessTests
     public async Task GetByPlaceAsync_ReturnsComments_FromAllUsers()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.AddRange(
-            MakeUser(1, "a@test.com", "Alice"),
-            MakeUser(2, "b@test.com", "Bob")
-        );
+        await f.BeginTransactionAsync();
+        var alice = MakeUser("a@test.com", "Alice");
+        var bob = MakeUser("b@test.com", "Bob");
+        f.Ctx.Users.AddRange(alice, bob);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PlaceComment>().AddRange(
-            MakeComment(1, 1, 1, "Alice's comment"),
-            MakeComment(2, 1, 2, "Bob's comment")
+            MakeComment(1, alice.Id, "Alice's comment"),
+            MakeComment(1, bob.Id, "Bob's comment")
         );
         await f.Ctx.SaveChangesAsync();
 
-        var comments = await f.ForUser(1).GetByPlaceAsync(1);
+        var comments = await f.ForUser(alice.Id).GetByPlaceAsync(1);
 
         Assert.AreEqual(2, comments.Count, "Comments from all users should be returned");
     }
@@ -124,14 +117,17 @@ public class PlaceCommentBusinessTests
     public async Task GetByPlaceAsync_OnlyReturnsSamePlaceComments()
     {
         await using var f = new Fixture();
-        f.Ctx.Users.Add(MakeUser(1, "a@test.com"));
+        await f.BeginTransactionAsync();
+        var user = MakeUser("a@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
         f.Ctx.Set<PlaceComment>().AddRange(
-            MakeComment(1, 1, 1, "Place 1 comment"),
-            MakeComment(2, 2, 1, "Place 2 comment")
+            MakeComment(1, user.Id, "Place 1 comment"),
+            MakeComment(2, user.Id, "Place 2 comment")
         );
         await f.Ctx.SaveChangesAsync();
 
-        var comments = await f.ForUser(1).GetByPlaceAsync(1);
+        var comments = await f.ForUser(user.Id).GetByPlaceAsync(1);
 
         Assert.AreEqual(1, comments.Count);
         Assert.AreEqual(1, comments[0].PlaceId);
@@ -143,10 +139,12 @@ public class PlaceCommentBusinessTests
     public async Task DeleteAsync_ReturnsFalse_WhenCommentOwnedByOtherUser()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<PlaceComment>().Add(MakeComment(1, 1, 2, "Other user's comment"));
+        await f.BeginTransactionAsync();
+        var comment = MakeComment(1, 2, "Other user's comment");
+        f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
 
-        var deleted = await f.ForUser(1).DeleteAsync(1);
+        var deleted = await f.ForUser(1).DeleteAsync(comment.Id);
 
         Assert.IsFalse(deleted);
         Assert.AreEqual(1, await f.Ctx.Set<PlaceComment>().CountAsync());
@@ -156,10 +154,12 @@ public class PlaceCommentBusinessTests
     public async Task DeleteAsync_ReturnsTrue_WhenCommentIsOwn()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<PlaceComment>().Add(MakeComment(1, 1, 1, "My comment"));
+        await f.BeginTransactionAsync();
+        var comment = MakeComment(1, 1, "My comment");
+        f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
 
-        var deleted = await f.ForUser(1).DeleteAsync(1);
+        var deleted = await f.ForUser(1).DeleteAsync(comment.Id);
 
         Assert.IsTrue(deleted);
         Assert.AreEqual(0, await f.Ctx.Set<PlaceComment>().CountAsync());
@@ -171,12 +171,14 @@ public class PlaceCommentBusinessTests
     public async Task VoteAsync_CreatesUpvote_WhenNoneExists()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<PlaceComment>().Add(MakeComment(1, 1, 2, "A comment"));
+        await f.BeginTransactionAsync();
+        var comment = MakeComment(1, 2, "A comment");
+        f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).VoteAsync(1, isUpvote: true);
+        await f.ForUser(1).VoteAsync(comment.Id, isUpvote: true);
 
-        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == 1 && r.CommentId == 1);
+        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == 1 && r.CommentId == comment.Id);
         Assert.IsTrue(vote.IsUpvote);
     }
 
@@ -184,13 +186,16 @@ public class PlaceCommentBusinessTests
     public async Task VoteAsync_UpdatesVote_WhenAlreadyVoted()
     {
         await using var f = new Fixture();
-        f.Ctx.Set<PlaceComment>().Add(MakeComment(1, 1, 2, "A comment"));
-        f.Ctx.Set<CommentRating>().Add(new CommentRating { UserId = 1, CommentId = 1, IsUpvote = true, CreatedAt = DateTime.UtcNow });
+        await f.BeginTransactionAsync();
+        var comment = MakeComment(1, 2, "A comment");
+        f.Ctx.Set<PlaceComment>().Add(comment);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.Set<CommentRating>().Add(new CommentRating { UserId = 1, CommentId = comment.Id, IsUpvote = true, CreatedAt = DateTime.UtcNow });
         await f.Ctx.SaveChangesAsync();
 
-        await f.ForUser(1).VoteAsync(1, isUpvote: false);
+        await f.ForUser(1).VoteAsync(comment.Id, isUpvote: false);
 
-        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == 1 && r.CommentId == 1);
+        var vote = await f.Ctx.Set<CommentRating>().FirstAsync(r => r.UserId == 1 && r.CommentId == comment.Id);
         Assert.IsFalse(vote.IsUpvote);
         Assert.AreEqual(1, await f.Ctx.Set<CommentRating>().CountAsync());
     }
