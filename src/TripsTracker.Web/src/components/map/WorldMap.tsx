@@ -156,31 +156,46 @@ export default function WorldMap({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [statusLabel, setStatusLabel] = useState<{ country: string; state: string | null }>({ country: '', state: null });
 
-  // Mutable refs used inside zoom handler (never trigger re-render)
+  // ── D3 selection refs — set by Effect 1, read by all other effects ───────────
   const projRef          = useRef<d3.GeoProjection | null>(null);
   const pathGeneratorRef = useRef<d3.GeoPath | null>(null);
   const currentKRef      = useRef<number>(1);
   const pinsGRef         = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const statesGRef       = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const countriesGRef    = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+
+  // ── Prop refs — always current, safe to read inside D3 event handlers ────────
+  // Updated unconditionally on every render, before any effect runs.
+  const countriesRef             = useRef<Country[]>(countries);
+  countriesRef.current           = countries;
+  const placesRef                = useRef<Place[]>(places);
+  placesRef.current              = places;
+  const visitedStatesRef         = useRef<VisitedState[]>(visitedStates);
+  visitedStatesRef.current       = visitedStates;
+  const onToggleStateBordersRef  = useRef(onToggleStateBorders);
+  onToggleStateBordersRef.current = onToggleStateBorders;
+  const onPlaceClickRef          = useRef(onPlaceClick);
+  onPlaceClickRef.current        = onPlaceClick;
 
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
-  // ── recluster — mirrors reference recluster() ──────────────────────────────
+  // ── recluster — reads entirely from refs; safe to call from stale closures ───
   const recluster = () => {
     if (!projRef.current || !pinsGRef.current) return;
     const proj = projRef.current;
     const pinsG = pinsGRef.current;
     const k = currentKRef.current;
     const tooltip = d3.select(tooltipRef.current);
+    const currentPlaces = placesRef.current;
 
     pinsG.selectAll('.mg').remove();
 
-    const countryTotals = places.reduce<Record<number, number>>((acc, p) => {
+    const countryTotals = currentPlaces.reduce<Record<number, number>>((acc, p) => {
       acc[p.countryId] = (acc[p.countryId] ?? 0) + 1;
       return acc;
     }, {});
 
-    const clusters = separateCollocatedClusters(buildClusters(places, proj, k), k);
+    const clusters = separateCollocatedClusters(buildClusters(currentPlaces, proj, k), k);
     const s = 1 / k; // counter-scale so dots stay 4px on screen
 
     clusters.forEach(c => {
@@ -241,7 +256,7 @@ export default function WorldMap({
         })
         .on('mouseout', () => tooltip.style('display', 'none'))
         .on('click', () => {
-          if (onPlaceClick) onPlaceClick(c.places.map(p => p.id));
+          if (onPlaceClickRef.current) onPlaceClickRef.current(c.places.map(p => p.id));
         });
     });
   };
@@ -254,9 +269,9 @@ export default function WorldMap({
     if (show) paths.style('display', null); else paths.style('display', 'none');
   };
 
-  // ── main effect — ocean, country fills, sphere, pins, zoom ─────────────────
-  // borderGeoCache is intentionally excluded: border updates are handled by the
-  // separate border effect below, so a new fetch does not wipe country fills.
+  // ── Effect 1: setup — ocean, country paths (no fill), borders layer, pins, zoom
+  // Runs only when geoJson changes (once on mount in practice).
+  // svg.selectAll('*').remove() lives ONLY here — country fills never disappear.
   useEffect(() => {
     if (!svgRef.current || !geoJson) return;
 
@@ -270,15 +285,12 @@ export default function WorldMap({
       .scale(Math.min(width / 6.1, height / 3.2))
       .translate([width / 2, height / 2]);
 
-    projRef.current    = projection;
+    projRef.current = projection;
     const savedTransform = svgRef.current ? d3.zoomTransform(svgRef.current) : d3.zoomIdentity;
     currentKRef.current = savedTransform.k;
 
     const pathGenerator = d3.geoPath().projection(projection);
     pathGeneratorRef.current = pathGenerator;
-
-    const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
-    const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
 
     const g = svg.append('g').attr('transform', savedTransform.toString());
 
@@ -286,33 +298,29 @@ export default function WorldMap({
     const sphereD = pathGenerator({ type: 'Sphere' as const }) ?? '';
     g.append('path').attr('fill', OCEAN_COLOR).attr('d', sphereD);
 
-    // Countries
+    // Countries layer — paths created here, fills applied by Effect 2
     const countriesG = g.append('g');
+    countriesGRef.current = countriesG;
     countriesG.selectAll<SVGPathElement, GeoJSON.Feature>('.country')
       .data(geoJson.features)
       .join('path')
       .attr('class', 'country')
       .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
-      .attr('fill', f => {
-        const a2: string = f.properties?.['ISO_A2'] ?? '';
-        if (a2 && homeAlpha2Set.has(a2))    return HOME_COLOR;
-        if (a2 && visitedAlpha2Set.has(a2)) return VIS_COLOR;
-        return LAND_COLOR;
-      })
+      .attr('fill', LAND_COLOR)  // Effect 2 updates to VIS/HOME colors
       .attr('stroke', 'rgba(0,0,0,0.4)')
       .attr('stroke-width', 0.35)
       .attr('vector-effect', 'non-scaling-stroke')
       .on('mouseover', (_event: MouseEvent, f: GeoJSON.Feature) => {
         const a2: string = f.properties?.['ISO_A2'] ?? '';
-        const country = countries.find(c => c.isoAlpha2 === a2);
+        const country = countriesRef.current.find(c => c.isoAlpha2 === a2);
         if (country) setStatusLabel({ country: country.name, state: null });
       })
       .on('mouseout', () => setStatusLabel({ country: '', state: null }))
       .on('contextmenu', (event: MouseEvent, f: GeoJSON.Feature) => {
         event.preventDefault();
-        if (!onToggleStateBorders) return;
+        if (!onToggleStateBordersRef.current) return;
         const a2: string = f.properties?.['ISO_A2'] ?? '';
-        const country = countries.find(c => c.isoAlpha2 === a2);
+        const country = countriesRef.current.find(c => c.isoAlpha2 === a2);
         if (!country) return;
         const rect = svgRef.current!.getBoundingClientRect();
         setContextMenu({
@@ -324,7 +332,7 @@ export default function WorldMap({
         });
       });
 
-    // State borders container — populated by the border effect below
+    // State borders layer — populated by Effect 4
     const statesG = g.append('g');
     statesGRef.current = statesG;
 
@@ -356,11 +364,32 @@ export default function WorldMap({
 
     svg.call(zoom);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countries, places, visitedStates, geoJson]);
+  }, [geoJson]);
 
-  // ── border effect — updates statesG only, never clears the main SVG ─────────
-  // Runs when borderGeoCache changes (new fetch completed) without re-rendering
-  // country fills, sphere, or pins.
+  // ── Effect 2: color update — in-place fill update, never rebuilds SVG ────────
+  useEffect(() => {
+    const countriesG = countriesGRef.current;
+    if (!countriesG) return;
+
+    const visitedAlpha2Set = new Set(countries.filter(c => c.isVisited).map(c => c.isoAlpha2));
+    const homeAlpha2Set    = new Set(countries.filter(c => c.isHome).map(c => c.isoAlpha2));
+
+    countriesG.selectAll<SVGPathElement, GeoJSON.Feature>('.country')
+      .attr('fill', f => {
+        const a2: string = f.properties?.['ISO_A2'] ?? '';
+        if (a2 && homeAlpha2Set.has(a2))    return HOME_COLOR;
+        if (a2 && visitedAlpha2Set.has(a2)) return VIS_COLOR;
+        return LAND_COLOR;
+      });
+  }, [countries]);
+
+  // ── Effect 3: pins update — recluster whenever places changes ────────────────
+  useEffect(() => {
+    recluster();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places]);
+
+  // ── Effect 4: border effect — updates statesG only, never clears main SVG ───
   useEffect(() => {
     const statesG = statesGRef.current;
     const pathGenerator = pathGeneratorRef.current;
@@ -423,7 +452,7 @@ export default function WorldMap({
         >
           <button
             onClick={() => {
-              onToggleStateBorders?.(contextMenu.countryId, !contextMenu.currentShow);
+              onToggleStateBordersRef.current?.(contextMenu.countryId, !contextMenu.currentShow);
               setContextMenu(null);
             }}
           >
