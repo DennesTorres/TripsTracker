@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
@@ -40,6 +40,7 @@ public class PlaceCommentBusinessTests
             .Options;
 
         await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
         await ctx.Database.EnsureCreatedAsync();
 
         // Seed FK parents shared across all tests in this class
@@ -61,22 +62,20 @@ public class PlaceCommentBusinessTests
         _user2Id = u2.Id;
     }
 
-    [ClassCleanup]
-    public static async Task ClassCleanup()
-    {
-        await using var ctx = new TripsTrackerDbContext(_options);
-        await ctx.Database.EnsureDeletedAsync();
-    }
-
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
         private readonly Mock<IUserContext> _userContextMock = new();
-        private IDbContextTransaction? _transaction;
+        private readonly TransactionScope _scope;
 
         public Fixture()
         {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
+            Ctx.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
         }
 
         public PlaceCommentBusiness ForUser(int userId)
@@ -85,17 +84,11 @@ public class PlaceCommentBusinessTests
             return new PlaceCommentBusiness(Ctx, _userContextMock.Object);
         }
 
-        public async Task BeginTransactionAsync()
-            => _transaction = await Ctx.Database.BeginTransactionAsync();
-
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
+            Ctx.Database.CloseConnection();
             await Ctx.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
         }
     }
 
@@ -117,7 +110,6 @@ public class PlaceCommentBusinessTests
     public async Task GetByPlaceAsync_ReturnsComments_FromAllUsers()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var alice = MakeUser("a@test.com", "Alice");
         var bob = MakeUser("b@test.com", "Bob");
         f.Ctx.Users.AddRange(alice, bob);
@@ -137,7 +129,6 @@ public class PlaceCommentBusinessTests
     public async Task GetByPlaceAsync_OnlyReturnsSamePlaceComments()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var user = MakeUser("a@test.com");
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
@@ -159,7 +150,6 @@ public class PlaceCommentBusinessTests
     public async Task DeleteAsync_ReturnsFalse_WhenCommentOwnedByOtherUser()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var comment = MakeComment(_placeId, _user2Id, "Other user's comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
@@ -174,7 +164,6 @@ public class PlaceCommentBusinessTests
     public async Task DeleteAsync_ReturnsTrue_WhenCommentIsOwn()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var comment = MakeComment(_placeId, _user1Id, "My comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
@@ -191,7 +180,6 @@ public class PlaceCommentBusinessTests
     public async Task VoteAsync_CreatesUpvote_WhenNoneExists()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var comment = MakeComment(_placeId, _user2Id, "A comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
@@ -206,7 +194,6 @@ public class PlaceCommentBusinessTests
     public async Task VoteAsync_UpdatesVote_WhenAlreadyVoted()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
         var comment = MakeComment(_placeId, _user2Id, "A comment");
         f.Ctx.Set<PlaceComment>().Add(comment);
         await f.Ctx.SaveChangesAsync();
