@@ -9,6 +9,7 @@ using TripsTracker.Interfaces.Configuration;
 namespace TripsTracker.Tests.Business;
 
 [TestClass]
+[DoNotParallelize]
 public class ExploreBusinessTests
 {
     #region Fixture
