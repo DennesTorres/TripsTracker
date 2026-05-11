@@ -3,6 +3,7 @@ import { useMsal } from '@azure/msal-react';
 import { useEnsureUser, usePointsSummary } from '@/api/hooks';
 import { User, LogOut, Star, Trophy } from 'lucide-react';
 import LeaderboardModal from './LeaderboardModal';
+import PointsStatementPanel from './PointsStatementPanel';
 import styles from './AppShell.module.scss';
 
 export type View = 'map' | 'places' | 'countries' | 'profile';
@@ -20,10 +21,9 @@ const TABS: { id: View; label: string }[] = [
 export default function AppShell({ children }: Props) {
   const [view, setView] = useState<View>('map');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pointsOpen, setPointsOpen] = useState(false);
+  const [statementOpen, setStatementOpen] = useState(false);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const pointsRef = useRef<HTMLDivElement>(null);
   const { instance } = useMsal();
   const { data: user } = useEnsureUser();
   const { data: pointsData } = usePointsSummary();
@@ -32,9 +32,6 @@ export default function AppShell({ children }: Props) {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
-      }
-      if (pointsRef.current && !pointsRef.current.contains(e.target as Node)) {
-        setPointsOpen(false);
       }
     };
     document.addEventListener('click', handler);
@@ -63,33 +60,14 @@ export default function AppShell({ children }: Props) {
         <div className={styles.spacer} />
 
         {pointsData !== undefined && (
-          <div className={styles.pointsMenu} ref={pointsRef}>
-            <button
-              className={styles.pointsBtn}
-              onClick={() => setPointsOpen(o => !o)}
-              title="Your points"
-            >
-              <Star size={13} />
-              <span>{pointsData.totalPoints.toLocaleString()}</span>
-            </button>
-            {pointsOpen && (
-              <div className={styles.pointsDropdown}>
-                <div className={styles.dropdownHeader}>
-                  <span className={styles.dropdownName}>{pointsData.totalPoints.toLocaleString()} pts total</span>
-                </div>
-                {pointsData.recentEvents.length === 0 ? (
-                  <div className={styles.pointsEmpty}>No activity yet</div>
-                ) : (
-                  pointsData.recentEvents.map(e => (
-                    <div key={e.id} className={styles.pointsRow}>
-                      <span className={styles.pointsEventType} title={getEventDescription(e.eventType)}>{formatEventType(e.eventType)}</span>
-                      <span className={styles.pointsValue}>+{e.points}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          <button
+            className={styles.pointsBtn}
+            onClick={() => setStatementOpen(o => !o)}
+            title="Your points statement"
+          >
+            <Star size={13} />
+            <span>{pointsData.totalPoints.toLocaleString()}</span>
+          </button>
         )}
 
         <button
@@ -125,35 +103,12 @@ export default function AppShell({ children }: Props) {
         </div>
       </nav>
       <main className={styles.main}>{children(view, setView)}</main>
-      {leaderboardOpen && <LeaderboardModal onClose={() => setLeaderboardOpen(false)} />}
+      {leaderboardOpen && (
+        <LeaderboardModal onClose={() => setLeaderboardOpen(false)} />
+      )}
+      {statementOpen && user && (
+        <PointsStatementPanel userId={user.id} onClose={() => setStatementOpen(false)} />
+      )}
     </div>
   );
-}
-
-function formatEventType(eventType: string): string {
-  const map: Record<string, string> = {
-    city_added: 'City added',
-    city_pioneer: 'Pioneer city',
-    country_first: 'First country visit',
-    country_pioneer: 'Pioneer country',
-    continent_first: 'First continent visit',
-    continent_pioneer: 'Pioneer continent',
-    photo_uploaded: 'Photo uploaded',
-    comment_added: 'Comment added',
-  };
-  return map[eventType] ?? eventType;
-}
-
-function getEventDescription(eventType: string): string {
-  const map: Record<string, string> = {
-    city_added: 'You added a new city to your trip history',
-    city_pioneer: 'You were the first person globally to visit this city',
-    country_first: 'First city you visited in this country',
-    country_pioneer: 'You were the first person globally to visit any city in this country',
-    continent_first: 'First country you visited in this continent',
-    continent_pioneer: 'You were the first person globally to visit any country in this continent',
-    photo_uploaded: 'You uploaded a photo',
-    comment_added: 'You added a comment',
-  };
-  return map[eventType] ?? '';
 }

@@ -128,9 +128,17 @@ export interface UserPointsSummary {
 }
 
 export interface LeaderboardEntry {
+  userId: number;
   rank: number;
   displayName: string;
   totalPoints: number;
+}
+
+export interface UserStatement {
+  userId: number;
+  displayName: string;
+  totalPoints: number;
+  events: PointEvent[];
 }
 
 export interface PublicMapData {

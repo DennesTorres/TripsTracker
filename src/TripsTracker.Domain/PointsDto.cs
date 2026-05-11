@@ -4,4 +4,6 @@ public record PointEventDto(int Id, string EventType, int Points, int? Reference
 
 public record UserPointsSummaryDto(int TotalPoints, List<PointEventDto> RecentEvents);
 
-public record LeaderboardEntryDto(int Rank, string DisplayName, int TotalPoints);
+public record UserStatementDto(int UserId, string DisplayName, int TotalPoints, List<PointEventDto> Events);
+
+public record LeaderboardEntryDto(int UserId, int Rank, string DisplayName, int TotalPoints);

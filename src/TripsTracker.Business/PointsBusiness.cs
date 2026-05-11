@@ -116,15 +116,41 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
         await AwardAsync(userId, original.EventType, original.Points, newReferenceId, newReferenceType, ct);
     }
 
+    public async Task<UserStatementDto> GetStatementAsync(int userId, CancellationToken ct = default)
+    {
+        var user = await Context.Set<User>().AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { DisplayName = u.DisplayName ?? u.Email, u.TotalPoints })
+            .FirstOrDefaultAsync(ct);
+
+        if (user is null)
+            return new UserStatementDto(userId, "", 0, []);
+
+        var revokedOriginalIds = await BuildBaseQuery()
+            .Where(e => e.UserId == userId && e.OriginalEventId != null)
+            .Select(e => e.OriginalEventId!.Value)
+            .ToListAsync(ct);
+
+        var events = await BuildBaseQuery()
+            .Where(e => e.UserId == userId
+                && !e.EventType.EndsWith("_revoked")
+                && !revokedOriginalIds.Contains(e.Id))
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt))
+            .ToListAsync(ct);
+
+        return new UserStatementDto(userId, user.DisplayName, user.TotalPoints, events);
+    }
+
     public async Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 20, CancellationToken ct = default)
     {
         var rows = await Context.Set<User>().AsNoTracking()
             .Where(u => u.TotalPoints > 0)
             .OrderByDescending(u => u.TotalPoints)
             .Take(limit)
-            .Select(u => new { DisplayName = u.DisplayName ?? u.Email, u.TotalPoints })
+            .Select(u => new { u.Id, DisplayName = u.DisplayName ?? u.Email, u.TotalPoints })
             .ToListAsync(ct);
 
-        return rows.Select((r, i) => new LeaderboardEntryDto(i + 1, r.DisplayName, r.TotalPoints)).ToList();
+        return rows.Select((r, i) => new LeaderboardEntryDto(r.Id, i + 1, r.DisplayName, r.TotalPoints)).ToList();
     }
 }

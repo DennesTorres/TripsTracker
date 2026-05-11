@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, LeaderboardEntry, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserPointsSummary, UserProfile, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, LeaderboardEntry, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserPointsSummary, UserProfile, UserStatement, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
@@ -157,6 +157,15 @@ export function useLeaderboard() {
     queryKey: ['leaderboard'],
     queryFn: () => apiClient.get<LeaderboardEntry[]>('/api/leaderboard').then(r => r.data),
     staleTime: 60_000,
+  });
+}
+
+export function useUserStatement(userId: number | null) {
+  return useQuery<UserStatement>({
+    queryKey: ['user-statement', userId],
+    queryFn: () => apiClient.get<UserStatement>(`/api/users/${userId}/points`).then(r => r.data),
+    enabled: userId !== null,
+    staleTime: 30_000,
   });
 }
 

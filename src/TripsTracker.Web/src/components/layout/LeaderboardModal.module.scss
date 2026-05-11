@@ -28,6 +28,14 @@
   background: rgba(255, 255, 255, 0.03);
   border-radius: 6px;
   border: 1px solid transparent;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: rgba(125, 211, 252, 0.06);
+    border-color: rgba(125, 211, 252, 0.15);
+  }
 }
 
 .top1 {

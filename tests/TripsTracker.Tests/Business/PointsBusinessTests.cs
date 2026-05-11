@@ -431,4 +431,71 @@ public class PointsBusinessTests
         var updated = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == user.Id);
         Assert.AreEqual(0, updated.TotalPoints);
     }
+
+    // ─── GetStatementAsync ────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetStatementAsync_ReturnsAllNonRevokedEventsForUser()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@x.com", totalPoints: 150);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.Set<PointEvent>().AddRange(
+            new PointEvent { UserId = user.Id, EventType = "city_added", Points = 50, CreatedAt = DateTime.UtcNow },
+            new PointEvent { UserId = user.Id, EventType = "country_first", Points = 100, CreatedAt = DateTime.UtcNow }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(user.Id).GetStatementAsync(user.Id);
+
+        Assert.AreEqual(user.Id, result.UserId);
+        Assert.AreEqual(150, result.TotalPoints);
+        Assert.AreEqual(2, result.Events.Count);
+    }
+
+    [TestMethod]
+    public async Task GetStatementAsync_DoesNotReturnOtherUsersEvents()
+    {
+        await using var f = new Fixture();
+        var user1 = MakeUser("u1@x.com", totalPoints: 0);
+        var user2 = MakeUser("u2@x.com", totalPoints: 100);
+        f.Ctx.Set<User>().AddRange(user1, user2);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.Set<PointEvent>().Add(
+            new PointEvent { UserId = user2.Id, EventType = "city_added", Points = 100, CreatedAt = DateTime.UtcNow }
+        );
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(user1.Id).GetStatementAsync(user1.Id);
+
+        Assert.AreEqual(0, result.Events.Count);
+    }
+
+    [TestMethod]
+    public async Task GetStatementAsync_ReturnsDisplayName()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@x.com", totalPoints: 50, displayName: "Alice");
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(user.Id).GetStatementAsync(user.Id);
+
+        Assert.AreEqual("Alice", result.DisplayName);
+    }
+
+    [TestMethod]
+    public async Task GetLeaderboardAsync_ReturnsUserId()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@x.com", totalPoints: 100, displayName: "Alice");
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(user.Id).GetLeaderboardAsync();
+
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual(user.Id, result[0].UserId);
+    }
 }

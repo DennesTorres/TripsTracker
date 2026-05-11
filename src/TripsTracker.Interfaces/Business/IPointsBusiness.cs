@@ -9,5 +9,6 @@ public interface IPointsBusiness
     Task ReassignAsync(int userId, string eventTypePrefix, int? oldReferenceId, string? oldReferenceType, int? newReferenceId, string? newReferenceType, CancellationToken ct = default);
     Task<UserPointsSummaryDto> GetSummaryAsync(CancellationToken ct = default);
     Task<List<PointEventDto>> GetRecentAsync(int count = 20, CancellationToken ct = default);
+    Task<UserStatementDto> GetStatementAsync(int userId, CancellationToken ct = default);
     Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 20, CancellationToken ct = default);
 }

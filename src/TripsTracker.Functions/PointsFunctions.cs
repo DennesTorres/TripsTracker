@@ -24,4 +24,11 @@ public class PointsFunctions(IPointsBusiness points)
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "leaderboard")] HttpRequest req,
         CancellationToken ct)
         => new OkObjectResult(await points.GetLeaderboardAsync(20, ct));
+
+    [Function("GetUserStatement")]
+    public async Task<IActionResult> GetUserStatement(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users/{userId:int}/points")] HttpRequest req,
+        int userId,
+        CancellationToken ct)
+        => new OkObjectResult(await points.GetStatementAsync(userId, ct));
 }
