@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useIsAuthenticated } from '@azure/msal-react';
 import { useSharedMap } from '@/api/hooks';
 import WorldMap from '@/components/map/WorldMap';
+import PlacePopup from '@/pages/places/PlacePopup';
+import PlaceDetailPanel from '@/pages/places/PlaceDetailPanel';
+import type { Place } from '@/types';
 import styles from './SharedMapPage.module.scss';
 
 interface Props {
@@ -14,6 +17,8 @@ export default function SharedMapPage({ token }: Props) {
   const [geoJson, setGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   const [usStatesGeoJson, setUsStatesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
   const [brazilStatesGeoJson, setBrazilStatesGeoJson] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
 
   useEffect(() => {
     fetch('/geo/world-110m.geojson').then(r => r.json()).then(setGeoJson);
@@ -51,7 +56,23 @@ export default function SharedMapPage({ token }: Props) {
           geoJson={geoJson}
           usStatesGeoJson={usStatesGeoJson!}
           brazilStatesGeoJson={brazilStatesGeoJson!}
+          onPlaceClick={(places, screenX, screenY) => setPopup({ places, x: screenX, y: screenY })}
         />
+        {popup && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 29 }} onClick={() => setPopup(null)} />
+            <PlacePopup
+              places={popup.places}
+              x={popup.x}
+              y={popup.y}
+              onClose={() => setPopup(null)}
+              onSeeMore={place => { setPopup(null); setSelectedPlace(place); }}
+            />
+          </>
+        )}
+        {selectedPlace && (
+          <PlaceDetailPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+        )}
       </div>
     </div>
   );

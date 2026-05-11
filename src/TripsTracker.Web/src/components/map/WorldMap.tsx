@@ -4,6 +4,12 @@ import type { GeoPermissibleObjects } from 'd3';
 import type { Country, Place, VisitedState } from '@/types';
 import styles from './WorldMap.module.scss';
 
+interface TemporaryPin {
+  lat: number;
+  lon: number;
+  label: string;
+}
+
 interface Props {
   countries: Country[];
   places: Place[];
@@ -15,6 +21,7 @@ interface Props {
   gbGeoJson?: GeoJSON.FeatureCollection;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
   onPlaceClick?: (places: Place[], screenX: number, screenY: number) => void;
+  temporaryPin?: TemporaryPin;
 }
 
 // ─── Colours — matched exactly to reference travel-map.html CSS variables ─────
@@ -146,6 +153,7 @@ export default function WorldMap({
   gbGeoJson,
   onToggleStateBorders,
   onPlaceClick,
+  temporaryPin,
 }: Props) {
   const svgRef           = useRef<SVGSVGElement>(null);
   const tooltipRef       = useRef<HTMLDivElement>(null);
@@ -157,6 +165,7 @@ export default function WorldMap({
   const currentKRef = useRef<number>(1);
   const pinsGRef    = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   const brStatesGRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const tempPinGRef  = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
 
   // ── recluster — mirrors reference recluster() ──────────────────────────────
   const recluster = () => {
@@ -380,6 +389,10 @@ export default function WorldMap({
     const pinsG = g.append('g');
     pinsGRef.current = pinsG;
 
+    // Temporary pin layer (above regular pins)
+    const tempPinG = g.append('g');
+    tempPinGRef.current = tempPinG;
+
     // Initial pin render
     recluster();
 
@@ -399,6 +412,38 @@ export default function WorldMap({
     svg.call(zoom);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countries, places, visitedStates, geoJson, usStatesGeoJson, brazilStatesGeoJson, arGeoJson, gbGeoJson]);
+
+  // ── temporary pin — redraws when temporaryPin changes ─────────────────────
+  useEffect(() => {
+    if (!tempPinGRef.current || !projRef.current) return;
+    const tempG = tempPinGRef.current;
+    tempG.selectAll('*').remove();
+    if (!temporaryPin) return;
+
+    const proj = projRef.current;
+    const k = currentKRef.current;
+    const coords = proj([temporaryPin.lon, temporaryPin.lat]);
+    if (!coords) return;
+
+    const s = 1 / k;
+    const mg = tempG.append('g')
+      .attr('transform', `translate(${coords[0]},${coords[1]}) scale(${s})`);
+
+    mg.append('circle')
+      .attr('r', 6)
+      .attr('fill', '#60a5fa')
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1.5);
+
+    mg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'central')
+      .attr('y', -14)
+      .attr('font-size', '7px')
+      .attr('fill', '#60a5fa')
+      .attr('pointer-events', 'none')
+      .text(temporaryPin.label);
+  }, [temporaryPin]);
 
   return (
     <div className={styles.container}>

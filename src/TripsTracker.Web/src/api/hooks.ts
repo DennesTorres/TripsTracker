@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, ExploreContent, ExploreLocation, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
@@ -227,5 +227,27 @@ export function useUpdateUser() {
       qc.invalidateQueries({ queryKey: ['countries'] });
       qc.invalidateQueries({ queryKey: ['discover-maps'] });
     },
+  });
+}
+
+export function useExploreSearch(query: string) {
+  return useQuery<ExploreLocation[]>({
+    queryKey: ['explore-search', query],
+    queryFn: () =>
+      apiClient.get<ExploreLocation[]>(`/api/explore?q=${encodeURIComponent(query)}`).then(r => r.data),
+    enabled: query.length >= 2 || query === '',
+    staleTime: 30_000,
+  });
+}
+
+export function useExploreContent(city: string, countryId: number | null) {
+  return useQuery<ExploreContent>({
+    queryKey: ['explore-content', city, countryId],
+    queryFn: () =>
+      apiClient.get<ExploreContent>(
+        `/api/explore/content?city=${encodeURIComponent(city)}&countryId=${countryId}`
+      ).then(r => r.data),
+    enabled: !!city && !!countryId,
+    staleTime: 30_000,
   });
 }

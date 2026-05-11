@@ -10,6 +10,8 @@ import styles from './AddPlaceForm.module.scss';
 
 interface Props {
   onClose: () => void;
+  initialCity?: string;
+  onExplore?: (city: string) => void;
 }
 
 interface MismatchSuggestion {
@@ -18,11 +20,11 @@ interface MismatchSuggestion {
   isHome: boolean;
 }
 
-export default function AddPlaceForm({ onClose }: Props) {
+export default function AddPlaceForm({ onClose, initialCity = '', onExplore }: Props) {
   const { data: countries = [] } = useCountries();
   const create = useCreatePlace();
   const [countryIsoAlpha2, setCountryIsoAlpha2] = useState('');
-  const [cityName, setCityName] = useState('');
+  const [cityName, setCityName] = useState(initialCity);
   const [selectedStateName, setSelectedStateName] = useState<string | undefined>();
   const [isHome, setIsHome] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +103,16 @@ export default function AddPlaceForm({ onClose }: Props) {
             required
           />
         </label>
+
+        {onExplore && cityName.trim().length >= 2 && (
+          <button
+            type="button"
+            className={styles.exploreLink}
+            onClick={() => onExplore(cityName.trim())}
+          >
+            Explore photos &amp; comments for this place first →
+          </button>
+        )}
 
         <FormCheckbox
           label="Home location"

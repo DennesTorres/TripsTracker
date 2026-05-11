@@ -119,3 +119,20 @@ export interface PublicMapData {
   countries: Country[];
   visitedStates: VisitedState[];
 }
+
+export interface ExploreLocation {
+  city: string;
+  stateName: string | null;
+  countryName: string;
+  countryId: number;
+  lat: number;
+  lon: number;
+  userCount: number;
+  photoCount: number;
+  commentCount: number;
+}
+
+export interface ExploreContent {
+  photos: PlacePhoto[];
+  comments: PlaceComment[];
+}

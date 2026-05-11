@@ -4,11 +4,12 @@ import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
 import PlacePopup from '@/pages/places/PlacePopup';
 import PlaceDetailPanel from '@/pages/places/PlaceDetailPanel';
+import ExplorePanel from '@/pages/places/ExplorePanel';
 import ShareModal from '@/components/share/ShareModal';
 import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
 import { usePlaces, useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
-import type { Place } from '@/types';
-import { Share2, Compass } from 'lucide-react';
+import type { ExploreLocation, Place } from '@/types';
+import { Search, Share2, Compass } from 'lucide-react';
 import styles from './MapPage.module.scss';
 
 export default function MapPage() {
@@ -23,8 +24,12 @@ export default function MapPage() {
   const [arGeo, setArGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [gbGeo, setGbGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [adding, setAdding] = useState(false);
+  const [addingWithCity, setAddingWithCity] = useState('');
   const [sharing, setSharing] = useState(false);
   const [discovering, setDiscovering] = useState(false);
+  const [exploring, setExploring] = useState(false);
+  const [exploreQuery, setExploreQuery] = useState('');
+  const [explorePin, setExplorePin] = useState<ExploreLocation | null>(null);
   const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
 
@@ -79,12 +84,16 @@ export default function MapPage() {
             gbGeoJson={gbGeo ?? undefined}
             onToggleStateBorders={handleToggleStateBorders}
             onPlaceClick={(places, screenX, screenY) => setPopup({ places, x: screenX, y: screenY })}
+            temporaryPin={explorePin ? { lat: explorePin.lat, lon: explorePin.lon, label: explorePin.city } : undefined}
           />
         )}
         {!isLoading && !hasError && (
           <div className={styles.mapButtons}>
             <button className={styles.addBtn} onClick={() => setAdding(true)}>
               + Add place
+            </button>
+            <button className={styles.exploreBtn} onClick={() => { setExploreQuery(''); setExploring(true); }}>
+              <Search size={14} /> Explore
             </button>
             <button className={styles.shareBtn} onClick={() => setSharing(true)}>
               <Share2 size={14} /> Share
@@ -93,6 +102,19 @@ export default function MapPage() {
               <Compass size={14} /> Discover
             </button>
           </div>
+        )}
+        {exploring && (
+          <ExplorePanel
+            initialQuery={exploreQuery}
+            onClose={() => { setExploring(false); setExplorePin(null); }}
+            onPinLocation={setExplorePin}
+            onAddPlace={city => {
+              setExploring(false);
+              setExplorePin(null);
+              setAddingWithCity(city);
+              setAdding(true);
+            }}
+          />
         )}
         {popup && (
           <>
@@ -113,7 +135,18 @@ export default function MapPage() {
       {!isLoading && (
         <StatsBar countries={countries} places={places} />
       )}
-      {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddPlaceForm
+          initialCity={addingWithCity}
+          onClose={() => { setAdding(false); setAddingWithCity(''); }}
+          onExplore={city => {
+            setAdding(false);
+            setAddingWithCity('');
+            setExploreQuery(city);
+            setExploring(true);
+          }}
+        />
+      )}
       {sharing && <ShareModal onClose={() => setSharing(false)} />}
       {discovering && (
         <DiscoverMapsModal
