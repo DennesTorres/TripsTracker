@@ -9,13 +9,23 @@ import { RequireAuth } from './auth/RequireAuth';
 import { useEnsureUser } from './api/hooks';
 
 function AuthenticatedApp() {
+  const [exploreCity, setExploreCity] = useState<string | null>(null);
   useEnsureUser();
 
   return (
     <AppShell>
       {(view, navigate) => {
-        if (view === 'map') return <MapPage />;
-        if (view === 'places') return <PlacesPage />;
+        if (view === 'map') return (
+          <MapPage
+            exploreCity={exploreCity}
+            onExploreCityConsumed={() => setExploreCity(null)}
+          />
+        );
+        if (view === 'places') return (
+          <PlacesPage
+            onExploreCity={city => { setExploreCity(city); navigate('map'); }}
+          />
+        );
         if (view === 'profile') return <ProfilePage onClose={() => navigate('map')} />;
         return <CountriesPage />;
       }}

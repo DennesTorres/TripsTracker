@@ -6,6 +6,10 @@ import DeleteConfirm from './DeleteConfirm';
 import PlaceDetailModal from './PlaceDetailModal';
 import styles from './PlacesPage.module.scss';
 
+interface Props {
+  onExploreCity?: (city: string) => void;
+}
+
 type SortKey = 'city' | 'countryName' | 'stateAbbr' | 'lon' | 'lat';
 type SortDir = 'asc' | 'desc';
 
@@ -20,7 +24,7 @@ function sortPlaces(places: Place[], key: SortKey, dir: SortDir): Place[] {
   });
 }
 
-export default function PlacesPage() {
+export default function PlacesPage({ onExploreCity }: Props) {
   const { data: places = [], isLoading } = usePlaces();
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<Place | null>(null);
@@ -158,7 +162,7 @@ export default function PlacesPage() {
         </table>
       </div>
 
-      {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
+      {adding && <AddPlaceForm onClose={() => setAdding(false)} onExplore={onExploreCity} />}
       {detail && <PlaceDetailModal place={detail} onClose={() => setDetail(null)} />}
 
       {deleting && (

@@ -20,7 +20,12 @@ interface DetailInfo {
   placeId?: number;
 }
 
-export default function MapPage() {
+interface Props {
+  exploreCity?: string | null;
+  onExploreCityConsumed?: () => void;
+}
+
+export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
   const { data: places = [], isLoading: placesLoading, isError: placesError, refetch: refetchPlaces } = usePlaces();
   const { data: countries = [], isLoading: countriesLoading, isError: countriesError, refetch: refetchCountries } = useCountries();
   const { data: visitedStates = [], isLoading: statesLoading, isError: statesError, refetch: refetchStates } = useVisitedStates();
@@ -39,6 +44,13 @@ export default function MapPage() {
   const [explorePin, setExplorePin] = useState<ExploreLocation | null>(null);
   const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
   const [activeDetail, setActiveDetail] = useState<DetailInfo | null>(null);
+
+  useEffect(() => {
+    if (exploreCity) {
+      setExploreQuery(exploreCity);
+      onExploreCityConsumed?.();
+    }
+  }, [exploreCity]);
 
   useEffect(() => {
     Promise.all([

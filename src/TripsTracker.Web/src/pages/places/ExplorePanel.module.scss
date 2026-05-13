@@ -1,111 +1,59 @@
-.panel {
+.container {
   position: absolute;
   top: 12px;
-  right: 12px;
-  width: 320px;
-  max-height: calc(100% - 24px);
-  background: #0d1828;
-  border: 1px solid #1e3050;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
   z-index: 40;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #1e3050;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e2e8f0;
-  flex: 1;
-}
-
-.backBtn {
-  background: none;
-  border: none;
-  color: #60a5fa;
-  cursor: pointer;
-  font-size: 12px;
-  flex: 1;
-  text-align: left;
-  padding: 0;
-
-  &:hover { text-decoration: underline; }
-}
-
-.closeBtn {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0 2px;
-
-  &:hover { color: #e2e8f0; }
-}
-
-.searchView, .contentView {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 .searchInput {
   width: 100%;
   box-sizing: border-box;
-  background: #111827;
+  background: rgba(13, 24, 40, 0.95);
   border: 1px solid #1e3050;
   border-radius: 6px;
-  padding: 7px 10px;
+  padding: 8px 12px;
   color: #e2e8f0;
   font-size: 13px;
   outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 
   &:focus { border-color: #3b82f6; }
+  &::placeholder { color: #64748b; }
+}
+
+.dropdown {
+  margin-top: 4px;
+  background: #0d1828;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .hint {
+  padding: 8px 12px;
   font-size: 12px;
   color: #64748b;
   margin: 0;
 }
 
-.results {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .resultRow {
-  background: #111827;
-  border: 1px solid #1e3050;
-  border-radius: 6px;
-  padding: 8px 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid #1a2840;
+  padding: 8px 12px;
   cursor: pointer;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s;
 
-  &:hover {
-    background: #1e3050;
-    border-color: #3b82f6;
-  }
+  &:last-child { border-bottom: none; }
+  &:hover { background: #1e3050; }
 }
 
 .resultCity {
@@ -117,141 +65,4 @@
 .resultMeta {
   font-size: 11px;
   color: #64748b;
-}
-
-.locationHeader {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #1e3050;
-  margin-bottom: 4px;
-
-  strong { font-size: 14px; color: #e2e8f0; }
-}
-
-.countryName {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.addBtn {
-  margin-top: 6px;
-  padding: 5px 10px;
-  background: #1e3a5f;
-  border: 1px solid #3b82f6;
-  border-radius: 6px;
-  color: #60a5fa;
-  font-size: 12px;
-  cursor: pointer;
-  align-self: flex-start;
-  transition: background 0.12s;
-
-  &:hover { background: #1e4a7a; }
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sectionTitle {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
-  margin: 0;
-  padding: 4px 0;
-}
-
-.photoRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #111827;
-  border-radius: 6px;
-  padding: 6px 8px;
-}
-
-.photoThumb {
-  width: 48px;
-  height: 36px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  overflow: hidden;
-  background: #1e3050;
-}
-
-.thumbImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photoMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.photoName {
-  font-size: 12px;
-  color: #e2e8f0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.photoRating {
-  font-size: 11px;
-  color: #f0b84a;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.commentRow {
-  background: #111827;
-  border-radius: 6px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.commentHeader {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-}
-
-.commentAuthor {
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
-}
-
-.commentDate {
-  font-size: 11px;
-  color: #475569;
-}
-
-.commentText {
-  font-size: 12px;
-  color: #e2e8f0;
-  margin: 0;
-}
-
-.commentVotes {
-  display: flex;
-  gap: 10px;
-  font-size: 11px;
-  color: #64748b;
-
-  span {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-  }
 }
