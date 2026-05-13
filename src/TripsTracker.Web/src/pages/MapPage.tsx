@@ -15,7 +15,10 @@ export default function MapPage() {
   const [worldGeo, setWorldGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [borderGeoCache, setBorderGeoCache] = useState<Record<number, GeoJSON.FeatureCollection>>({});
   const fetchingRef = useRef<Set<number>>(new Set());
+  const borderGeoCacheRef = useRef<Record<number, GeoJSON.FeatureCollection>>({});
+  borderGeoCacheRef.current = borderGeoCache;
   const [adding, setAdding] = useState(false);
+  const [loadingCountryId, setLoadingCountryId] = useState<number | null>(null);
 
   // Load world base map once
   useEffect(() => {
@@ -44,12 +47,27 @@ export default function MapPage() {
         // Silently ignore — borders won't render for this country
       } finally {
         fetchingRef.current.delete(country.id);
+        // Clear loading indicator if this fetch was triggered by a toggle
+        setLoadingCountryId(prev => prev === country.id ? null : prev);
       }
     });
   }, [countries, borderGeoCache]);
 
   const handleToggleStateBorders = useCallback((countryId: number, show: boolean) => {
-    setStateBorders.mutate({ id: countryId, show });
+    setLoadingCountryId(countryId);
+    setStateBorders.mutate(
+      { id: countryId, show },
+      {
+        onSuccess: () => {
+          // Disabling or GeoJSON already cached: no fetch will happen, clear loading now
+          if (!show || borderGeoCacheRef.current[countryId]) {
+            setLoadingCountryId(null);
+          }
+          // Enabling and not cached: the GeoJSON fetch finally-block will clear loading
+        },
+        onError: () => setLoadingCountryId(null),
+      }
+    );
   }, [setStateBorders]);
 
   const isLoading = placesLoading || countriesLoading || statesLoading || !worldGeo;
@@ -79,6 +97,9 @@ export default function MapPage() {
             geoJson={worldGeo!}
             borderGeoCache={borderGeoCache}
             onToggleStateBorders={handleToggleStateBorders}
+            loadingCountryName={loadingCountryId
+              ? (countries.find(c => c.id === loadingCountryId)?.name ?? null)
+              : null}
           />
         )}
         {!isLoading && !hasError && (

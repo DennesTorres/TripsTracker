@@ -13,6 +13,8 @@ interface Props {
   borderGeoCache: Record<number, GeoJSON.FeatureCollection>;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
   onPlaceClick?: (placeIds: number[]) => void;
+  /** Country name currently loading borders — shown in status bar while operation is in progress. */
+  loadingCountryName?: string | null;
 }
 
 interface ContextMenuState {
@@ -149,6 +151,7 @@ export default function WorldMap({
   borderGeoCache,
   onToggleStateBorders,
   onPlaceClick,
+  loadingCountryName,
 }: Props) {
   const svgRef      = useRef<SVGSVGElement>(null);
   const tooltipRef  = useRef<HTMLDivElement>(null);
@@ -473,7 +476,9 @@ export default function WorldMap({
         </div>
       )}
       <div className={styles.statusBar}>
-        {statusLabel.country && (
+        {loadingCountryName ? (
+          <span style={{ fontStyle: 'italic' }}>Loading borders for {loadingCountryName}…</span>
+        ) : statusLabel.country ? (
           <>
             <span>{statusLabel.country}</span>
             {statusLabel.state && (
@@ -483,7 +488,7 @@ export default function WorldMap({
               </>
             )}
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
