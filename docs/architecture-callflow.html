@@ -83,9 +83,9 @@
 </head>
 <body>
 <h1>TripsTracker — Architecture Overview</h1>
-<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-05-01 (Stage 5 — story #49 — public map sharing)</h2>
+<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-05-13 (Stage 6 — stories #98–#101 — UGC: photos, comments, ratings, explore, blob storage)</h2>
 
-<svg viewBox="0 0 1720 810" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 2200 890" xmlns="http://www.w3.org/2000/svg"
      font-family="'Segoe UI', Consolas, sans-serif">
   <defs>
     <marker id="ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
@@ -101,27 +101,27 @@
   <!-- ═══════════════════ LAYER BANDS ═══════════════════ -->
 
   <!-- Frontend  y=25  h=105 -->
-  <rect x="120" y="25"  width="1340" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
+  <rect x="120" y="25"  width="1820" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
   <text x="137" y="43" font-size="10" font-weight="700" letter-spacing="1.8" fill="#f0883e">FRONTEND · React + React Query</text>
 
   <!-- Functions  y=175  h=85 -->
-  <rect x="120" y="175" width="1340" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
+  <rect x="120" y="175" width="1820" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
   <text x="137" y="193" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">AZURE FUNCTIONS · HTTP Triggers</text>
 
   <!-- Process  y=305  h=95 -->
-  <rect x="120" y="305" width="1340" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
+  <rect x="120" y="305" width="1820" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
   <text x="137" y="323" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">PROCESS · TripsTracker.Process</text>
 
   <!-- Business  y=445  h=105 -->
-  <rect x="120" y="445" width="1340" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
+  <rect x="120" y="445" width="1820" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
   <text x="137" y="463" font-size="10" font-weight="700" letter-spacing="1.8" fill="#58a6ff">BUSINESS · TripsTracker.Business · AOP wraps all calls</text>
 
-  <!-- External  x=1480  y=445  h=200 -->
-  <rect x="1480" y="445" width="180" height="200" rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
-  <text x="1497" y="463" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
+  <!-- External  x=1960  y=430  h=240 -->
+  <rect x="1960" y="430" width="200" height="240" rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
+  <text x="1977" y="448" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
 
-  <!-- Database  y=595  h=80 -->
-  <rect x="120" y="595" width="1340" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
+  <!-- Database  y=595  h=165 -->
+  <rect x="120" y="595" width="1820" height="165"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
   <text x="137" y="613" font-size="10" font-weight="700" letter-spacing="1.8" fill="#3fb950">DATABASE · Azure SQL · EF Core 10</text>
 
   <!-- ═══════════════════ USER ACTOR ═══════════════════ -->
@@ -214,14 +214,19 @@
   <text x="1130" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">CreateAsync · UpdateAsync</text>
 
   <!-- External — Nominatim -->
-  <ellipse cx="1570" cy="487" rx="80" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
-  <text x="1570" y="482" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
-  <text x="1570" y="495" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync</text>
+  <ellipse cx="2060" cy="475" rx="80" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="2060" y="470" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
+  <text x="2060" y="483" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync</text>
 
   <!-- External — Photon -->
-  <ellipse cx="1570" cy="572" rx="80" ry="26" fill="#12091a" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,2"/>
-  <text x="1570" y="567" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Photon API</text>
-  <text x="1570" y="580" text-anchor="middle" font-size="9"  fill="#7c5fa8">photon.komoot.io · SuggestCitiesAsync</text>
+  <ellipse cx="2060" cy="545" rx="80" ry="26" fill="#12091a" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="2060" y="540" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Photon API</text>
+  <text x="2060" y="553" text-anchor="middle" font-size="9"  fill="#7c5fa8">photon.komoot.io · SuggestCitiesAsync</text>
+
+  <!-- External — Azure Blob / Azurite -->
+  <ellipse cx="2060" cy="615" rx="80" ry="26" fill="#061428" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="2060" y="610" text-anchor="middle" font-size="10" font-weight="600" fill="#58a6ff">Azure Blob</text>
+  <text x="2060" y="622" text-anchor="middle" font-size="9"  fill="#4a80b0">Azurite local · BlobStorageService</text>
 
   <!-- Database (cy=635) -->
   <ellipse cx="215" cy="635" rx="75"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
@@ -271,6 +276,59 @@
   <ellipse cx="1385" cy="635" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
   <text x="1385" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">ShareLinks</text>
   <text x="1385" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId FK · Token · IsActive · ExpiresAt · ViewCount</text>
+
+  <!-- ── Stage 6 components ── -->
+
+  <!-- PlaceDetailPanel (Frontend cy=77) -->
+  <ellipse cx="1510" cy="77" rx="100" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1510" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">PlaceDetailPanel</text>
+  <text x="1510" y="87" text-anchor="middle" font-size="9" fill="#a87040">photos · comments · ratings</text>
+
+  <!-- ExplorePanel (Frontend cy=77) -->
+  <ellipse cx="1740" cy="77" rx="90" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1740" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">ExplorePanel</text>
+  <text x="1740" y="87" text-anchor="middle" font-size="9" fill="#a87040">cross-user city search + temp pin</text>
+
+  <!-- PhotoFunctions + CommentFunctions (Functions cy=217) -->
+  <ellipse cx="1510" cy="217" rx="110" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1510" y="210" text-anchor="middle" font-size="9" font-weight="600" fill="#d2a8ff">GET·POST /places/{id}/photos  DELETE·PUT /photos/{id}</text>
+  <text x="1510" y="221" text-anchor="middle" font-size="9" fill="#d2a8ff">GET·POST /places/{id}/comments  PUT·DELETE /comments/{id}</text>
+  <text x="1510" y="231" text-anchor="middle" font-size="8" fill="#8a6fef">PhotoFunctions · CommentFunctions</text>
+
+  <!-- ExploreFunctions + StorageFunctions (Functions cy=217) -->
+  <ellipse cx="1760" cy="217" rx="100" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1760" y="210" text-anchor="middle" font-size="9" font-weight="600" fill="#d2a8ff">GET /explore  GET /explore/content</text>
+  <text x="1760" y="221" text-anchor="middle" font-size="9" fill="#d2a8ff">GET /storage/usage  POST /storage/refresh</text>
+  <text x="1760" y="231" text-anchor="middle" font-size="8" fill="#8a6fef">ExploreFunctions · StorageFunctions</text>
+
+  <!-- PlacePhotoBusiness + PlaceCommentBusiness (Business cy=497) -->
+  <ellipse cx="1540" cy="497" rx="115" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1540" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">PlacePhotoBusiness</text>
+  <text x="1540" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">GetByPlaceAsync · CreateAsync · DeleteAsync · RateAsync</text>
+  <text x="1540" y="513" text-anchor="middle" font-size="8" fill="#4a80b0">PlaceCommentBusiness: CreateAsync · VoteAsync</text>
+
+  <!-- StorageBusiness + ExploreBusiness (Business cy=497) -->
+  <ellipse cx="1780" cy="497" rx="100" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1780" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">StorageBusiness</text>
+  <text x="1780" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">GetUsageAsync · RefreshAsync</text>
+  <text x="1780" y="513" text-anchor="middle" font-size="8" fill="#4a80b0">ExploreBusiness: SearchAsync · GetContentAsync</text>
+
+  <!-- PlacePhotos + PlaceComments (Database row 2  cy=720) -->
+  <ellipse cx="215" cy="720" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="215" y="715" text-anchor="middle" font-size="11" font-weight="600" fill="#7ee787">PlacePhotos</text>
+  <text x="215" y="728" text-anchor="middle" font-size="9" fill="#3a7a3a">PlaceId FK · UserId FK · BlobName · SizeBytes</text>
+
+  <ellipse cx="450" cy="720" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="450" y="715" text-anchor="middle" font-size="11" font-weight="600" fill="#7ee787">PlaceComments</text>
+  <text x="450" y="728" text-anchor="middle" font-size="9" fill="#3a7a3a">PlaceId FK · UserId FK · Text · ParentCommentId?</text>
+
+  <ellipse cx="690" cy="720" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="690" y="715" text-anchor="middle" font-size="11" font-weight="600" fill="#7ee787">PhotoRatings</text>
+  <text x="690" y="728" text-anchor="middle" font-size="9" fill="#3a7a3a">PK(UserId,PhotoId) · Rating 1–5</text>
+
+  <ellipse cx="920" cy="720" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="920" y="715" text-anchor="middle" font-size="11" font-weight="600" fill="#7ee787">CommentRatings</text>
+  <text x="920" y="728" text-anchor="middle" font-size="9" fill="#3a7a3a">PK(UserId,CommentId) · IsUpvote</text>
 
   <!-- ═══════════════════ OPERATION FLOWS ═══════════════════ -->
 
@@ -1107,6 +1165,158 @@
               Header: TripsTracker brand · "<em>DisplayName</em>'s travel map"<br>
               Stats: N places · N countries · N continents<br>
               Read-only WorldMap with owner's places, country fills, state borders
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="proc-section">
+  <h3>Stage 6 — User Generated Content (UGC)</h3>
+  <div class="proc-grid">
+
+    <!-- ── PHOTO UPLOAD ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a1e38; color:#58a6ff">
+        <span style="width:10px;height:10px;border-radius:50%;background:#58a6ff;display:inline-block"></span>
+        Upload Photo
+      </div>
+      <div class="proc-card-body">
+        <div class="step-row">
+          <div class="step-num" style="background:#58a6ff;color:#fff">1</div>
+          <div class="step-body">
+            <div class="step-who">PlaceDetailPanel <span class="layer-tag">Frontend</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="http-method post">POST</span> <code>/api/places/{placeId}/photos</code> multipart/form-data (file + caption)</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#58a6ff;color:#fff">2</div>
+          <div class="step-body">
+            <div class="step-who">PhotoFunctions <span class="layer-tag">Functions</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body">validates file present + size ≤ 10MB</span></div>
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><span class="call-arrow">→</span> <code>BlobStorageService.UploadAsync(blobName, stream, contentType)</code></span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="call-arrow">→</span> <code>PlacePhotoBusiness.CreateAsync(placeId, blobName, fileName, contentType, size, caption)</code></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#58a6ff;color:#fff">3</div>
+          <div class="step-body">
+            <div class="step-who">PlacePhotoBusiness <span class="layer-tag">Business</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body">inserts PlacePhoto row (BlobName, SizeBytes, SortOrder, UploadedAt)</span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="call-ret">←</span> <code>PlacePhotoDto</code> (Id, BlobName, AvgRating=0, RatingCount=0)</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="note">BlobName format: <code>{userId}/{placeId}/{guid}.{ext}</code> — user-isolated path. Blob bytes deleted by application before DB record on delete.</div>
+      </div>
+    </div>
+
+    <!-- ── COMMENT + VOTE ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a2010; color:#3fb950">
+        <span style="width:10px;height:10px;border-radius:50%;background:#3fb950;display:inline-block"></span>
+        Add Comment / Vote
+      </div>
+      <div class="proc-card-body">
+        <div class="step-row">
+          <div class="step-num" style="background:#3fb950;color:#fff">1</div>
+          <div class="step-body">
+            <div class="step-who">PlaceDetailPanel <span class="layer-tag">Frontend</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><span class="http-method post">POST</span> <code>/api/places/{placeId}/comments</code> <code>{ text }</code></span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="http-method put">PUT</span> <code>/api/comments/{commentId}/vote</code> <code>{ isUpvote }</code></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#3fb950;color:#fff">2</div>
+          <div class="step-body">
+            <div class="step-who">PlaceCommentBusiness <span class="layer-tag">Business</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><code>CreateAsync</code> → inserts PlaceComment row (UserId from IUserContext)</span></div>
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><code>CreateReplyAsync(parentCommentId)</code> → inserts with ParentCommentId</span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><code>VoteAsync(commentId, isUpvote)</code> → UPSERT CommentRatings (one per user per comment)</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="note">Comment reads include JOIN to Users for AuthorDisplayName and COUNT of CommentRatings for Upvotes/Downvotes.</div>
+      </div>
+    </div>
+
+    <!-- ── EXPLORE ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#1a0e38; color:#a78bfa">
+        <span style="width:10px;height:10px;border-radius:50%;background:#a78bfa;display:inline-block"></span>
+        Explore (Cross-User City Discovery)
+      </div>
+      <div class="proc-card-body">
+        <div class="step-row">
+          <div class="step-num" style="background:#a78bfa;color:#fff">1</div>
+          <div class="step-body">
+            <div class="step-who">ExplorePanel <span class="layer-tag">Frontend</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="http-method get">GET</span> <code>/api/explore?q={query}</code> → top 20 cities by user count</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#a78bfa;color:#fff">2</div>
+          <div class="step-body">
+            <div class="step-who">ExploreBusiness <span class="layer-tag">Business</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><code>SearchAsync(query)</code> → queries ALL places (cross-user, no UserId filter)</span></div>
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body">joins Countries; groups by (City, CountryId); counts users, photos, comments</span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="call-ret">←</span> <code>[ExploreLocationDto]</code> top 20 by UserCount</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#a78bfa;color:#fff">3</div>
+          <div class="step-body">
+            <div class="step-who">ExplorePanel (city selected) <span class="layer-tag">Frontend</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="http-method get">GET</span> <code>/api/explore/content?city={X}&countryId={Y}</code> → photos + comments for all instances of city</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="note">ExploreBusiness bypasses IUserContext — reads all places. Only used by Explore. No user-data leak: displays aggregated counts + public content only.</div>
+      </div>
+    </div>
+
+    <!-- ── STORAGE USAGE ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a1a30; color:#79c0ff">
+        <span style="width:10px;height:10px;border-radius:50%;background:#79c0ff;display:inline-block"></span>
+        Storage Usage / Refresh
+      </div>
+      <div class="proc-card-body">
+        <div class="step-row">
+          <div class="step-num" style="background:#79c0ff;color:#0f1117">1</div>
+          <div class="step-body">
+            <div class="step-who">ProfilePage <span class="layer-tag">Frontend</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><span class="http-method get">GET</span> <code>/api/storage/usage</code> → cached bytes used + max (10 GB)</span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body"><span class="http-method post">POST</span> <code>/api/storage/refresh</code> → recount from blob storage</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num" style="background:#79c0ff;color:#0f1117">2</div>
+          <div class="step-body">
+            <div class="step-who">StorageBusiness <span class="layer-tag">Business</span></div>
+            <div class="step-calls">
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><code>GetUsageAsync</code> → reads Users.StorageUsedBytes + StorageLastRefreshedAt</span></div>
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body"><code>RefreshAsync</code> → calls <code>BlobStorageService.GetUserBlobsAsync(userId)</code></span></div>
+              <div class="call"><span class="call-prefix">├─</span><span class="call-body">reconciles PlacePhotos.SizeBytes with actual blob sizes</span></div>
+              <div class="call"><span class="call-prefix">└─</span><span class="call-body">updates <code>Users.StorageUsedBytes</code> + <code>StorageLastRefreshedAt</code> via ExecuteUpdateAsync</span></div>
             </div>
           </div>
         </div>

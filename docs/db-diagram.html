@@ -18,7 +18,7 @@
 </head>
 <body>
 <h1>TripsTracker — Database Schema</h1>
-<h2>Tables, views, fields, types and relationships &nbsp;·&nbsp; Updated 2026-05-01 (after Stage 5 — story #49 — public map sharing · ShareLinks)</h2>
+<h2>Tables, views, fields, types and relationships &nbsp;·&nbsp; Updated 2026-05-13 (after Stage 6 — stories #98–#101 — UGC: photos, comments, ratings)</h2>
 <div class="diagram-wrap">
   <div class="mermaid">
 erDiagram
@@ -27,6 +27,9 @@ erDiagram
         nvarchar Email "unique — from JWT"
         nvarchar DisplayName "nullable"
         datetime CreatedAt
+        bit IsDiscoverable "Stage 5 — discoverable public map"
+        bigint StorageUsedBytes "Stage 6 — cached blob usage"
+        datetime StorageLastRefreshedAt "Stage 6 — nullable"
     }
 
     Countries {
@@ -68,11 +71,48 @@ erDiagram
     ShareLinks {
         int Id PK
         int UserId FK
-        nvarchar Token "unique — GUID"
+        nvarchar Token "unique — 32-char URL-safe base64"
         bit IsActive
         datetime CreatedAt
         datetime ExpiresAt "nullable"
         int ViewCount
+    }
+
+    PlacePhotos {
+        int Id PK
+        int PlaceId FK
+        int UserId FK
+        nvarchar BlobName "userId/placeId/guid.ext"
+        nvarchar OriginalFileName "nullable"
+        nvarchar ContentType
+        bigint SizeBytes
+        nvarchar Caption "nullable — max 500"
+        int SortOrder
+        datetime UploadedAt
+    }
+
+    PlaceComments {
+        int Id PK
+        int PlaceId FK
+        int UserId FK
+        int ParentCommentId "nullable — self-ref for replies"
+        nvarchar Text "max 2000"
+        datetime CreatedAt
+        datetime UpdatedAt "nullable"
+    }
+
+    PhotoRatings {
+        int UserId PK,FK
+        int PhotoId PK,FK
+        tinyint Rating "1-5"
+        datetime CreatedAt
+    }
+
+    CommentRatings {
+        int UserId PK,FK
+        int CommentId PK,FK
+        bit IsUpvote "true=up false=down"
+        datetime CreatedAt
     }
 
     Users ||--o{ ShareLinks : "Id to UserId FK"
@@ -82,6 +122,14 @@ erDiagram
     Countries ||--o{ UserCountries : "Id to CountryId FK"
     Countries ||--o{ VisitedStates_VIEW : "Id to countryId derived"
     Places ||--o{ VisitedStates_VIEW : "StateAbbr derived"
+    Places ||--o{ PlacePhotos : "Id to PlaceId FK (cascade)"
+    Places ||--o{ PlaceComments : "Id to PlaceId FK (cascade)"
+    Users ||--o{ PlacePhotos : "Id to UserId FK (restrict)"
+    Users ||--o{ PlaceComments : "Id to UserId FK (restrict)"
+    PlacePhotos ||--o{ PhotoRatings : "Id to PhotoId FK (cascade)"
+    Users ||--o{ PhotoRatings : "Id to UserId FK (restrict)"
+    PlaceComments ||--o{ CommentRatings : "Id to CommentId FK (cascade)"
+    Users ||--o{ CommentRatings : "Id to UserId FK (restrict)"
   </div>
   <div class="legend">
     <div class="legend-item"><span class="tag tag-fk">FK</span> Users → Places and Users → UserCountries are real FK constraints (UserId NOT NULL). Every place and country preference is owned by a user — no shared data.</div>
@@ -89,6 +137,9 @@ erDiagram
     <div class="legend-item"><span class="tag tag-view">VIEW</span> VisitedStates is a SQL VIEW — not a table. Derived from Places WHERE StateAbbr IS NOT NULL, grouped by UserId + CountryId + StateAbbr. StateName resolved via MAX(StateName). No write API — fully derived.</div>
     <div class="legend-item" style="color:#475569">UserCountries replaces Countries.IsHome and Countries.IsVisited (removed in Stage 4 migration MultiUserDataIsolationCleanup). IsHome and IsVisited are now per-user, per-country. ShowStateBorders added in AddShowStateBorders migration.</div>
     <div class="legend-item"><span class="tag tag-fk">FK</span> Users → ShareLinks is a real FK constraint with cascade delete. Deactivating a link sets IsActive=false; token remains in the table for audit purposes.</div>
+    <div class="legend-item"><span class="tag tag-fk">FK</span> PlacePhotos and PlaceComments cascade-delete when a Place is deleted. PhotoRatings and CommentRatings cascade-delete when photo/comment is deleted. Blob bytes are deleted separately by application logic before the DB record.</div>
+    <div class="legend-item" style="color:#475569">PhotoRatings and CommentRatings use composite PKs (UserId + PhotoId / CommentId) — one rating per user per photo/comment. UPSERT pattern: insert or update.</div>
+    <div class="legend-item" style="color:#475569">PlaceComments.ParentCommentId is a nullable self-reference for comment replies (Stage 6 AddParentCommentId migration).</div>
     <div class="legend-item" style="color:#475569">Hard delete — no IsDeleted column. Places deleted with ExecuteDeleteAsync. Cascade deletes: UserCountries rows deleted when User or Country is deleted.</div>
     <div class="legend-item" style="color:#475569">Places.Flag was removed — flag emoji is derived from Countries.Flag via the CountryId FK join, not stored redundantly.</div>
   </div>
