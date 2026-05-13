@@ -403,7 +403,7 @@ export default function WorldMap({
         const geo = borderGeoCache[country.id];
         if (!geo) return;
 
-        // Build visited set: geoBoundaries shapeISO format is "{A2}-{stateAbbr}"
+        // Build visited set: GADM ISO_1 format is "{A2}-{stateAbbr}"
         const visitedSet = new Set(
           visitedStates
             .filter(s => s.countryId === country.id)
@@ -417,19 +417,19 @@ export default function WorldMap({
           .attr('class', `brs ${cssClass}`)
           .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')
           .attr('fill', f => {
-            const iso: string = (f.properties?.['shapeISO'] as string) ?? '';
+            const iso: string = (f.properties?.['ISO_1'] as string) ?? '';
             return visitedSet.has(iso) ? BR_STATE_VIS_FILL : BR_STATE_BASE_FILL;
           })
           .attr('stroke', f => {
-            const iso: string = (f.properties?.['shapeISO'] as string) ?? '';
+            const iso: string = (f.properties?.['ISO_1'] as string) ?? '';
             return visitedSet.has(iso) ? BR_STATE_VIS_STROKE : BR_STATE_BASE_STROKE;
           })
           .attr('stroke-width', 0.5)
           .attr('vector-effect', 'non-scaling-stroke')
           .style('display', 'none')
           .on('mouseover', (_event: MouseEvent, f: GeoJSON.Feature) => {
-            const shapeName: string = (f.properties?.['shapeName'] as string) ?? '';
-            setStatusLabel(prev => ({ ...prev, state: shapeName || null }));
+            const stateName: string = (f.properties?.['NAME_1'] as string) ?? '';
+            setStatusLabel(prev => ({ ...prev, state: stateName || null }));
           })
           .on('mouseout', () => {
             setStatusLabel(prev => ({ ...prev, state: null }));
