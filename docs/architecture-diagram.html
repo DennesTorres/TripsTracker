@@ -28,7 +28,7 @@ flowchart TB
     subgraph PROCESS["⚙️ Process Layer — TripsTracker.Process"]
         direction LR
         P1["PlacesProcess\nAddAsync (geocode → create → mark visited)\nDeleteAsync (delete → manage IsVisited/IsHome)"]
-        P2["IQueryable composition\nacross Business classes\nTransactionScope(Required)"]
+        P2["UserProcess · IQueryable composition\nacross Business classes · TransactionScope(Required)"]
     end
 
     subgraph INTEGRATION["🌐 Integration — TripsTracker.Integration"]
@@ -69,7 +69,7 @@ flowchart TB
     end
 
     subgraph TESTS["🧪 Tests — TripsTracker.Tests"]
-        TS1["84+ MSTests\nSQLite in-memory for bulk ops\nReal SQL Server for integration\n(transaction rollback isolation)"]
+        TS1["84+ MSTests\nSQL Server only (SQLite/InMemory removed)\nTransactionScope rollback isolation"]
     end
 
     ENTRY -->|"calls via interfaces"| PROCESS
