@@ -27,6 +27,7 @@ erDiagram
         nvarchar Email "unique — from JWT"
         nvarchar DisplayName "nullable"
         datetime CreatedAt
+        bit IsDiscoverable "opt-in to Discover feature"
     }
 
     Countries {
@@ -89,6 +90,7 @@ erDiagram
     <div class="legend-item"><span class="tag tag-view">VIEW</span> VisitedStates is a SQL VIEW — not a table. Derived from Places WHERE StateAbbr IS NOT NULL, grouped by UserId + CountryId + StateAbbr. StateName resolved via MAX(StateName). No write API — fully derived.</div>
     <div class="legend-item" style="color:#475569">UserCountries replaces Countries.IsHome and Countries.IsVisited (removed in Stage 4 migration MultiUserDataIsolationCleanup). IsHome and IsVisited are now per-user, per-country. ShowStateBorders added in AddShowStateBorders migration.</div>
     <div class="legend-item"><span class="tag tag-fk">FK</span> Users → ShareLinks is a real FK constraint with cascade delete. Deactivating a link sets IsActive=false; token remains in the table for audit purposes.</div>
+    <div class="legend-item" style="color:#475569">Users.IsDiscoverable allows other authenticated users to find this user's map via the Discover feature (DiscoverMapsModal). Default false — opt-in only. Added in MoveIsDiscoverableToUsers migration.</div>
     <div class="legend-item" style="color:#475569">Hard delete — no IsDeleted column. Places deleted with ExecuteDeleteAsync. Cascade deletes: UserCountries rows deleted when User or Country is deleted.</div>
     <div class="legend-item" style="color:#475569">Places.Flag was removed — flag emoji is derived from Countries.Flag via the CountryId FK join, not stored redundantly.</div>
   </div>
