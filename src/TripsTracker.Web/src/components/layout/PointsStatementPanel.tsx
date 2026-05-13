@@ -74,7 +74,10 @@ export default function PointsStatementPanel({ userId, onClose }: Props) {
           const isOpen = openTooltip === e.id;
           return (
             <div key={e.id} className={styles.row}>
-              <span className={styles.label}>{formatEventType(e.eventType)}</span>
+              <div className={styles.labelWrap}>
+                <span className={styles.label}>{formatEventType(e.eventType)}</span>
+                {e.cityName && <span className={styles.city}>{e.cityName}</span>}
+              </div>
               {description && (
                 <div className={styles.tooltipWrap}>
                   <button

@@ -87,14 +87,17 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .Select(e => e.OriginalEventId!.Value)
             .ToListAsync(ct);
 
-        return await BuildBaseQuery()
-            .Where(e => e.UserId == _userContext.UserId
+        return await (
+            from e in BuildBaseQuery()
+            where e.UserId == _userContext.UserId
                 && !e.EventType.EndsWith("_revoked")
-                && !revokedOriginalIds.Contains(e.Id))
-            .OrderByDescending(e => e.CreatedAt)
-            .Take(count)
-            .Select(e => new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt))
-            .ToListAsync(ct);
+                && !revokedOriginalIds.Contains(e.Id)
+            join p in Context.Set<Place>().AsNoTracking() on e.ReferenceId equals p.Id into ep
+            from p in ep.DefaultIfEmpty()
+            orderby e.CreatedAt descending
+            select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
+                e.ReferenceType == "place" ? p.City : null)
+        ).Take(count).ToListAsync(ct);
     }
 
     public async Task ReassignAsync(int userId, string eventTypePrefix, int? oldReferenceId, string? oldReferenceType,
@@ -131,13 +134,17 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .Select(e => e.OriginalEventId!.Value)
             .ToListAsync(ct);
 
-        var events = await BuildBaseQuery()
-            .Where(e => e.UserId == userId
+        var events = await (
+            from e in BuildBaseQuery()
+            where e.UserId == userId
                 && !e.EventType.EndsWith("_revoked")
-                && !revokedOriginalIds.Contains(e.Id))
-            .OrderByDescending(e => e.CreatedAt)
-            .Select(e => new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt))
-            .ToListAsync(ct);
+                && !revokedOriginalIds.Contains(e.Id)
+            join p in Context.Set<Place>().AsNoTracking() on e.ReferenceId equals p.Id into ep
+            from p in ep.DefaultIfEmpty()
+            orderby e.CreatedAt descending
+            select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
+                e.ReferenceType == "place" ? p.City : null)
+        ).ToListAsync(ct);
 
         return new UserStatementDto(userId, user.DisplayName, user.TotalPoints, events);
     }

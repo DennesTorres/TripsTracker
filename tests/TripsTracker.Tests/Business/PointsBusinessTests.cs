@@ -498,4 +498,33 @@ public class PointsBusinessTests
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual(user.Id, result[0].UserId);
     }
+
+    [TestMethod]
+    public async Task GetStatementAsync_PopulatesCityName_WhenReferenceTypeIsPlace()
+    {
+        await using var f = new Fixture();
+        var country = new Country { IsoAlpha2 = "BR", Flag = "🇧🇷", Name = "Brazil", Region = "Americas", IsoNumeric = 76 };
+        f.Ctx.Set<Country>().Add(country);
+        await f.Ctx.SaveChangesAsync();
+
+        var user = MakeUser("u@x.com", totalPoints: 50);
+        f.Ctx.Set<User>().Add(user);
+        await f.Ctx.SaveChangesAsync();
+
+        var place = new Place { City = "São Paulo", CountryId = country.Id, UserId = user.Id, Lon = -46.6, Lat = -23.5 };
+        f.Ctx.Set<Place>().Add(place);
+        await f.Ctx.SaveChangesAsync();
+
+        f.Ctx.Set<PointEvent>().Add(new PointEvent
+        {
+            UserId = user.Id, EventType = "city_added", Points = 50,
+            ReferenceId = place.Id, ReferenceType = "place", CreatedAt = DateTime.UtcNow,
+        });
+        await f.Ctx.SaveChangesAsync();
+
+        var statement = await f.ForUser(user.Id).GetStatementAsync(user.Id);
+
+        Assert.AreEqual(1, statement.Events.Count);
+        Assert.AreEqual("São Paulo", statement.Events[0].CityName);
+    }
 }

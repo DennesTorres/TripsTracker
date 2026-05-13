@@ -76,9 +76,24 @@
   }
 }
 
+.labelWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .label {
   font-size: 13px;
   color: #cbd5e1;
+}
+
+.city {
+  font-size: 11px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tooltipWrap {
@@ -99,10 +114,8 @@
 
 .tooltip {
   position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-right: 8px;
+  top: calc(100% + 6px);
+  right: 0;
   background: #1e293b;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 6px;
@@ -118,7 +131,7 @@
 
 .date {
   font-size: 11px;
-  color: #475569;
+  color: #64748b;
   white-space: nowrap;
 }
 

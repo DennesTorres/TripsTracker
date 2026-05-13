@@ -4,6 +4,7 @@ import { useEnsureUser, usePointsSummary } from '@/api/hooks';
 import { User, LogOut, Star, Trophy } from 'lucide-react';
 import LeaderboardModal from './LeaderboardModal';
 import PointsStatementPanel from './PointsStatementPanel';
+import PointsSummaryPopup from './PointsSummaryPopup';
 import styles from './AppShell.module.scss';
 
 export type View = 'map' | 'places' | 'countries' | 'profile';
@@ -21,7 +22,9 @@ const TABS: { id: View; label: string }[] = [
 export default function AppShell({ children }: Props) {
   const [view, setView] = useState<View>('map');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [statementOpen, setStatementOpen] = useState(false);
+  const [statementUserId, setStatementUserId] = useState<number | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { instance } = useMsal();
@@ -62,8 +65,8 @@ export default function AppShell({ children }: Props) {
         {pointsData !== undefined && (
           <button
             className={styles.pointsBtn}
-            onClick={() => setStatementOpen(o => !o)}
-            title="Your points statement"
+            onClick={() => setSummaryOpen(o => !o)}
+            title="Your points"
           >
             <Star size={13} />
             <span>{pointsData.totalPoints.toLocaleString()}</span>
@@ -103,11 +106,20 @@ export default function AppShell({ children }: Props) {
         </div>
       </nav>
       <main className={styles.main}>{children(view, setView)}</main>
-      {leaderboardOpen && (
-        <LeaderboardModal onClose={() => setLeaderboardOpen(false)} />
+      {summaryOpen && (
+        <PointsSummaryPopup
+          onClose={() => setSummaryOpen(false)}
+          onViewFull={() => { setSummaryOpen(false); setStatementUserId(user?.id ?? null); setStatementOpen(true); }}
+        />
       )}
-      {statementOpen && user && (
-        <PointsStatementPanel userId={user.id} onClose={() => setStatementOpen(false)} />
+      {leaderboardOpen && (
+        <LeaderboardModal
+          onClose={() => setLeaderboardOpen(false)}
+          onViewUser={(id) => { setLeaderboardOpen(false); setStatementUserId(id); setStatementOpen(true); }}
+        />
+      )}
+      {statementOpen && statementUserId !== null && (
+        <PointsStatementPanel userId={statementUserId} onClose={() => { setStatementOpen(false); setStatementUserId(null); }} />
       )}
     </div>
   );

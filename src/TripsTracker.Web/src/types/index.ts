@@ -120,6 +120,7 @@ export interface PointEvent {
   referenceId?: number;
   referenceType?: string;
   createdAt: string;
+  cityName?: string | null;
 }
 
 export interface UserPointsSummary {
