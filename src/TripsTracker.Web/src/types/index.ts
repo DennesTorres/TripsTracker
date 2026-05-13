@@ -136,3 +136,9 @@ export interface ExploreContent {
   photos: PlacePhoto[];
   comments: PlaceComment[];
 }
+
+export interface StorageUsage {
+  usedBytes: number;
+  limitBytes: number;
+  lastRefreshedAt: string | null;
+}

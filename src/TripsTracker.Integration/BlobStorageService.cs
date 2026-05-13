@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using TripsTracker.Domain;
 using TripsTracker.Interfaces.Integration;
 
 namespace TripsTracker.Integration;
@@ -42,5 +43,17 @@ public class BlobStorageService : IBlobStorageService
         var container = await GetContainerAsync(ct);
         var blob = container.GetBlobClient(blobName);
         await blob.DeleteIfExistsAsync(cancellationToken: ct);
+    }
+
+    public async Task<IReadOnlyList<BlobSizeInfo>> GetUserBlobsAsync(int userId, CancellationToken ct = default)
+    {
+        var container = await GetContainerAsync(ct);
+        var prefix = $"{userId}/";
+        var results = new List<BlobSizeInfo>();
+        await foreach (var item in container.GetBlobsAsync(BlobTraits.None, BlobStates.All, prefix, ct))
+        {
+            results.Add(new BlobSizeInfo(item.Name, item.Properties.ContentLength ?? 0));
+        }
+        return results;
     }
 }

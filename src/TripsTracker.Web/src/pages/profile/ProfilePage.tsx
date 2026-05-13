@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useEnsureUser, useUpdateUser, useCountries } from '@/api/hooks';
+import { useEnsureUser, useUpdateUser, useCountries, useStorageUsage, useRefreshStorage } from '@/api/hooks';
 import CountryCombobox from '@/components/ui/CountryCombobox';
 import FormInput from '@/components/ui/FormInput';
 import styles from './ProfilePage.module.scss';
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
 
 interface Props {
   onClose?: () => void;
@@ -12,6 +18,8 @@ export default function ProfilePage({ onClose }: Props) {
   const { data: user } = useEnsureUser();
   const { data: countries = [] } = useCountries();
   const updateUser = useUpdateUser();
+  const { data: storageUsage } = useStorageUsage();
+  const refreshStorage = useRefreshStorage();
 
   const [displayName, setDisplayName] = useState('');
   const [homeCountry, setHomeCountry] = useState('');
@@ -88,6 +96,35 @@ export default function ProfilePage({ onClose }: Props) {
           <label className={styles.label}>Member since</label>
           <p className={styles.readOnly}>{joinedDate}</p>
         </div>
+
+        {storageUsage && (
+          <div className={styles.field}>
+            <div className={styles.storageHeader}>
+              <label className={styles.label}>Photo storage</label>
+              <button
+                className={styles.refreshBtn}
+                onClick={() => refreshStorage.mutate()}
+                disabled={refreshStorage.isPending}
+              >
+                {refreshStorage.isPending ? 'Refreshing…' : '↻ Refresh'}
+              </button>
+            </div>
+            <div className={styles.storageBar}>
+              <div
+                className={styles.storageBarFill}
+                style={{ width: `${Math.min(100, (storageUsage.usedBytes / storageUsage.limitBytes) * 100)}%` }}
+              />
+            </div>
+            <p className={styles.storageText}>
+              {formatBytes(storageUsage.usedBytes)} of {formatBytes(storageUsage.limitBytes)} used
+              {storageUsage.lastRefreshedAt && (
+                <span className={styles.storageRefreshed}>
+                  {' '}· Updated {new Date(storageUsage.lastRefreshedAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
 
         {savedMessage && (
           <p className={`${styles.savedMsg} ${savedMessage.startsWith('Could') ? styles.savedMsgError : styles.savedMsgOk}`}>

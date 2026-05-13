@@ -8,4 +8,5 @@ public class User
     public DateTime CreatedAt { get; set; }
     public bool IsDiscoverable { get; set; }
     public long StorageUsedBytes { get; set; }
+    public DateTime? StorageLastRefreshedAt { get; set; }
 }
