@@ -124,6 +124,15 @@ export function useCreateComment() {
   });
 }
 
+export function useCreateReply() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ parentCommentId, text, placeId }: { parentCommentId: number; text: string; placeId: number }) =>
+      apiClient.post<PlaceComment>(`/api/comments/${parentCommentId}/replies`, { text }).then(r => r.data),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
 export function useDeleteComment() {
   const qc = useQueryClient();
   return useMutation({

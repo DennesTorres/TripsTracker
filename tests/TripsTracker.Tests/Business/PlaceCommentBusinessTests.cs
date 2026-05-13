@@ -104,6 +104,22 @@ public class PlaceCommentBusinessTests
 
     #endregion
 
+    // ─── CreateReplyAsync ─────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task CreateReplyAsync_SetsParentCommentId()
+    {
+        await using var f = new Fixture();
+        var parent = MakeComment(_placeId, _user1Id, "Parent comment");
+        f.Ctx.Set<PlaceComment>().Add(parent);
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.ForUser(_user2Id).CreateReplyAsync(parent.Id, "Reply text");
+
+        Assert.AreEqual(parent.Id, result.ParentCommentId);
+        Assert.AreEqual("Reply text", result.Text);
+    }
+
     // ─── GetByPlaceAsync ──────────────────────────────────────────────────────
 
     [TestMethod]

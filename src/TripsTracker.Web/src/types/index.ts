@@ -103,6 +103,7 @@ export interface PlaceComment {
   updatedAt?: string;
   upvoteCount: number;
   downvoteCount: number;
+  parentCommentId?: number | null;
 }
 
 export interface PublicShareSummary {

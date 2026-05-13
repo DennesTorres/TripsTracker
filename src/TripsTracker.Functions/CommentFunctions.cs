@@ -29,6 +29,20 @@ public class CommentFunctions(IPlaceCommentBusiness comments)
         return new OkObjectResult(result);
     }
 
+    [Function("CreateCommentReply")]
+    public async Task<IActionResult> CreateReply(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "comments/{commentId:int}/replies")] HttpRequest req,
+        int commentId,
+        CancellationToken ct)
+    {
+        var dto = await req.ReadFromJsonAsync<CreateReplyDto>(ct);
+        if (dto is null || string.IsNullOrWhiteSpace(dto.Text))
+            return new BadRequestObjectResult(new { error = "Reply text is required" });
+
+        var result = await comments.CreateReplyAsync(commentId, dto.Text, ct);
+        return new OkObjectResult(result);
+    }
+
     [Function("UpdateComment")]
     public async Task<IActionResult> Update(
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "comments/{commentId:int}")] HttpRequest req,

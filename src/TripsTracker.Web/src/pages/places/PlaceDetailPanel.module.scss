@@ -93,14 +93,14 @@
 .sectionTitle {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 0;
 }
 
 .empty {
-  color: #475569;
+  color: #64748b;
   font-size: 12px;
   font-style: italic;
   margin: 0;
@@ -108,36 +108,55 @@
 
 // ── Photos ────────────────────────────────────────────────────────────────────
 
-.photoRow {
+.photoSlider {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-direction: column;
+  gap: 8px;
 }
 
-.photoThumb {
-  width: 52px;
-  height: 52px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  overflow: hidden;
-  background: #1c2535;
-}
-
-.thumbImg {
+.sliderImg {
   width: 100%;
-  height: 100%;
+  height: 180px;
   object-fit: cover;
+  border-radius: 6px;
+  background: #1c2535;
   display: block;
 }
 
-.photoMeta {
-  flex: 1;
-  min-width: 0;
+.sliderControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.sliderBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #1e3050;
+  color: #94a3b8;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+
+  &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+  &:disabled { opacity: 0.3; cursor: default; }
+}
+
+.sliderCount {
+  font-size: 11px;
+  color: #64748b;
+  min-width: 40px;
+  text-align: center;
+}
+
+.sliderMeta {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .photoName {
@@ -162,7 +181,7 @@
 .starBtn {
   background: none;
   border: none;
-  color: #475569;
+  color: #64748b;
   cursor: pointer;
   padding: 3px;
   border-radius: 3px;
@@ -225,7 +244,7 @@
 
 .commentDate {
   font-size: 11px;
-  color: #475569;
+  color: #64748b;
 }
 
 .commentText {
@@ -248,7 +267,7 @@
   gap: 4px;
   background: none;
   border: none;
-  color: #475569;
+  color: #64748b;
   font-size: 11px;
   cursor: pointer;
   padding: 2px 5px;
@@ -302,7 +321,7 @@
   border-radius: 4px;
   border: none;
   background: transparent;
-  color: #475569;
+  color: #64748b;
   cursor: pointer;
 
   &:hover { background: rgba(255, 255, 255, 0.08); color: #94a3b8; }
@@ -312,4 +331,52 @@
   margin-left: auto;
 
   &:hover { background: rgba(248, 81, 73, 0.12); color: #f85149; }
+}
+
+// ── Replies ───────────────────────────────────────────────────────────────────
+
+.replyRow {
+  padding-left: 16px;
+  border-left: 2px solid #1e3050;
+  margin-left: 8px;
+}
+
+.replyBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+
+  &:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.05); }
+}
+
+.replyForm {
+  padding-left: 16px;
+  border-left: 2px solid #1e3050;
+  margin-left: 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.replyFormBtns {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.cancelBtn {
+  background: none;
+  border: 1px solid #1e3050;
+  color: #64748b;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover { background: rgba(255, 255, 255, 0.05); color: #94a3b8; }
 }

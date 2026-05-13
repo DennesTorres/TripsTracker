@@ -4,6 +4,7 @@ using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Business;
 
@@ -33,7 +34,33 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
             .FirstOrDefaultAsync(ct);
 
         return new PlaceCommentDto(comment.Id, comment.PlaceId, comment.UserId,
-            user ?? "", comment.Text, comment.CreatedAt, null, 0, 0);
+            user ?? "", comment.Text, comment.CreatedAt, null, 0, 0, null);
+    }
+
+    public async Task<PlaceCommentDto> CreateReplyAsync(int parentCommentId, string text, CancellationToken ct = default)
+    {
+        var parent = await BuildBaseQuery()
+            .Where(c => c.Id == parentCommentId)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException("Comment", parentCommentId);
+
+        var comment = new PlaceComment
+        {
+            PlaceId = parent.PlaceId,
+            UserId = _userContext.UserId!.Value,
+            ParentCommentId = parentCommentId,
+            Text = text,
+            CreatedAt = DateTime.UtcNow,
+        };
+        await InsertAsync(comment, ct);
+
+        var user = await Context.Set<User>().AsNoTracking()
+            .Where(u => u.Id == comment.UserId)
+            .Select(u => u.DisplayName ?? u.Email)
+            .FirstOrDefaultAsync(ct);
+
+        return new PlaceCommentDto(comment.Id, comment.PlaceId, comment.UserId,
+            user ?? "", comment.Text, comment.CreatedAt, null, 0, 0, parentCommentId);
     }
 
     public Task<List<PlaceCommentDto>> GetByPlaceAsync(int placeId, CancellationToken ct = default)
@@ -53,7 +80,8 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
                 x.c.Id, x.c.PlaceId, x.c.UserId, x.DisplayName,
                 x.c.Text, x.c.CreatedAt, x.c.UpdatedAt,
                 x.ratings.Count(r => r.IsUpvote),
-                x.ratings.Count(r => !r.IsUpvote)))
+                x.ratings.Count(r => !r.IsUpvote),
+                x.c.ParentCommentId))
             .ToListAsync(ct);
 
     public async Task<PlaceCommentDto?> UpdateAsync(int commentId, string text, CancellationToken ct = default)
@@ -114,6 +142,7 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
                 x.c.Id, x.c.PlaceId, x.c.UserId, x.DisplayName,
                 x.c.Text, x.c.CreatedAt, x.c.UpdatedAt,
                 x.ratings.Count(r => r.IsUpvote),
-                x.ratings.Count(r => !r.IsUpvote)))
+                x.ratings.Count(r => !r.IsUpvote),
+                x.c.ParentCommentId))
             .FirstOrDefaultAsync(ct);
 }

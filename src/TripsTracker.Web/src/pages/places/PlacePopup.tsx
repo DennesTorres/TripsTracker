@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useExploreContent } from '@/api/hooks';
 import type { Place } from '@/types';
 import styles from './PlacePopup.module.scss';
@@ -32,8 +33,13 @@ export default function PlacePopup({ places, x, y, onClose, onSeeMore }: Props) 
 
 function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => void }) {
   const { data: content } = useExploreContent(place.city, place.countryId);
-  const photo = content?.photos[0];
-  const comment = content?.comments[0];
+  const photos = content?.photos ?? [];
+  const topLevelComments = (content?.comments ?? []).filter(c => !c.parentCommentId);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [commentIndex, setCommentIndex] = useState(0);
+
+  const photo = photos.length > 0 ? photos[Math.min(photoIndex, photos.length - 1)] : undefined;
+  const comment = topLevelComments.length > 0 ? topLevelComments[Math.min(commentIndex, topLevelComments.length - 1)] : undefined;
 
   return (
     <div>
@@ -52,11 +58,43 @@ function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => vo
           {photo.ratingCount > 0 && (
             <span className={styles.rating}>{photo.averageRating.toFixed(1)} ★</span>
           )}
+          {photos.length > 1 && (
+            <div className={styles.photoNav}>
+              <button
+                className={styles.navBtn}
+                onClick={() => setPhotoIndex(i => Math.max(0, i - 1))}
+                disabled={photoIndex === 0}
+              >‹</button>
+              <span className={styles.navCount}>{photoIndex + 1}/{photos.length}</span>
+              <button
+                className={styles.navBtn}
+                onClick={() => setPhotoIndex(i => Math.min(photos.length - 1, i + 1))}
+                disabled={photoIndex >= photos.length - 1}
+              >›</button>
+            </div>
+          )}
         </div>
       )}
       {comment && (
         <div className={styles.commentPreview}>
-          <span className={styles.commentAuthor}>{comment.userDisplayName || 'Anonymous'}</span>
+          <div className={styles.commentHeader}>
+            <span className={styles.commentAuthor}>{comment.userDisplayName || 'Anonymous'}</span>
+            {topLevelComments.length > 1 && (
+              <div className={styles.commentNav}>
+                <button
+                  className={styles.navBtn}
+                  onClick={() => setCommentIndex(i => Math.max(0, i - 1))}
+                  disabled={commentIndex === 0}
+                >‹</button>
+                <span className={styles.navCount}>{commentIndex + 1}/{topLevelComments.length}</span>
+                <button
+                  className={styles.navBtn}
+                  onClick={() => setCommentIndex(i => Math.min(topLevelComments.length - 1, i + 1))}
+                  disabled={commentIndex >= topLevelComments.length - 1}
+                >›</button>
+              </div>
+            )}
+          </div>
           <span className={styles.commentText}>
             {comment.text.length > 80 ? `${comment.text.slice(0, 80)}…` : comment.text}
           </span>

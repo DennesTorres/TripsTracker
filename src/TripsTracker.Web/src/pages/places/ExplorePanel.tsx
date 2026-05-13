@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useExploreSearch } from '@/api/hooks';
 import type { ExploreLocation } from '@/types';
 import styles from './ExplorePanel.module.scss';
@@ -12,14 +13,27 @@ interface Props {
 export default function ExplorePanel({ query, onQueryChange, onPinLocation, onSelectCity }: Props) {
   const { data: locations = [], isFetching } = useExploreSearch(query);
   const showDropdown = query.length >= 2;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onQueryChange('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDropdown, onQueryChange]);
 
   function handleSelect(loc: ExploreLocation) {
+    onQueryChange('');
     onPinLocation(loc);
     onSelectCity(loc);
   }
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} ref={containerRef}>
       <input
         className={styles.searchInput}
         type="text"

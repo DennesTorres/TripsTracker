@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
@@ -7,7 +7,7 @@ import PlaceDetailPanel from '@/pages/places/PlaceDetailPanel';
 import ExplorePanel from '@/pages/places/ExplorePanel';
 import ShareModal from '@/components/share/ShareModal';
 import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
-import { usePlaces, useCountries, useVisitedStates, useSetStateBorders, useCreatePlace } from '@/api/hooks';
+import { usePlaces, useCountries, useVisitedStates, useSetStateBorders, useCreatePlace, useExploreSearch } from '@/api/hooks';
 import type { ExploreLocation, Place } from '@/types';
 import { Share2, Compass } from 'lucide-react';
 import styles from './MapPage.module.scss';
@@ -44,13 +44,25 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
   const [explorePin, setExplorePin] = useState<ExploreLocation | null>(null);
   const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
   const [activeDetail, setActiveDetail] = useState<DetailInfo | null>(null);
+  const autoSelectRef = useRef(false);
+
+  const { data: exploreResults = [] } = useExploreSearch(exploreQuery);
 
   useEffect(() => {
     if (exploreCity) {
+      autoSelectRef.current = true;
       setExploreQuery(exploreCity);
       onExploreCityConsumed?.();
     }
   }, [exploreCity]);
+
+  useEffect(() => {
+    if (autoSelectRef.current && exploreResults.length > 0) {
+      autoSelectRef.current = false;
+      handleExploreSelectCity(exploreResults[0]);
+      setExploreQuery('');
+    }
+  }, [exploreResults]);
 
   useEffect(() => {
     Promise.all([
@@ -79,9 +91,19 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
 
   function handleAddFromExplore() {
     if (!activeDetail) return;
+    const existing = places.find(
+      p => p.city.toLowerCase() === activeDetail.city.toLowerCase() && p.countryId === activeDetail.countryId
+    );
+    if (existing) {
+      setActiveDetail(d => d ? { ...d, placeId: existing.id } : d);
+      return;
+    }
     const country = countries.find(c => c.id === activeDetail.countryId);
     if (!country) return;
-    createPlace.mutate({ cityName: activeDetail.city, countryIsoAlpha2: country.isoAlpha2, isHome: false });
+    createPlace.mutate(
+      { cityName: activeDetail.city, countryIsoAlpha2: country.isoAlpha2, isHome: false },
+      { onSuccess: place => setActiveDetail(d => d ? { ...d, placeId: place.id } : d) }
+    );
   }
 
   function handleCloseDetail() {
