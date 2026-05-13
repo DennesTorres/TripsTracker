@@ -34,8 +34,8 @@ const C3_COLOR     = '#e8354a';  // --c3     (6+ places, red)
 const CH_COLOR     = '#2a9058';  // --ch     (home-country places, green)
 
 // Brazil state border colours — from reference .br-state CSS
-const BR_STATE_BASE_STROKE  = 'rgba(200,151,58,0.35)';
-const BR_STATE_VIS_STROKE   = 'rgba(240,184,74,0.65)';
+const BR_STATE_BASE_STROKE  = 'rgba(255,255,255,0.35)';
+const BR_STATE_VIS_STROKE   = 'rgba(255,255,255,0.55)';
 const BR_STATE_VIS_FILL     = 'rgba(200,151,58,0.14)';
 const BR_STATE_BASE_FILL    = 'rgba(0,0,0,0.06)';
 
@@ -429,10 +429,22 @@ export default function WorldMap({
           .style('display', 'none')
           .on('mouseover', (_event: MouseEvent, f: GeoJSON.Feature) => {
             const stateName: string = (f.properties?.['NAME_1'] as string) ?? '';
-            setStatusLabel(prev => ({ ...prev, state: stateName || null }));
+            setStatusLabel({ country: country.name, state: stateName || null });
           })
           .on('mouseout', () => {
-            setStatusLabel(prev => ({ ...prev, state: null }));
+            setStatusLabel({ country: '', state: null });
+          })
+          .on('contextmenu', (event: MouseEvent) => {
+            event.preventDefault();
+            if (!onToggleStateBordersRef.current) return;
+            const rect = svgRef.current!.getBoundingClientRect();
+            setContextMenu({
+              x: event.clientX - rect.left,
+              y: event.clientY - rect.top,
+              countryId: country.id,
+              countryName: country.name,
+              currentShow: country.showStateBorders,
+            });
           });
       });
 
