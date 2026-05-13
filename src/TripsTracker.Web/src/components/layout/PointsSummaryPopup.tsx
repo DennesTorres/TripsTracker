@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, X, HelpCircle } from 'lucide-react';
 import { usePointsSummary } from '@/api/hooks';
 import styles from './PointsSummaryPopup.module.scss';
@@ -34,6 +34,13 @@ export default function PointsSummaryPopup({ onClose, onViewFull }: Props) {
   const { data } = usePointsSummary();
   const [openTooltip, setOpenTooltip] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (openTooltip === null) return;
+    const handler = () => setOpenTooltip(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [openTooltip]);
+
   return (
     <div className={styles.popup}>
       <div className={styles.header}>
@@ -65,7 +72,7 @@ export default function PointsSummaryPopup({ onClose, onViewFull }: Props) {
                   <div className={styles.tooltipWrap}>
                     <button
                       className={styles.helpBtn}
-                      onClick={() => setOpenTooltip(isOpen ? null : e.id)}
+                      onClick={(ev) => { ev.stopPropagation(); setOpenTooltip(isOpen ? null : e.id); }}
                       title="What earns this?"
                     >
                       <HelpCircle size={11} />

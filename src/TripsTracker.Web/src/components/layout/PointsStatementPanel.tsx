@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, HelpCircle } from 'lucide-react';
 import { useUserStatement } from '@/api/hooks';
 import HowPointsWorkPanel from './HowPointsWorkPanel';
@@ -44,6 +44,13 @@ export default function PointsStatementPanel({ userId, onClose }: Props) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [openTooltip, setOpenTooltip] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (openTooltip === null) return;
+    const handler = () => setOpenTooltip(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [openTooltip]);
+
   if (helpOpen) {
     return <HowPointsWorkPanel onBack={() => setHelpOpen(false)} onClose={onClose} />;
   }
@@ -87,7 +94,7 @@ export default function PointsStatementPanel({ userId, onClose }: Props) {
                 <div className={styles.tooltipWrap}>
                   <button
                     className={styles.helpBtn}
-                    onClick={() => setOpenTooltip(isOpen ? null : e.id)}
+                    onClick={(ev) => { ev.stopPropagation(); setOpenTooltip(isOpen ? null : e.id); }}
                     title="What earns this?"
                   >
                     <HelpCircle size={12} />

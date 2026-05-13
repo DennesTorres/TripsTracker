@@ -98,9 +98,7 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             from c in cp.DefaultIfEmpty()
             orderby e.CreatedAt descending
             select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
-                e.ReferenceType == "place" ? p.City : null,
-                e.ReferenceType == "place" ? c.Name : null,
-                e.ReferenceType == "place" ? c.Region : null)
+                p.City, c.Name, c.Region)
         ).Take(count).ToListAsync(ct);
     }
 
@@ -149,9 +147,7 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             from c in cp.DefaultIfEmpty()
             orderby e.CreatedAt descending
             select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
-                e.ReferenceType == "place" ? p.City : null,
-                e.ReferenceType == "place" ? c.Name : null,
-                e.ReferenceType == "place" ? c.Region : null)
+                p.City, c.Name, c.Region)
         ).ToListAsync(ct);
 
         return new UserStatementDto(userId, user.DisplayName, user.TotalPoints, events);
