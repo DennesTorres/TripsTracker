@@ -7,16 +7,25 @@ import PlaceDetailPanel from '@/pages/places/PlaceDetailPanel';
 import ExplorePanel from '@/pages/places/ExplorePanel';
 import ShareModal from '@/components/share/ShareModal';
 import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
-import { usePlaces, useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
+import { usePlaces, useCountries, useVisitedStates, useSetStateBorders, useCreatePlace } from '@/api/hooks';
 import type { ExploreLocation, Place } from '@/types';
-import { Search, Share2, Compass } from 'lucide-react';
+import { Share2, Compass } from 'lucide-react';
 import styles from './MapPage.module.scss';
+
+interface DetailInfo {
+  city: string;
+  stateName?: string | null;
+  countryName: string;
+  countryId: number;
+  placeId?: number;
+}
 
 export default function MapPage() {
   const { data: places = [], isLoading: placesLoading, isError: placesError, refetch: refetchPlaces } = usePlaces();
   const { data: countries = [], isLoading: countriesLoading, isError: countriesError, refetch: refetchCountries } = useCountries();
   const { data: visitedStates = [], isLoading: statesLoading, isError: statesError, refetch: refetchStates } = useVisitedStates();
   const setStateBorders = useSetStateBorders();
+  const createPlace = useCreatePlace();
 
   const [worldGeo, setWorldGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [usGeo, setUsGeo] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -24,14 +33,12 @@ export default function MapPage() {
   const [arGeo, setArGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [gbGeo, setGbGeo] = useState<GeoJSON.FeatureCollection | null>(null);
   const [adding, setAdding] = useState(false);
-  const [addingWithCity, setAddingWithCity] = useState('');
   const [sharing, setSharing] = useState(false);
   const [discovering, setDiscovering] = useState(false);
-  const [exploring, setExploring] = useState(false);
   const [exploreQuery, setExploreQuery] = useState('');
   const [explorePin, setExplorePin] = useState<ExploreLocation | null>(null);
   const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [activeDetail, setActiveDetail] = useState<DetailInfo | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -52,6 +59,23 @@ export default function MapPage() {
   const handleToggleStateBorders = useCallback((countryId: number, show: boolean) => {
     setStateBorders.mutate({ id: countryId, show });
   }, [setStateBorders]);
+
+  function handleExploreSelectCity(loc: ExploreLocation) {
+    setExplorePin(loc);
+    setActiveDetail({ city: loc.city, stateName: loc.stateName, countryName: loc.countryName, countryId: loc.countryId });
+  }
+
+  function handleAddFromExplore() {
+    if (!activeDetail) return;
+    const country = countries.find(c => c.id === activeDetail.countryId);
+    if (!country) return;
+    createPlace.mutate({ cityName: activeDetail.city, countryIsoAlpha2: country.isoAlpha2, isHome: false });
+  }
+
+  function handleCloseDetail() {
+    if (activeDetail?.placeId === undefined) setExplorePin(null);
+    setActiveDetail(null);
+  }
 
   const isLoading = placesLoading || countriesLoading || statesLoading || !worldGeo;
   const hasError = !isLoading && (placesError || countriesError || statesError);
@@ -92,9 +116,6 @@ export default function MapPage() {
             <button className={styles.addBtn} onClick={() => setAdding(true)}>
               + Add place
             </button>
-            <button className={styles.exploreBtn} onClick={() => { setExploreQuery(''); setExploring(true); }}>
-              <Search size={14} /> Explore
-            </button>
             <button className={styles.shareBtn} onClick={() => setSharing(true)}>
               <Share2 size={14} /> Share
             </button>
@@ -103,19 +124,12 @@ export default function MapPage() {
             </button>
           </div>
         )}
-        {exploring && (
-          <ExplorePanel
-            initialQuery={exploreQuery}
-            onClose={() => { setExploring(false); setExplorePin(null); }}
-            onPinLocation={setExplorePin}
-            onAddPlace={city => {
-              setExploring(false);
-              setExplorePin(null);
-              setAddingWithCity(city);
-              setAdding(true);
-            }}
-          />
-        )}
+        <ExplorePanel
+          query={exploreQuery}
+          onQueryChange={setExploreQuery}
+          onPinLocation={setExplorePin}
+          onSelectCity={handleExploreSelectCity}
+        />
         {popup && (
           <>
             <div style={{ position: 'absolute', inset: 0, zIndex: 29 }} onClick={() => setPopup(null)} />
@@ -124,12 +138,23 @@ export default function MapPage() {
               x={popup.x}
               y={popup.y}
               onClose={() => setPopup(null)}
-              onSeeMore={place => { setPopup(null); setSelectedPlace(place); }}
+              onSeeMore={place => {
+                setPopup(null);
+                setActiveDetail({ city: place.city, stateName: place.stateName, countryName: place.countryName, countryId: place.countryId, placeId: place.id });
+              }}
             />
           </>
         )}
-        {selectedPlace && (
-          <PlaceDetailPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+        {activeDetail && (
+          <PlaceDetailPanel
+            city={activeDetail.city}
+            stateName={activeDetail.stateName}
+            countryName={activeDetail.countryName}
+            countryId={activeDetail.countryId}
+            placeId={activeDetail.placeId}
+            onAddToMyPlaces={activeDetail.placeId === undefined ? handleAddFromExplore : undefined}
+            onClose={handleCloseDetail}
+          />
         )}
       </div>
       {!isLoading && (
@@ -137,13 +162,11 @@ export default function MapPage() {
       )}
       {adding && (
         <AddPlaceForm
-          initialCity={addingWithCity}
-          onClose={() => { setAdding(false); setAddingWithCity(''); }}
+          initialCity=""
+          onClose={() => setAdding(false)}
           onExplore={city => {
             setAdding(false);
-            setAddingWithCity('');
             setExploreQuery(city);
-            setExploring(true);
           }}
         />
       )}

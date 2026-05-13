@@ -71,7 +71,13 @@ export default function SharedMapPage({ token }: Props) {
           </>
         )}
         {selectedPlace && (
-          <PlaceDetailPanel place={selectedPlace} onClose={() => setSelectedPlace(null)} />
+          <PlaceDetailPanel
+            city={selectedPlace.city}
+            stateName={selectedPlace.stateName}
+            countryName={selectedPlace.countryName}
+            countryId={selectedPlace.countryId}
+            onClose={() => setSelectedPlace(null)}
+          />
         )}
       </div>
     </div>

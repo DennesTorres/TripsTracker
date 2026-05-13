@@ -1,5 +1,5 @@
-import { usePlacePhotos, usePlaceComments } from '@/api/hooks';
-import type { Place, PlacePhoto, PlaceComment } from '@/types';
+import { useExploreContent } from '@/api/hooks';
+import type { Place } from '@/types';
 import styles from './PlacePopup.module.scss';
 
 interface Props {
@@ -31,10 +31,9 @@ export default function PlacePopup({ places, x, y, onClose, onSeeMore }: Props) 
 }
 
 function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => void }) {
-  const { data: photos = [] } = usePlacePhotos(place.id);
-  const { data: comments = [] } = usePlaceComments(place.id);
-  const photo: PlacePhoto | undefined = photos[0];
-  const comment: PlaceComment | undefined = comments[0];
+  const { data: content } = useExploreContent(place.city, place.countryId);
+  const photo = content?.photos[0];
+  const comment = content?.comments[0];
 
   return (
     <div>
