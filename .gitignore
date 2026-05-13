@@ -3,9 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
-# Local environment overrides — never commit
-**/appsettings.local.json
-
 # User-specific files
 *.rsuser
 *.suo
@@ -424,5 +421,4 @@ FodyWeavers.xsd
 *.msp
 .claude/worktrees/
 
-# Test local configuration (connection strings)
-**/appsettings.local.json
+
