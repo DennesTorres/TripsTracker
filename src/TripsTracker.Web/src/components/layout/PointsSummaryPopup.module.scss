@@ -61,13 +61,64 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   padding: 6px 12px;
   &:hover { background: rgba(255,255,255,0.03); }
+}
+
+.labelWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
 }
 
 .label {
   font-size: 12px;
   color: #cbd5e1;
+}
+
+.city {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tooltipWrap {
+  position: relative;
+}
+
+.helpBtn {
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  &:hover { color: #94a3b8; }
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  width: 180px;
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .points {

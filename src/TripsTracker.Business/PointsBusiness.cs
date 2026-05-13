@@ -94,9 +94,13 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
                 && !revokedOriginalIds.Contains(e.Id)
             join p in Context.Set<Place>().AsNoTracking() on e.ReferenceId equals p.Id into ep
             from p in ep.DefaultIfEmpty()
+            join c in Context.Set<Country>().AsNoTracking() on p.CountryId equals c.Id into cp
+            from c in cp.DefaultIfEmpty()
             orderby e.CreatedAt descending
             select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
-                e.ReferenceType == "place" ? p.City : null)
+                e.ReferenceType == "place" ? p.City : null,
+                e.ReferenceType == "place" ? c.Name : null,
+                e.ReferenceType == "place" ? c.Region : null)
         ).Take(count).ToListAsync(ct);
     }
 
@@ -141,9 +145,13 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
                 && !revokedOriginalIds.Contains(e.Id)
             join p in Context.Set<Place>().AsNoTracking() on e.ReferenceId equals p.Id into ep
             from p in ep.DefaultIfEmpty()
+            join c in Context.Set<Country>().AsNoTracking() on p.CountryId equals c.Id into cp
+            from c in cp.DefaultIfEmpty()
             orderby e.CreatedAt descending
             select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
-                e.ReferenceType == "place" ? p.City : null)
+                e.ReferenceType == "place" ? p.City : null,
+                e.ReferenceType == "place" ? c.Name : null,
+                e.ReferenceType == "place" ? c.Region : null)
         ).ToListAsync(ct);
 
         return new UserStatementDto(userId, user.DisplayName, user.TotalPoints, events);

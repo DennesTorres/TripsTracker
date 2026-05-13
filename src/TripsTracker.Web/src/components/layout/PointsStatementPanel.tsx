@@ -76,7 +76,12 @@ export default function PointsStatementPanel({ userId, onClose }: Props) {
             <div key={e.id} className={styles.row}>
               <div className={styles.labelWrap}>
                 <span className={styles.label}>{formatEventType(e.eventType)}</span>
-                {e.cityName && <span className={styles.city}>{e.cityName}</span>}
+                {(() => {
+                  const loc = e.eventType.startsWith('continent') ? e.continentName
+                    : e.eventType.startsWith('country') ? e.countryName
+                    : e.cityName;
+                  return loc ? <span className={styles.city}>{loc}</span> : null;
+                })()}
               </div>
               {description && (
                 <div className={styles.tooltipWrap}>

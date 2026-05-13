@@ -121,6 +121,8 @@ export interface PointEvent {
   referenceType?: string;
   createdAt: string;
   cityName?: string | null;
+  countryName?: string | null;
+  continentName?: string | null;
 }
 
 export interface UserPointsSummary {

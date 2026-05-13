@@ -1,6 +1,7 @@
 namespace TripsTracker.Domain;
 
-public record PointEventDto(int Id, string EventType, int Points, int? ReferenceId, string? ReferenceType, DateTime CreatedAt, string? CityName = null);
+public record PointEventDto(int Id, string EventType, int Points, int? ReferenceId, string? ReferenceType, DateTime CreatedAt,
+    string? CityName = null, string? CountryName = null, string? ContinentName = null);
 
 public record UserPointsSummaryDto(int TotalPoints, List<PointEventDto> RecentEvents);
 

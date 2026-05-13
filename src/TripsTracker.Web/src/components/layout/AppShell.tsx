@@ -65,7 +65,14 @@ export default function AppShell({ children }: Props) {
         {pointsData !== undefined && (
           <button
             className={styles.pointsBtn}
-            onClick={() => setSummaryOpen(o => !o)}
+            onClick={() => {
+              if (!summaryOpen) {
+                setStatementOpen(false);
+                setStatementUserId(null);
+                setLeaderboardOpen(false);
+              }
+              setSummaryOpen(o => !o);
+            }}
             title="Your points"
           >
             <Star size={13} />
@@ -75,7 +82,7 @@ export default function AppShell({ children }: Props) {
 
         <button
           className={styles.leaderboardBtn}
-          onClick={() => setLeaderboardOpen(true)}
+          onClick={() => { setSummaryOpen(false); setLeaderboardOpen(true); }}
           title="Leaderboard"
         >
           <Trophy size={15} />
