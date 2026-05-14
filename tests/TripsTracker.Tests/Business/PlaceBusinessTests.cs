@@ -9,6 +9,7 @@ using TripsTracker.Interfaces.Configuration;
 namespace TripsTracker.Tests.Business;
 
 [TestClass]
+[DoNotParallelize] // Fixture uses hardcoded IsoNumeric=9801; parallel inserts would violate the unique index
 public class PlaceBusinessTests
 {
     #region Fixture

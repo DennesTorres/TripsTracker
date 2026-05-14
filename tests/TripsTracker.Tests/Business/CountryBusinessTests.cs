@@ -137,6 +137,7 @@ public class CountryBusinessTests
 
         await f.Biz.SetHomeAsync(c2.Id, true);
 
+        f.Ctx.ChangeTracker.Clear(); // ExecuteUpdateAsync bypasses the change tracker; clear to avoid stale cache
         var uc1 = await f.Ctx.Set<TripsTracker.Data.Entities.UserCountry>()
             .FirstOrDefaultAsync(uc => uc.UserId == 1 && uc.CountryId == c1.Id);
         Assert.IsTrue(uc1 == null || !uc1.IsHome);

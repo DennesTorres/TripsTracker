@@ -1,3 +1,4 @@
+using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Exceptions;
@@ -23,6 +24,11 @@ public class PlacesProcess : IPlacesProcess
         var country = await _countries.GetByIsoAlpha2Async(dto.CountryIsoAlpha2, ct)
             ?? throw new NotFoundException("Country", dto.CountryIsoAlpha2);
 
+        if (string.Equals(dto.CityName.Trim(), country.Name, StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException(
+                $"'{dto.CityName}' is a country name, not a city. Please enter a specific city within {country.Name}.",
+                "CITY_IS_COUNTRY");
+
         var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
 
         var place = await _places.CreateAsync(
@@ -39,6 +45,8 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<DeletePlaceResult> DeleteAsync(int placeId, CancellationToken ct = default)
     {
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
         var place = await _places.GetByIdAsync(placeId, ct)
             ?? throw new NotFoundException("Place", placeId);
 
@@ -59,6 +67,7 @@ public class PlacesProcess : IPlacesProcess
             }
         }
 
+        scope.Complete();
         return new DeletePlaceResult(promptHomeCountry, promptHomeCountry ? place.CountryId : null, promptHomeCountry ? place.CountryName : null);
     }
 }
