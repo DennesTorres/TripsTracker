@@ -33,8 +33,7 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
             .Select(u => u.DisplayName ?? u.Email)
             .FirstOrDefaultAsync(ct);
 
-        return new PlaceCommentDto(comment.Id, comment.PlaceId, comment.UserId,
-            user ?? "", comment.Text, comment.CreatedAt, null, 0, 0, null);
+        return new PlaceCommentDto { Id = comment.Id, PlaceId = comment.PlaceId, UserId = comment.UserId, UserDisplayName = user ?? "", Text = comment.Text, CreatedAt = comment.CreatedAt };
     }
 
     public async Task<PlaceCommentDto> CreateReplyAsync(int parentCommentId, string text, CancellationToken ct = default)
@@ -59,8 +58,7 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
             .Select(u => u.DisplayName ?? u.Email)
             .FirstOrDefaultAsync(ct);
 
-        return new PlaceCommentDto(comment.Id, comment.PlaceId, comment.UserId,
-            user ?? "", comment.Text, comment.CreatedAt, null, 0, 0, parentCommentId);
+        return new PlaceCommentDto { Id = comment.Id, PlaceId = comment.PlaceId, UserId = comment.UserId, UserDisplayName = user ?? "", Text = comment.Text, CreatedAt = comment.CreatedAt, ParentCommentId = parentCommentId };
     }
 
     public Task<List<PlaceCommentDto>> GetByPlaceAsync(int placeId, CancellationToken ct = default)
@@ -76,12 +74,7 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
                 x => x.c.Id,
                 r => r.CommentId,
                 (x, ratings) => new { x.c, x.DisplayName, ratings })
-            .Select(x => new PlaceCommentDto(
-                x.c.Id, x.c.PlaceId, x.c.UserId, x.DisplayName,
-                x.c.Text, x.c.CreatedAt, x.c.UpdatedAt,
-                x.ratings.Count(r => r.IsUpvote),
-                x.ratings.Count(r => !r.IsUpvote),
-                x.c.ParentCommentId))
+            .Select(x => new PlaceCommentDto { Id = x.c.Id, PlaceId = x.c.PlaceId, UserId = x.c.UserId, UserDisplayName = x.DisplayName, Text = x.c.Text, CreatedAt = x.c.CreatedAt, UpdatedAt = x.c.UpdatedAt, UpvoteCount = x.ratings.Count(r => r.IsUpvote), DownvoteCount = x.ratings.Count(r => !r.IsUpvote), ParentCommentId = x.c.ParentCommentId })
             .ToListAsync(ct);
 
     public async Task<PlaceCommentDto?> UpdateAsync(int commentId, string text, CancellationToken ct = default)
@@ -142,11 +135,6 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
                 x => x.c.Id,
                 r => r.CommentId,
                 (x, ratings) => new { x.c, x.DisplayName, ratings })
-            .Select(x => new PlaceCommentDto(
-                x.c.Id, x.c.PlaceId, x.c.UserId, x.DisplayName,
-                x.c.Text, x.c.CreatedAt, x.c.UpdatedAt,
-                x.ratings.Count(r => r.IsUpvote),
-                x.ratings.Count(r => !r.IsUpvote),
-                x.c.ParentCommentId))
+            .Select(x => new PlaceCommentDto { Id = x.c.Id, PlaceId = x.c.PlaceId, UserId = x.c.UserId, UserDisplayName = x.DisplayName, Text = x.c.Text, CreatedAt = x.c.CreatedAt, UpdatedAt = x.c.UpdatedAt, UpvoteCount = x.ratings.Count(r => r.IsUpvote), DownvoteCount = x.ratings.Count(r => !r.IsUpvote), ParentCommentId = x.c.ParentCommentId })
             .FirstOrDefaultAsync(ct);
 }

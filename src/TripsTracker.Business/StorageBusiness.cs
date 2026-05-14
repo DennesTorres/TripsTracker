@@ -24,7 +24,7 @@ public class StorageBusiness : BusinessBase<User>, IStorageBusiness
             .Select(u => new { u.StorageUsedBytes, u.StorageLastRefreshedAt })
             .FirstOrDefaultAsync(ct);
 
-        return new StorageUsageDto(row?.StorageUsedBytes ?? 0, MaxStorageBytes, row?.StorageLastRefreshedAt);
+        return new StorageUsageDto { UsedBytes = row?.StorageUsedBytes ?? 0, LimitBytes = MaxStorageBytes, LastRefreshedAt = row?.StorageLastRefreshedAt };
     }
 
     public async Task<StorageUsageDto> RefreshAsync(int userId, CancellationToken ct = default)
@@ -61,6 +61,6 @@ public class StorageBusiness : BusinessBase<User>, IStorageBusiness
             },
             ct);
 
-        return new StorageUsageDto(totalBytes, MaxStorageBytes, now);
+        return new StorageUsageDto { UsedBytes = totalBytes, LimitBytes = MaxStorageBytes, LastRefreshedAt = now };
     }
 }

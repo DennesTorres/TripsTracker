@@ -49,8 +49,7 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
         };
         await InsertAsync(photo, ct);
         await _users.AddStorageUsedAsync(userId, sizeBytes, ct);
-        return new PlacePhotoDto(photo.Id, photo.PlaceId, photo.UserId, photo.OriginalFileName,
-            photo.ContentType, photo.SizeBytes, photo.Caption, photo.SortOrder, photo.UploadedAt, 0, 0);
+        return new PlacePhotoDto { Id = photo.Id, PlaceId = photo.PlaceId, UserId = photo.UserId, OriginalFileName = photo.OriginalFileName, ContentType = photo.ContentType, SizeBytes = photo.SizeBytes, Caption = photo.Caption, SortOrder = photo.SortOrder, UploadedAt = photo.UploadedAt };
     }
 
     public Task<List<PlacePhotoDto>> GetByPlaceAsync(int placeId, CancellationToken ct = default)
@@ -62,11 +61,7 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
                 p => p.Id,
                 r => r.PhotoId,
                 (p, ratings) => new { p, ratings })
-            .Select(x => new PlacePhotoDto(
-                x.p.Id, x.p.PlaceId, x.p.UserId, x.p.OriginalFileName,
-                x.p.ContentType, x.p.SizeBytes, x.p.Caption, x.p.SortOrder, x.p.UploadedAt,
-                x.ratings.Any() ? x.ratings.Average(r => (double)r.Rating) : 0,
-                x.ratings.Count()))
+            .Select(x => new PlacePhotoDto { Id = x.p.Id, PlaceId = x.p.PlaceId, UserId = x.p.UserId, OriginalFileName = x.p.OriginalFileName, ContentType = x.p.ContentType, SizeBytes = x.p.SizeBytes, Caption = x.p.Caption, SortOrder = x.p.SortOrder, UploadedAt = x.p.UploadedAt, AverageRating = x.ratings.Any() ? x.ratings.Average(r => (double)r.Rating) : 0, RatingCount = x.ratings.Count() })
             .ToListAsync(ct);
 
     public async Task<bool> DeleteAsync(int photoId, CancellationToken ct = default)
@@ -115,6 +110,6 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
     public Task<PlacePhotoBlobInfo?> GetBlobInfoAsync(int photoId, CancellationToken ct = default)
         => BuildBaseQuery()
             .Where(p => p.Id == photoId)
-            .Select(p => new PlacePhotoBlobInfo(p.Id, p.BlobName, p.ContentType))
+            .Select(p => new PlacePhotoBlobInfo { Id = p.Id, BlobName = p.BlobName, ContentType = p.ContentType })
             .FirstOrDefaultAsync(ct);
 }

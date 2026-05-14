@@ -1,3 +1,7 @@
 namespace TripsTracker.Domain;
 
-public record BlobSizeInfo(string BlobName, long SizeBytes);
+public class BlobSizeInfo
+{
+    public required string BlobName { get; init; }
+    public long SizeBytes { get; init; }
+}

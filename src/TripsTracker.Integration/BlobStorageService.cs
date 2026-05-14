@@ -52,7 +52,7 @@ public class BlobStorageService : IBlobStorageService
         var results = new List<BlobSizeInfo>();
         await foreach (var item in container.GetBlobsAsync(BlobTraits.None, BlobStates.All, prefix, ct))
         {
-            results.Add(new BlobSizeInfo(item.Name, item.Properties.ContentLength ?? 0));
+            results.Add(new BlobSizeInfo { BlobName = item.Name, SizeBytes = item.Properties.ContentLength ?? 0 });
         }
         return results;
     }

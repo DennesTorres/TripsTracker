@@ -1,3 +1,8 @@
 namespace TripsTracker.Domain;
 
-public record StorageUsageDto(long UsedBytes, long LimitBytes, DateTime? LastRefreshedAt);
+public class StorageUsageDto
+{
+    public long UsedBytes { get; init; }
+    public long LimitBytes { get; init; }
+    public DateTime? LastRefreshedAt { get; init; }
+}

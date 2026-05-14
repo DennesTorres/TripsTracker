@@ -111,8 +111,8 @@ public class StorageBusinessTests
         f.BlobsMock.Setup(b => b.GetUserBlobsAsync(_userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<BlobSizeInfo>
             {
-                new("1/p/a.jpg", 150L),
-                new("1/p/b.jpg", 250L),
+                new BlobSizeInfo { BlobName = "1/p/a.jpg", SizeBytes = 150L },
+                new BlobSizeInfo { BlobName = "1/p/b.jpg", SizeBytes = 250L },
             });
 
         var before = DateTime.UtcNow;

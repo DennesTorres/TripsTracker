@@ -33,16 +33,7 @@ public class ExploreBusiness : BusinessBase<Place>, IExploreBusiness
 
         return places
             .GroupBy(p => (p.City, p.CountryId))
-            .Select(g => new ExploreLocationDto(
-                g.Key.City,
-                g.Select(x => x.StateName).FirstOrDefault(s => s != null),
-                g.First().CountryName,
-                g.Key.CountryId,
-                g.Average(x => x.Lat),
-                g.Average(x => x.Lon),
-                g.Count(),
-                g.Sum(x => photoMap.GetValueOrDefault(x.Id, 0)),
-                g.Sum(x => commentMap.GetValueOrDefault(x.Id, 0))))
+            .Select(g => new ExploreLocationDto { City = g.Key.City, StateName = g.Select(x => x.StateName).FirstOrDefault(s => s != null), CountryName = g.First().CountryName, CountryId = g.Key.CountryId, Lat = g.Average(x => x.Lat), Lon = g.Average(x => x.Lon), UserCount = g.Count(), PhotoCount = g.Sum(x => photoMap.GetValueOrDefault(x.Id, 0)), CommentCount = g.Sum(x => commentMap.GetValueOrDefault(x.Id, 0)) })
             .OrderByDescending(l => l.UserCount)
             .Take(20)
             .ToList();
@@ -56,7 +47,7 @@ public class ExploreBusiness : BusinessBase<Place>, IExploreBusiness
             .ToListAsync(ct);
 
         if (placeIds.Count == 0)
-            return new ExploreContentDto([], []);
+            return new ExploreContentDto { Photos = [], Comments = [] };
 
         var photos = await Context.Set<PlacePhoto>().AsNoTracking()
             .Where(ph => placeIds.Contains(ph.PlaceId))
@@ -66,11 +57,7 @@ public class ExploreBusiness : BusinessBase<Place>, IExploreBusiness
                 ph => ph.Id,
                 r => r.PhotoId,
                 (ph, ratings) => new { ph, ratings })
-            .Select(x => new PlacePhotoDto(
-                x.ph.Id, x.ph.PlaceId, x.ph.UserId, x.ph.OriginalFileName,
-                x.ph.ContentType, x.ph.SizeBytes, x.ph.Caption, x.ph.SortOrder, x.ph.UploadedAt,
-                x.ratings.Any() ? x.ratings.Average(r => (double)r.Rating) : 0,
-                x.ratings.Count()))
+            .Select(x => new PlacePhotoDto { Id = x.ph.Id, PlaceId = x.ph.PlaceId, UserId = x.ph.UserId, OriginalFileName = x.ph.OriginalFileName, ContentType = x.ph.ContentType, SizeBytes = x.ph.SizeBytes, Caption = x.ph.Caption, SortOrder = x.ph.SortOrder, UploadedAt = x.ph.UploadedAt, AverageRating = x.ratings.Any() ? x.ratings.Average(r => (double)r.Rating) : 0, RatingCount = x.ratings.Count() })
             .ToListAsync(ct);
 
         var comments = await Context.Set<PlaceComment>().AsNoTracking()
@@ -84,14 +71,9 @@ public class ExploreBusiness : BusinessBase<Place>, IExploreBusiness
                 x => x.c.Id,
                 r => r.CommentId,
                 (x, ratings) => new { x.c, x.DisplayName, ratings })
-            .Select(x => new PlaceCommentDto(
-                x.c.Id, x.c.PlaceId, x.c.UserId, x.DisplayName,
-                x.c.Text, x.c.CreatedAt, x.c.UpdatedAt,
-                x.ratings.Count(r => r.IsUpvote),
-                x.ratings.Count(r => !r.IsUpvote),
-                x.c.ParentCommentId))
+            .Select(x => new PlaceCommentDto { Id = x.c.Id, PlaceId = x.c.PlaceId, UserId = x.c.UserId, UserDisplayName = x.DisplayName, Text = x.c.Text, CreatedAt = x.c.CreatedAt, UpdatedAt = x.c.UpdatedAt, UpvoteCount = x.ratings.Count(r => r.IsUpvote), DownvoteCount = x.ratings.Count(r => !r.IsUpvote), ParentCommentId = x.c.ParentCommentId })
             .ToListAsync(ct);
 
-        return new ExploreContentDto(photos, comments);
+        return new ExploreContentDto { Photos = photos, Comments = comments };
     }
 }
