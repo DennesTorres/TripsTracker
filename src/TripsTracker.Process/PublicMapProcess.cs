@@ -39,10 +39,12 @@ public class PublicMapProcess : IPublicMapProcess
         var countries = await _countries.GetAllForUserAsync(link.OwnerId, ct);
         var states = await _states.GetAllForUserAsync(link.OwnerId, ct);
 
-        return new PublicMapDto(
-            owner?.DisplayName ?? owner?.Email ?? "Traveler",
-            places,
-            countries,
-            states);
+        return new PublicMapDto
+        {
+            OwnerDisplayName = owner?.DisplayName ?? owner?.Email ?? "Traveler",
+            Places = places,
+            Countries = countries,
+            VisitedStates = states
+        };
     }
 }

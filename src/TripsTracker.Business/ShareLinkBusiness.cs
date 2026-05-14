@@ -36,7 +36,7 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
         => BuildBaseQuery()
             .Where(l => l.UserId == _userContext.UserId)
             .OrderByDescending(l => l.CreatedAt)
-            .Select(l => new ShareLinkDto(l.Id, l.Token, l.IsActive, l.CreatedAt, l.ExpiresAt, l.ViewCount, l.UserId))
+            .Select(l => new ShareLinkDto { Id = l.Id, Token = l.Token, IsActive = l.IsActive, CreatedAt = l.CreatedAt, ExpiresAt = l.ExpiresAt, ViewCount = l.ViewCount, OwnerId = l.UserId })
             .ToListAsync(ct);
 
     public async Task<bool> DeactivateAsync(int id, CancellationToken ct = default)
@@ -51,7 +51,7 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
     public Task<ShareLinkDto?> GetByTokenAsync(string token, CancellationToken ct = default)
         => BuildBaseQuery()
             .Where(l => l.Token == token && l.IsActive && (l.ExpiresAt == null || l.ExpiresAt > DateTime.UtcNow))
-            .Select(l => new ShareLinkDto(l.Id, l.Token, l.IsActive, l.CreatedAt, l.ExpiresAt, l.ViewCount, l.UserId))
+            .Select(l => new ShareLinkDto { Id = l.Id, Token = l.Token, IsActive = l.IsActive, CreatedAt = l.CreatedAt, ExpiresAt = l.ExpiresAt, ViewCount = l.ViewCount, OwnerId = l.UserId })
             .FirstOrDefaultAsync(ct);
 
     public Task IncrementViewCountAsync(string token, CancellationToken ct = default)
@@ -81,7 +81,7 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
             .ThenByDescending(x => x.CountriesVisited)
             .ThenByDescending(x => x.PlacesCount)
             .Take(limit)
-            .Select(x => new PublicShareSummaryDto(x.Token, x.DisplayName, x.ContinentsVisited, x.CountriesVisited, x.PlacesCount))
+            .Select(x => new PublicShareSummaryDto { Token = x.Token, DisplayName = x.DisplayName, ContinentsVisited = x.ContinentsVisited, CountriesVisited = x.CountriesVisited, PlacesCount = x.PlacesCount })
             .ToListAsync(ct);
 
     private static string GenerateToken()
@@ -89,5 +89,5 @@ public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
             .Replace("+", "-").Replace("/", "_").TrimEnd('=');
 
     private static ShareLinkDto ToDto(ShareLink l)
-        => new(l.Id, l.Token, l.IsActive, l.CreatedAt, l.ExpiresAt, l.ViewCount, l.UserId);
+        => new() { Id = l.Id, Token = l.Token, IsActive = l.IsActive, CreatedAt = l.CreatedAt, ExpiresAt = l.ExpiresAt, ViewCount = l.ViewCount, OwnerId = l.UserId };
 }
