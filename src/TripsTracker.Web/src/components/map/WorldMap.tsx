@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import type { GeoPermissibleObjects } from 'd3';
 import type { Country, Place, VisitedState } from '@/types';
 import styles from './WorldMap.module.scss';
+import { useMapStatus } from '@/context/MapStatusContext';
 
 interface Props {
   countries: Country[];
@@ -151,13 +152,13 @@ export default function WorldMap({
   borderGeoCache,
   onToggleStateBorders,
   onPlaceClick,
-  loadingCountryName,
 }: Props) {
   const svgRef      = useRef<SVGSVGElement>(null);
   const tooltipRef  = useRef<HTMLDivElement>(null);
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [statusLabel, setStatusLabel] = useState<{ country: string; state: string | null }>({ country: '', state: null });
+  const { loadingMessage } = useMapStatus();
 
   // ── D3 selection refs — set by Effect 1, read by all other effects ───────────
   const projRef          = useRef<d3.GeoProjection | null>(null);
@@ -476,8 +477,8 @@ export default function WorldMap({
         </div>
       )}
       <div className={styles.statusBar}>
-        {loadingCountryName ? (
-          <span style={{ fontStyle: 'italic' }}>Loading borders for {loadingCountryName}…</span>
+        {loadingMessage ? (
+          <span style={{ fontStyle: 'italic' }}>Loading borders for {loadingMessage}</span>
         ) : statusLabel.country ? (
           <>
             <span>{statusLabel.country}</span>
