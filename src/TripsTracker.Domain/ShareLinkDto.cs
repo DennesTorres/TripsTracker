@@ -1,6 +1,6 @@
 namespace TripsTracker.Domain;
 
-public record ShareLinkDto(int Id, string Token, bool IsActive, DateTime CreatedAt, DateTime? ExpiresAt, int ViewCount);
+public record ShareLinkDto(int Id, string Token, bool IsActive, DateTime CreatedAt, DateTime? ExpiresAt, int ViewCount, int OwnerId);
 public record CreateShareLinkDto(DateTime? ExpiresAt = null);
 public record PublicMapDto(
     string OwnerDisplayName,

@@ -200,6 +200,7 @@ public class ShareLinkBusinessTests
 
         Assert.IsNotNull(result);
         Assert.AreEqual("tok-active", result.Token);
+        Assert.AreEqual(user.Id, result.OwnerId);
     }
 
     [TestMethod]
@@ -252,33 +253,6 @@ public class ShareLinkBusinessTests
 
         var inDb = await f.Ctx.ShareLinks.AsNoTracking().FirstAsync(l => l.Token == "tok-view");
         Assert.AreEqual(1, inDb.ViewCount);
-    }
-
-    // ─── GetOwnerIdAsync ──────────────────────────────────────────────────────
-
-    [TestMethod]
-    public async Task GetOwnerIdAsync_KnownToken_ReturnsOwnerId()
-    {
-        await using var f = new Fixture();
-        var user = MakeUser("u@test.com");
-        f.Ctx.Users.Add(user);
-        await f.Ctx.SaveChangesAsync();
-        f.Ctx.ShareLinks.Add(MakeLink(user.Id, "tok-owner"));
-        await f.Ctx.SaveChangesAsync();
-
-        var result = await f.Biz.GetOwnerIdAsync("tok-owner");
-
-        Assert.AreEqual(user.Id, result);
-    }
-
-    [TestMethod]
-    public async Task GetOwnerIdAsync_UnknownToken_ReturnsNull()
-    {
-        await using var f = new Fixture();
-
-        var result = await f.Biz.GetOwnerIdAsync("no-such-token");
-
-        Assert.IsNull(result);
     }
 
     // ─── DiscoverAsync ────────────────────────────────────────────────────────

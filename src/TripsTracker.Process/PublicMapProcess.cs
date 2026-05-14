@@ -33,15 +33,11 @@ public class PublicMapProcess : IPublicMapProcess
 
         await _shareLinks.IncrementViewCountAsync(token, ct);
 
-        // Get owner's UserId from the share link
-        var ownerId = await _shareLinks.GetOwnerIdAsync(token, ct);
-        if (ownerId is null) return null;
-
-        // Fetch owner's data using Business layer methods that accept an explicit userId
-        var owner = await _users.GetByIdAsync(ownerId.Value, ct);
-        var places = await _places.GetAllForUserAsync(ownerId.Value, ct);
-        var countries = await _countries.GetAllForUserAsync(ownerId.Value, ct);
-        var states = await _states.GetAllForUserAsync(ownerId.Value, ct);
+        // Fetch owner's data using the OwnerId already present on the share link
+        var owner = await _users.GetByIdAsync(link.OwnerId, ct);
+        var places = await _places.GetAllForUserAsync(link.OwnerId, ct);
+        var countries = await _countries.GetAllForUserAsync(link.OwnerId, ct);
+        var states = await _states.GetAllForUserAsync(link.OwnerId, ct);
 
         return new PublicMapDto(
             owner?.DisplayName ?? owner?.Email ?? "Traveler",
