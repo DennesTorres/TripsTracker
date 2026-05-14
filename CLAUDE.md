@@ -15,7 +15,7 @@ https://github.com/DennesTorres/TripsTracker
 `TripsTracker.slnx` — VS 2022 17.10+ XML format
 
 ## Current Stage
-Stage 2 UI in progress. Active branch: `feature/story-129-city-suggestions`.
+Stage 6 UGC + Stage 7 Gamification in Testing phase. PRs #154-#157 open on GitHub.
 See `memory/WORKFLOW.md` for current state and next sequence.
 
 ## Local Setup (gitignored — each developer configures)

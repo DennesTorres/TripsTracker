@@ -90,6 +90,84 @@ public class CountryBusinessTests
     #endregion
 
     [TestMethod]
+    public async Task SetVisitedAsync_SetsIsVisited_ForCurrentUser()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync(CountryWithoutIso3("Y1"));
+
+        var result = await f.Biz.SetVisitedAsync(country.Id, true);
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.IsVisited);
+    }
+
+    [TestMethod]
+    public async Task SetVisitedAsync_ClearsIsVisited_WhenSetToFalse()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync(CountryWithoutIso3("Y2"));
+        await f.Biz.SetVisitedAsync(country.Id, true);
+
+        var result = await f.Biz.SetVisitedAsync(country.Id, false);
+
+        Assert.IsNotNull(result);
+        Assert.IsFalse(result.IsVisited);
+    }
+
+    [TestMethod]
+    public async Task SetHomeAsync_SetsHomeAndVisited_ForCountry()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync(CountryWithoutIso3("Y3"));
+
+        var result = await f.Biz.SetHomeAsync(country.Id, true);
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.IsHome);
+        Assert.IsTrue(result.IsVisited);
+    }
+
+    [TestMethod]
+    public async Task SetHomeAsync_ClearsOtherHomesForUser()
+    {
+        await using var f = new Fixture();
+        var c1 = await f.AddCountryAsync(CountryWithoutIso3("Y4"));
+        var c2 = await f.AddCountryAsync(CountryWithoutIso3("Y5"));
+        await f.Biz.SetHomeAsync(c1.Id, true);
+
+        await f.Biz.SetHomeAsync(c2.Id, true);
+
+        var uc1 = await f.Ctx.Set<TripsTracker.Data.Entities.UserCountry>()
+            .FirstOrDefaultAsync(uc => uc.UserId == 1 && uc.CountryId == c1.Id);
+        Assert.IsTrue(uc1 == null || !uc1.IsHome);
+    }
+
+    [TestMethod]
+    public async Task SetShowStateBordersAsync_SetsFlag_ForCurrentUser()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync(CountryWithoutIso3("Y6"));
+
+        var result = await f.Biz.SetShowStateBordersAsync(country.Id, true);
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.ShowStateBorders);
+    }
+
+    [TestMethod]
+    public async Task SetShowStateBordersAsync_ClearsFlag_WhenSetToFalse()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync(CountryWithoutIso3("Y7"));
+        await f.Biz.SetShowStateBordersAsync(country.Id, true);
+
+        var result = await f.Biz.SetShowStateBordersAsync(country.Id, false);
+
+        Assert.IsNotNull(result);
+        Assert.IsFalse(result.ShowStateBorders);
+    }
+
+    [TestMethod]
     public async Task GetIsoAlpha3Async_ReturnsIsoAlpha3_WhenCountryExists()
     {
         await using var f = new Fixture();

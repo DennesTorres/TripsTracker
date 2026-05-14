@@ -48,13 +48,17 @@ public class PlacesProcess : IPlacesProcess
         if (!hasRemainingPlaces)
             await _countries.SetVisitedAsync(place.CountryId, false, ct);
 
+        var promptHomeCountry = false;
         if (place.IsHome)
         {
             var hasRemainingHome = await _places.HasHomeInCountryAsync(place.CountryId, ct);
             if (!hasRemainingHome)
+            {
                 await _countries.SetHomeAsync(place.CountryId, false, ct);
+                promptHomeCountry = true;
+            }
         }
 
-        return new DeletePlaceResult(false, null, null);
+        return new DeletePlaceResult(promptHomeCountry, promptHomeCountry ? place.CountryId : null, promptHomeCountry ? place.CountryName : null);
     }
 }
