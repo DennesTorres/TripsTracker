@@ -88,7 +88,8 @@ public class ExploreBusiness : BusinessBase<Place>, IExploreBusiness
                 x.c.Id, x.c.PlaceId, x.c.UserId, x.DisplayName,
                 x.c.Text, x.c.CreatedAt, x.c.UpdatedAt,
                 x.ratings.Count(r => r.IsUpvote),
-                x.ratings.Count(r => !r.IsUpvote)))
+                x.ratings.Count(r => !r.IsUpvote),
+                x.c.ParentCommentId))
             .ToListAsync(ct);
 
         return new ExploreContentDto(photos, comments);

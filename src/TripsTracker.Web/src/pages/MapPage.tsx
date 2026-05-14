@@ -57,6 +57,14 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
   }, [exploreCity]);
 
   useEffect(() => {
+    if (exploreQuery) {
+      setExplorePin(null);
+      setActiveDetail(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exploreQuery]);
+
+  useEffect(() => {
     if (autoSelectRef.current && exploreResults.length > 0) {
       autoSelectRef.current = false;
       handleExploreSelectCity(exploreResults[0]);
@@ -200,6 +208,7 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
           onClose={() => setAdding(false)}
           onExplore={city => {
             setAdding(false);
+            autoSelectRef.current = true;
             setExploreQuery(city);
           }}
         />

@@ -27,6 +27,7 @@ export default function AddPlaceForm({ onClose, initialCity = '', onExplore }: P
   const [cityName, setCityName] = useState(initialCity);
   const [selectedStateName, setSelectedStateName] = useState<string | undefined>();
   const [isHome, setIsHome] = useState(false);
+  const [cityConfirmed, setCityConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<MismatchSuggestion | null>(null);
 
@@ -35,10 +36,12 @@ export default function AddPlaceForm({ onClose, initialCity = '', onExplore }: P
     setCountryIsoAlpha2(s.countryIsoAlpha2);
     setSelectedStateName(s.stateName ?? undefined);
     setError(null);
+    setCityConfirmed(true);
   }
 
   function handleCityChange(value: string) {
     setCityName(value);
+    setCityConfirmed(false);
     if (selectedStateName) setSelectedStateName(undefined);
   }
 
@@ -104,7 +107,7 @@ export default function AddPlaceForm({ onClose, initialCity = '', onExplore }: P
           />
         </label>
 
-        {onExplore && cityName.trim().length >= 2 && (
+        {onExplore && cityConfirmed && (
           <button
             type="button"
             className={styles.exploreLink}

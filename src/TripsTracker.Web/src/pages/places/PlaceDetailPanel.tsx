@@ -215,6 +215,7 @@ function CommentsSection({ city, countryId, placeId, comments, isLoading }: Sect
             canEdit={placeId !== undefined}
             onDelete={() => deleteComment.mutate({ commentId: c.id, placeId: placeId! }, { onSuccess: invalidate })}
             onVote={up => voteComment.mutate({ commentId: c.id, isUpvote: up, placeId: placeId! }, { onSuccess: invalidate })}
+            votePending={voteComment.isPending}
             onReply={placeId !== undefined ? () => { setReplyingTo(c.id); setReplyText(''); } : undefined}
           />
           {repliesFor(c.id).map(r => (
@@ -225,6 +226,7 @@ function CommentsSection({ city, countryId, placeId, comments, isLoading }: Sect
                 canEdit={placeId !== undefined}
                 onDelete={() => deleteComment.mutate({ commentId: r.id, placeId: placeId! }, { onSuccess: invalidate })}
                 onVote={up => voteComment.mutate({ commentId: r.id, isUpvote: up, placeId: placeId! }, { onSuccess: invalidate })}
+              votePending={voteComment.isPending}
               />
             </div>
           ))}
@@ -271,12 +273,13 @@ function CommentsSection({ city, countryId, placeId, comments, isLoading }: Sect
   );
 }
 
-function CommentRow({ comment, isOwn, canEdit, onDelete, onVote, onReply }: {
+function CommentRow({ comment, isOwn, canEdit, onDelete, onVote, votePending = false, onReply }: {
   comment: PlaceComment;
   isOwn: boolean;
   canEdit: boolean;
   onDelete: () => void;
   onVote: (up: boolean) => void;
+  votePending?: boolean;
   onReply?: () => void;
 }) {
   return (
@@ -289,10 +292,10 @@ function CommentRow({ comment, isOwn, canEdit, onDelete, onVote, onReply }: {
       </div>
       <p className={styles.commentText}>{comment.text}</p>
       <div className={styles.commentFooter}>
-        <button className={styles.voteBtn} onClick={() => onVote(true)} title="Upvote">
+        <button className={styles.voteBtn} onClick={() => onVote(true)} disabled={votePending} title="Upvote">
           <ThumbsUp size={13} /> <span>{comment.upvoteCount}</span>
         </button>
-        <button className={styles.voteBtn} onClick={() => onVote(false)} title="Downvote">
+        <button className={styles.voteBtn} onClick={() => onVote(false)} disabled={votePending} title="Downvote">
           <ThumbsDown size={13} /> <span>{comment.downvoteCount}</span>
         </button>
         {onReply && (

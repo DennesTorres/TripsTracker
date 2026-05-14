@@ -4,6 +4,7 @@ using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Business;
 
@@ -18,6 +19,14 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<PlaceDto> CreateAsync(CreatePlaceDto dto, CancellationToken ct = default)
     {
+        var userId = _userContext.UserId!.Value;
+        var duplicate = await BuildBaseQuery()
+            .AnyAsync(p => p.UserId == userId && p.CountryId == dto.CountryId
+                && p.City.ToLower() == dto.City.ToLower(), ct);
+        if (duplicate)
+            throw new BusinessRuleException(
+                $"You already have '{dto.City}' in your places.", "DUPLICATE_PLACE");
+
         var place = new Place
         {
             Lon = dto.Lon,
@@ -27,7 +36,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             StateAbbr = dto.StateAbbr,
             StateName = dto.StateName,
             IsHome = dto.IsHome,
-            UserId = _userContext.UserId!.Value
+            UserId = userId
         };
         await InsertAsync(place, ct);
         return await GetByIdAsync(place.Id, ct)

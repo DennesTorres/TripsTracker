@@ -108,22 +108,26 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
         var userId = _userContext.UserId!.Value;
         var existing = await Context.Set<CommentRating>()
             .FirstOrDefaultAsync(r => r.UserId == userId && r.CommentId == commentId, ct);
-
-        if (existing is null)
+        if (existing != null)
         {
-            Context.Set<CommentRating>().Add(new CommentRating
-            {
-                UserId = userId,
-                CommentId = commentId,
-                IsUpvote = isUpvote,
-                CreatedAt = DateTime.UtcNow,
-            });
+            existing.IsUpvote = isUpvote;
+            await Context.SaveChangesAsync(ct);
         }
         else
         {
-            existing.IsUpvote = isUpvote;
+            try
+            {
+                Context.Set<CommentRating>().Add(new CommentRating
+                {
+                    UserId = userId,
+                    CommentId = commentId,
+                    IsUpvote = isUpvote,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await Context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException) { /* concurrent insert -- already voted */ }
         }
-        await Context.SaveChangesAsync(ct);
     }
 
     private Task<PlaceCommentDto?> GetByIdAsync(int commentId, CancellationToken ct)
