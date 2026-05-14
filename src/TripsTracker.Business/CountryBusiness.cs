@@ -75,32 +75,39 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
             .FirstOrDefaultAsync(ct);
     }
 
-    public async Task<CountryDto?> SetVisitedAsync(int id, bool isVisited, CancellationToken ct = default)
+    public async Task<CountryDto?> SetAsVisitedAsync(int id, CancellationToken ct = default)
     {
         var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");
-        await UpsertUserCountryAsync(userId, id, isVisited: isVisited, ct: ct);
+        await UpsertUserCountryAsync(userId, id, isVisited: true, ct: ct);
         return await GetByIdForUserAsync(id, userId, ct);
     }
 
-    public async Task<CountryDto?> SetHomeAsync(int id, bool isHome = true, CancellationToken ct = default)
+    public async Task<CountryDto?> UnsetVisitedAsync(int id, CancellationToken ct = default)
+    {
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");
+        await UpsertUserCountryAsync(userId, id, isVisited: false, ct: ct);
+        return await GetByIdForUserAsync(id, userId, ct);
+    }
+
+    public async Task<CountryDto?> SetAsHomeAsync(int id, CancellationToken ct = default)
     {
         var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");
 
-        if (isHome)
-        {
-            // Clear existing home flag for this user across all countries
-            await Context.Set<UserCountry>()
-                .Where(uc => uc.UserId == userId && uc.IsHome)
-                .ExecuteUpdateAsync(s => s.SetProperty(uc => uc.IsHome, false), ct);
+        // Clear existing home flag for this user across all countries
+        await Context.Set<UserCountry>()
+            .Where(uc => uc.UserId == userId && uc.IsHome)
+            .ExecuteUpdateAsync(s => s.SetProperty(uc => uc.IsHome, false), ct);
 
-            // Set home + visited on the requested country
-            await UpsertUserCountryAsync(userId, id, isHome: true, isVisited: true, ct: ct);
-        }
-        else
-        {
-            await UpsertUserCountryAsync(userId, id, isHome: false, ct: ct);
-        }
+        // Set home + visited on the requested country
+        await UpsertUserCountryAsync(userId, id, isHome: true, isVisited: true, ct: ct);
 
+        return await GetByIdForUserAsync(id, userId, ct);
+    }
+
+    public async Task<CountryDto?> UnsetHomeAsync(int id, CancellationToken ct = default)
+    {
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");
+        await UpsertUserCountryAsync(userId, id, isHome: false, ct: ct);
         return await GetByIdForUserAsync(id, userId, ct);
     }
 
