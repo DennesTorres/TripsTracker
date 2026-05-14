@@ -27,11 +27,18 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (c, ucs) => new { c, ucs })
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
-                (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
-                    uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited,
-                    uc != null && uc.ShowStateBorders))
+                (x, uc) => new CountryDto
+                {
+                    Id = x.c.Id,
+                    IsoNumeric = x.c.IsoNumeric,
+                    IsoAlpha2 = x.c.IsoAlpha2,
+                    Flag = x.c.Flag,
+                    Name = x.c.Name,
+                    Region = x.c.Region,
+                    IsHome = uc != null && uc.IsHome,
+                    IsVisited = uc != null && uc.IsVisited,
+                    ShowStateBorders = uc != null && uc.ShowStateBorders
+                })
             .ToListAsync(ct);
     }
 
@@ -47,11 +54,18 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (c, ucs) => new { c, ucs })
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
-                (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
-                    uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited,
-                    uc != null && uc.ShowStateBorders))
+                (x, uc) => new CountryDto
+                {
+                    Id = x.c.Id,
+                    IsoNumeric = x.c.IsoNumeric,
+                    IsoAlpha2 = x.c.IsoAlpha2,
+                    Flag = x.c.Flag,
+                    Name = x.c.Name,
+                    Region = x.c.Region,
+                    IsHome = uc != null && uc.IsHome,
+                    IsVisited = uc != null && uc.IsVisited,
+                    ShowStateBorders = uc != null && uc.ShowStateBorders
+                })
             .FirstOrDefaultAsync(ct);
     }
 
@@ -67,11 +81,18 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (c, ucs) => new { c, ucs })
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
-                (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
-                    uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited,
-                    uc != null && uc.ShowStateBorders))
+                (x, uc) => new CountryDto
+                {
+                    Id = x.c.Id,
+                    IsoNumeric = x.c.IsoNumeric,
+                    IsoAlpha2 = x.c.IsoAlpha2,
+                    Flag = x.c.Flag,
+                    Name = x.c.Name,
+                    Region = x.c.Region,
+                    IsHome = uc != null && uc.IsHome,
+                    IsVisited = uc != null && uc.IsVisited,
+                    ShowStateBorders = uc != null && uc.ShowStateBorders
+                })
             .FirstOrDefaultAsync(ct);
     }
 
@@ -159,10 +180,17 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
                 (c, ucs) => new { c, ucs })
             .SelectMany(
                 x => x.ucs.DefaultIfEmpty(),
-                (x, uc) => new CountryDto(
-                    x.c.Id, x.c.IsoNumeric, x.c.IsoAlpha2, x.c.Flag, x.c.Name, x.c.Region,
-                    uc != null && uc.IsHome,
-                    uc != null && uc.IsVisited,
-                    uc != null && uc.ShowStateBorders))
+                (x, uc) => new CountryDto
+                {
+                    Id = x.c.Id,
+                    IsoNumeric = x.c.IsoNumeric,
+                    IsoAlpha2 = x.c.IsoAlpha2,
+                    Flag = x.c.Flag,
+                    Name = x.c.Name,
+                    Region = x.c.Region,
+                    IsHome = uc != null && uc.IsHome,
+                    IsVisited = uc != null && uc.IsVisited,
+                    ShowStateBorders = uc != null && uc.ShowStateBorders
+                })
             .FirstOrDefaultAsync(ct);
 }

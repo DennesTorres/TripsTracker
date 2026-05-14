@@ -100,9 +100,11 @@ public class PlacesProcessTests
 
     // Helpers for Moq-based orchestration tests (AddAsync only — these test call sequencing,
     // not database state, so mocking is appropriate here).
-    private static CountryDto Brazil() => new(
-        Id: 1, IsoNumeric: 76, IsoAlpha2: "BR", Flag: "🇧🇷",
-        Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false, ShowStateBorders: false);
+    private static CountryDto Brazil() => new CountryDto
+    {
+        Id = 1, IsoNumeric = 76, IsoAlpha2 = "BR", Flag = "🇧🇷",
+        Name = "Brazil", Region = "Americas"
+    };
 
     private static PlaceDto AnyPlace() => new(
         Id: 1, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",
@@ -179,7 +181,7 @@ public class PlacesProcessTests
         var geocoding = new Mock<IGeocodingBusiness>();
 
         countries.Setup(c => c.GetByIsoAlpha2Async("MT", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CountryDto(10, 470, "MT", "🇲🇹", "Malta", "Europe", false, false, false));
+            .ReturnsAsync(new CountryDto { Id = 10, IsoNumeric = 470, IsoAlpha2 = "MT", Flag = "🇲🇹", Name = "Malta", Region = "Europe" });
 
         var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
 

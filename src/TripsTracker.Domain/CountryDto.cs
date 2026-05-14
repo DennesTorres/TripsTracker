@@ -1,3 +1,14 @@
 namespace TripsTracker.Domain;
 
-public record CountryDto(int Id, int IsoNumeric, string IsoAlpha2, string Flag, string Name, string Region, bool IsHome, bool IsVisited, bool ShowStateBorders);
+public class CountryDto
+{
+    public int Id { get; init; }
+    public int IsoNumeric { get; init; }
+    public required string IsoAlpha2 { get; init; }
+    public required string Flag { get; init; }
+    public required string Name { get; init; }
+    public required string Region { get; init; }
+    public bool IsHome { get; init; }
+    public bool IsVisited { get; init; }
+    public bool ShowStateBorders { get; init; }
+}

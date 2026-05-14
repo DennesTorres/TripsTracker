@@ -118,7 +118,7 @@ public class UserBusinessTests
         await using var f = new Fixture();
         var user = await f.AddUserAsync("update@test.local", "OldName");
 
-        var result = await f.Biz.UpdateAsync(user.Id, new TripsTracker.Domain.UpdateUserDto("NewName", null));
+        var result = await f.Biz.UpdateAsync(user.Id, new TripsTracker.Domain.UpdateUserDto { DisplayName = "NewName" });
 
         Assert.IsNotNull(result);
         Assert.AreEqual("NewName", result.DisplayName);
@@ -129,7 +129,7 @@ public class UserBusinessTests
     {
         await using var f = new Fixture();
 
-        var result = await f.Biz.UpdateAsync(int.MaxValue, new TripsTracker.Domain.UpdateUserDto("Name", null));
+        var result = await f.Biz.UpdateAsync(int.MaxValue, new TripsTracker.Domain.UpdateUserDto { DisplayName = "Name" });
 
         Assert.IsNull(result);
     }
