@@ -1,0 +1,136 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.description {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.createBtn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  background: #0078d4;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  align-self: flex-start;
+
+  &:hover { background: #106ebe; }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 0.5rem;
+}
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}
+
+.inactive {
+  opacity: 0.5;
+}
+
+.statusActive {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #0d2b1a;
+  color: #4ade80;
+  border: 1px solid #166534;
+  white-space: nowrap;
+}
+
+.statusDisabled {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.05);
+  color: #64748b;
+  border: 1px solid #334155;
+  white-space: nowrap;
+}
+
+.disableBtn {
+  &:hover {
+    background: rgba(248, 81, 73, 0.15);
+    color: #f85149;
+  }
+}
+
+.token {
+  font-size: 0.75rem;
+  color: #64748b;
+  flex: 1;
+}
+
+.views {
+  font-size: 0.7rem;
+  color: #475569;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255,255,255,0.1);
+    color: #e8e8e8;
+  }
+}
+
+.deactivated {
+  font-size: 0.7rem;
+  color: #475569;
+  font-style: italic;
+}
+
+.discoverableRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  user-select: none;
+  flex-wrap: wrap;
+
+  input[type='checkbox'] { cursor: pointer; accent-color: #0078d4; }
+
+  span:nth-child(2) { font-weight: 600; flex: 1; }
+}
+
+.discoverableHint {
+  width: 100%;
+  margin-left: 20px;
+  font-size: 0.75rem;
+  color: #475569;
+}

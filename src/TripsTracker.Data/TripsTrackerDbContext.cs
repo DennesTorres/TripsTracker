@@ -12,6 +12,7 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
     public DbSet<VisitedState> VisitedStates => Set<VisitedState>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserCountry> UserCountries => Set<UserCountry>();
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,8 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         {
             e.HasIndex(p => p.CountryId);
             e.HasIndex(p => p.UserId);
+            e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Country>().WithMany().HasForeignKey(p => p.CountryId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Country>(e =>
@@ -40,10 +43,20 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
             e.HasIndex(u => u.Email).IsUnique();
         });
 
+        modelBuilder.Entity<ShareLink>(e =>
+        {
+            e.HasIndex(l => l.Token).IsUnique();
+            e.HasIndex(l => l.UserId);
+            e.Property(l => l.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            e.HasOne<User>().WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<UserCountry>(e =>
         {
             e.HasKey(uc => new { uc.UserId, uc.CountryId });
             e.HasIndex(uc => uc.UserId);
+            e.HasOne<User>().WithMany().HasForeignKey(uc => uc.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Country>().WithMany().HasForeignKey(uc => uc.CountryId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

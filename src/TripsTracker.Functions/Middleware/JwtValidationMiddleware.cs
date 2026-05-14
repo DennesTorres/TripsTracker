@@ -41,7 +41,7 @@ public class JwtValidationMiddleware : IFunctionsWorkerMiddleware
 
         // Public endpoints that do not require authentication
         var functionName = context.FunctionDefinition.Name;
-        if (functionName is "HealthCheck" or "GetSharedMap")
+        if (functionName is "HealthCheck" or "GetSharedMap" or "DiscoverMaps")
         {
             await next(context);
             return;

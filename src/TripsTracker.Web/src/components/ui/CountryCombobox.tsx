@@ -7,9 +7,10 @@ interface Props {
   value: string;
   onChange: (isoAlpha2: string) => void;
   required?: boolean;
+  allowClear?: boolean;
 }
 
-export default function CountryCombobox({ countries, value, onChange, required }: Props) {
+export default function CountryCombobox({ countries, value, onChange, required, allowClear }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,7 @@ export default function CountryCombobox({ countries, value, onChange, required }
     <div className={styles.wrap} ref={wrapRef}>
       <input
         type="text"
-        className={styles.input}
+        className={`${styles.input} ${allowClear && value ? styles.inputWithClear : ''}`}
         value={displayValue}
         onChange={e => { setQuery(e.target.value); setOpen(true); }}
         onFocus={handleFocus}
@@ -56,6 +57,15 @@ export default function CountryCombobox({ countries, value, onChange, required }
         required={required && !value}
         autoComplete="off"
       />
+      {allowClear && value && (
+        <button
+          type="button"
+          className={styles.clearBtn}
+          onMouseDown={e => { e.preventDefault(); onChange(''); setQuery(''); setOpen(false); }}
+          tabIndex={-1}
+          aria-label="Clear"
+        >×</button>
+      )}
       {open && filtered.length > 0 && (
         <ul className={styles.dropdown}>
           {filtered.map(c => (

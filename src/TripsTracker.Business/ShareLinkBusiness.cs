@@ -1,0 +1,93 @@
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
+using TripsTracker.Data;
+using TripsTracker.Data.Entities;
+using TripsTracker.Domain;
+using TripsTracker.Interfaces;
+using TripsTracker.Interfaces.Business;
+
+namespace TripsTracker.Business;
+
+public class ShareLinkBusiness : BusinessBase<ShareLink>, IShareLinkBusiness
+{
+    private readonly IUserContext _userContext;
+
+    public ShareLinkBusiness(TripsTrackerDbContext context, IUserContext userContext) : base(context)
+    {
+        _userContext = userContext;
+    }
+
+    public async Task<ShareLinkDto> CreateAsync(CreateShareLinkDto dto, CancellationToken ct = default)
+    {
+        var token = GenerateToken();
+        var link = new ShareLink
+        {
+            UserId = _userContext.UserId!.Value,
+            Token = token,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = dto.ExpiresAt,
+        };
+        await InsertAsync(link, ct);
+        return ToDto(link);
+    }
+
+    public Task<List<ShareLinkDto>> GetUserLinksAsync(CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(l => l.UserId == _userContext.UserId)
+            .OrderByDescending(l => l.CreatedAt)
+            .Select(l => new ShareLinkDto { Id = l.Id, Token = l.Token, IsActive = l.IsActive, CreatedAt = l.CreatedAt, ExpiresAt = l.ExpiresAt, ViewCount = l.ViewCount, OwnerId = l.UserId })
+            .ToListAsync(ct);
+
+    public async Task<bool> DeactivateAsync(int id, CancellationToken ct = default)
+    {
+        var rows = await ExecuteUpdateAsync(
+            l => l.Id == id && l.UserId == _userContext.UserId,
+            s => s.SetProperty(l => l.IsActive, false),
+            ct);
+        return rows > 0;
+    }
+
+    public Task<ShareLinkDto?> GetByTokenAsync(string token, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(l => l.Token == token && l.IsActive && (l.ExpiresAt == null || l.ExpiresAt > DateTime.UtcNow))
+            .Select(l => new ShareLinkDto { Id = l.Id, Token = l.Token, IsActive = l.IsActive, CreatedAt = l.CreatedAt, ExpiresAt = l.ExpiresAt, ViewCount = l.ViewCount, OwnerId = l.UserId })
+            .FirstOrDefaultAsync(ct);
+
+    public Task IncrementViewCountAsync(string token, CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            l => l.Token == token,
+            s => s.SetProperty(l => l.ViewCount, l => l.ViewCount + 1),
+            ct);
+
+    public Task<List<PublicShareSummaryDto>> DiscoverAsync(string query, int limit = 20, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(l => l.IsActive && (l.ExpiresAt == null || l.ExpiresAt > DateTime.UtcNow))
+            .Join(Context.Set<User>().Where(u => u.IsDiscoverable), l => l.UserId, u => u.Id, (l, u) => new { l, u })
+            .Where(x => string.IsNullOrEmpty(query) || (x.u.DisplayName != null && x.u.DisplayName.Contains(query)))
+            .Select(x => new
+            {
+                x.l.Token,
+                DisplayName = x.u.DisplayName ?? x.u.Email,
+                ContinentsVisited = Context.Set<UserCountry>()
+                    .Where(uc => uc.UserId == x.l.UserId && uc.IsVisited)
+                    .Join(Context.Set<Country>(), uc => uc.CountryId, c => c.Id, (uc, c) => c.Region)
+                    .Distinct()
+                    .Count(),
+                CountriesVisited = Context.Set<UserCountry>().Count(uc => uc.UserId == x.l.UserId && uc.IsVisited),
+                PlacesCount = Context.Set<Place>().Count(p => p.UserId == x.l.UserId),
+            })
+            .OrderByDescending(x => x.ContinentsVisited)
+            .ThenByDescending(x => x.CountriesVisited)
+            .ThenByDescending(x => x.PlacesCount)
+            .Take(limit)
+            .Select(x => new PublicShareSummaryDto { Token = x.Token, DisplayName = x.DisplayName, ContinentsVisited = x.ContinentsVisited, CountriesVisited = x.CountriesVisited, PlacesCount = x.PlacesCount })
+            .ToListAsync(ct);
+
+    private static string GenerateToken()
+        => Convert.ToBase64String(RandomNumberGenerator.GetBytes(24))
+            .Replace("+", "-").Replace("/", "_").TrimEnd('=');
+
+    private static ShareLinkDto ToDto(ShareLink l)
+        => new() { Id = l.Id, Token = l.Token, IsActive = l.IsActive, CreatedAt = l.CreatedAt, ExpiresAt = l.ExpiresAt, ViewCount = l.ViewCount, OwnerId = l.UserId };
+}

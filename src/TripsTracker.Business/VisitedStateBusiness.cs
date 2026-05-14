@@ -21,4 +21,10 @@ public class VisitedStateBusiness : BusinessBase<VisitedState>, IVisitedStateBus
             .Where(vs => vs.UserId == _userContext.UserId)
             .Select(vs => new VisitedStateDto(vs.Id, vs.CountryId, vs.StateAbbr, vs.StateName))
             .ToListAsync(ct);
+
+    public Task<List<VisitedStateDto>> GetAllForUserAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(vs => vs.UserId == userId)
+            .Select(vs => new VisitedStateDto(vs.Id, vs.CountryId, vs.StateAbbr, vs.StateName))
+            .ToListAsync(ct);
 }

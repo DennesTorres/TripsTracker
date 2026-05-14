@@ -21,11 +21,13 @@ export interface Country {
   id: number;
   isoNumeric: number;
   isoAlpha2: string;
+  isoAlpha3?: string;
   flag: string;
   name: string;
   region: string;
   isHome: boolean;
   isVisited: boolean;
+  showStateBorders: boolean;
 }
 
 export interface UpdatePlace {
@@ -52,4 +54,42 @@ export interface VisitedState {
   countryId: number;
   stateAbbr: string;
   stateName?: string;
+}
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  displayName?: string;
+  createdAt: string;
+  isDiscoverable: boolean;
+}
+
+export interface UpdateUser {
+  displayName?: string;
+  homeCountryId?: number;
+  isDiscoverable?: boolean;
+}
+
+export interface ShareLink {
+  id: number;
+  token: string;
+  isActive: boolean;
+  createdAt: string;
+  expiresAt?: string;
+  viewCount: number;
+}
+
+export interface PublicShareSummary {
+  token: string;
+  displayName: string;
+  continentsVisited: number;
+  countriesVisited: number;
+  placesCount: number;
+}
+
+export interface PublicMapData {
+  ownerDisplayName: string;
+  places: Place[];
+  countries: Country[];
+  visitedStates: VisitedState[];
 }

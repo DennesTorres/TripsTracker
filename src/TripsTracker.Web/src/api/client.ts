@@ -33,3 +33,11 @@ apiClient.interceptors.request.use(async config => {
 });
 
 export default apiClient;
+
+/**
+ * Unauthenticated client for public endpoints that must not trigger a login redirect.
+ * Used by useSharedMap — GET /api/shared/{token} is a public endpoint.
+ */
+export const publicApiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+});

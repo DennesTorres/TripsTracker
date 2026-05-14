@@ -9,4 +9,10 @@ public interface IUserProcess
     /// Safe to call on every login — idempotent.
     /// </summary>
     Task<UserDto> EnsureUserAsync(string email, string? displayName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Updates display name and/or home country. Validates that the requested home country
+    /// has been visited before setting it. Returns null if the user is not found.
+    /// </summary>
+    Task<UserDto?> UpdateAsync(int userId, UpdateUserDto dto, CancellationToken ct = default);
 }

@@ -72,7 +72,7 @@ public class NominatimGeocodingService : INominatimService
 
     private async Task<GeocodingResult?> GeocodeWithPhotonAsync(string cityName, string countryIsoAlpha2Hint, CancellationToken ct)
     {
-        var url = $"{PhotonBaseUrl}/api/?q={Uri.EscapeDataString(cityName)}&lang=en&limit=10";
+        var url = $"{PhotonBaseUrl}/api/?q={Uri.EscapeDataString(cityName)}&lang=en&limit=50";
         var response = await _http.GetFromJsonAsync<PhotonFeatureCollection>(url, ct);
         if (response?.Features is null or { Length: 0 }) return null;
 
@@ -84,7 +84,7 @@ public class NominatimGeocodingService : INominatimService
             if (!CityTypes.Contains(props.OsmValue ?? "")) return false;
             if (!string.IsNullOrWhiteSpace(normalizedCountry) &&
                 !props.CountryCode.Equals(normalizedCountry, StringComparison.OrdinalIgnoreCase)) return false;
-            return true;
+            return _compareInfo.IndexOf(props.Name, cityName, _compareOpts) >= 0;
         });
 
         if (match?.Geometry?.Coordinates is not { Length: >= 2 } coords) return null;

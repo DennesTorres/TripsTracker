@@ -6,5 +6,5 @@ public class VisitedState
     public int CountryId { get; set; }
     public string StateAbbr { get; set; } = string.Empty;
     public string? StateName { get; set; }
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 }

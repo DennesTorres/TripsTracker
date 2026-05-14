@@ -1,0 +1,18 @@
+{
+    "IsEncrypted": false,
+    "Host": {
+        "CORS": "http://localhost:4173,http://localhost:5173",
+        "CORSCredentials": false
+    },
+    "Values": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "BlobStorage__ConnectionString": "UseDevelopmentStorage=true",
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+        "APPLICATIONINSIGHTS_CONNECTION_STRING": "InstrumentationKey=92a2bd4d-8b62-4d58-9212-89648794f679;IngestionEndpoint=https://uksouth-1.in.applicationinsights.azure.com/;LiveEndpoint=https://uksouth.livediagnostics.monitor.azure.com/;ApplicationId=4a93251b-cc31-43dd-9686-2e2bbd50af28",
+        "Database__ConnectionString": "Server=localhost;Database=TripsTracker_Stage5;Trusted_Connection=True;TrustServerCertificate=True;",
+        "ApplicationInsights__ConnectionString": "InstrumentationKey=92a2bd4d-8b62-4d58-9212-89648794f679;IngestionEndpoint=https://uksouth-1.in.applicationinsights.azure.com/;LiveEndpoint=https://uksouth.livediagnostics.monitor.azure.com/;ApplicationId=4a93251b-cc31-43dd-9686-2e2bbd50af28",
+        "Nominatim__UserAgent": "TripsTracker/1.0",
+        "Auth__Authority": "https://login.microsoftonline.com/common/v2.0",
+        "Auth__Audience": "api://05aa01d6-ed6d-4bd2-8844-2c13c91a873f"
+    }
+}
