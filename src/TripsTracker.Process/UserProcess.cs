@@ -35,7 +35,7 @@ public class UserProcess : IUserProcess
             var country = await _countries.GetByIdAsync(dto.HomeCountryId.Value, ct);
             if (country is null) throw new NotFoundException("Country", dto.HomeCountryId.Value);
             if (!country.IsVisited) throw new BusinessRuleException("Home country must be a country you have visited.");
-            await _countries.SetHomeAsync(dto.HomeCountryId.Value, true, ct);
+            await _countries.SetAsHomeAsync(dto.HomeCountryId.Value, ct);
         }
 
         return updated;

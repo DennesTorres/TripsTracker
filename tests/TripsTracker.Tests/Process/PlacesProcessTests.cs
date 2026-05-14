@@ -234,7 +234,7 @@ public class PlacesProcessTests
 
         countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Brazil());
-        countries.Setup(c => c.SetVisitedAsync(1, false, It.IsAny<CancellationToken>()))
+        countries.Setup(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()))
             .ReturnsAsync((CountryDto?)null);
 
         var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
@@ -245,6 +245,47 @@ public class PlacesProcessTests
         Id: 2, Lon: -46.6, Lat: -23.5, CountryId: 1, CountryName: "Brazil",
         CountryFlag: "🇧🇷", City: "São Paulo", StateAbbr: "SP",
         StateName: "São Paulo", IsHome: false);
+
+    private static PlaceDto HomePlace() => new(
+        Id: 2, Lon: -46.6, Lat: -23.5, CountryId: 1, CountryName: "Brazil",
+        CountryFlag: "🇧🇷", City: "São Paulo", StateAbbr: "SP",
+        StateName: "São Paulo", IsHome: true);
+
+    private static (PlacesProcess Sut, Mock<ICountryBusiness> Countries) BuildHomeDeleteSut(
+        bool countryStillHasHomePlace)
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+        var points = new Mock<IPointsBusiness>();
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(1);
+
+        places.Setup(p => p.GetByIdAsync(2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(HomePlace());
+        places.Setup(p => p.DeleteAsync(2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(countryStillHasHomePlace);
+        places.Setup(p => p.GetFirstForCurrentUserInCountryAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SurvivingPlace());
+        places.Setup(p => p.GetFirstForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SurvivingPlace());
+
+        countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Brazil());
+        countries.Setup(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CountryDto?)null);
+        countries.Setup(c => c.UnsetHomeAsync(1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CountryDto?)null);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
+        return (sut, countries);
+    }
 
     [TestMethod]
     public async Task DeleteAsync_RevokesPlacePoints_Always()
@@ -354,5 +395,67 @@ public class PlacesProcessTests
         points.Verify(p => p.ReassignAsync(1, "continent_", AnyPlace().Id, "Continent", surviving.Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
         points.Verify(p => p.RevokeAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         points.Verify(p => p.RevokeAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ─── DeleteAsync — PromptHomeCountry ─────────────────────────────────────
+
+    [TestMethod]
+    public async Task DeleteAsync_NonHomePlace_ReturnsPromptFalse()
+    {
+        var (sut, _) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true);
+
+        var result = await sut.DeleteAsync(1);
+
+        Assert.IsFalse(result.PromptHomeCountry);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_HomePlace_OtherHomeRemains_ReturnsPromptFalse()
+    {
+        var (sut, _) = BuildHomeDeleteSut(countryStillHasHomePlace: true);
+
+        var result = await sut.DeleteAsync(2);
+
+        Assert.IsFalse(result.PromptHomeCountry);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_HomePlace_NoOtherHome_ReturnsPromptTrue_WithCountryInfo()
+    {
+        var (sut, countries) = BuildHomeDeleteSut(countryStillHasHomePlace: false);
+
+        var result = await sut.DeleteAsync(2);
+
+        Assert.IsTrue(result.PromptHomeCountry);
+        Assert.AreEqual(1, result.CountryId);
+        Assert.AreEqual("Brazil", result.CountryName);
+        countries.Verify(c => c.UnsetHomeAsync(1, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_LastPlaceInCountry_UnsetsVisited()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+        var points = new Mock<IPointsBusiness>();
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(1);
+
+        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(AnyPlace());
+        places.Setup(p => p.DeleteAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        places.Setup(p => p.GetFirstForCurrentUserInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync((PlaceDto?)null);
+        places.Setup(p => p.GetFirstForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>())).ReturnsAsync(SurvivingPlace());
+        countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(Brazil());
+        countries.Setup(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync((CountryDto?)null);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
+
+        await sut.DeleteAsync(1);
+
+        countries.Verify(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

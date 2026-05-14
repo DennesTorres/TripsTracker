@@ -14,7 +14,9 @@ public class CountryFunctions(ICountryBusiness countries)
         CancellationToken ct)
     {
         var value = req.Query.ContainsKey("value") && req.Query["value"] == "false" ? false : true;
-        var result = await countries.SetHomeAsync(id, value, ct);
+        var result = value
+            ? await countries.SetAsHomeAsync(id, ct)
+            : await countries.UnsetHomeAsync(id, ct);
         return result is not null ? new OkObjectResult(result) : new NotFoundResult();
     }
 

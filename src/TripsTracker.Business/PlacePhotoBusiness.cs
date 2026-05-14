@@ -91,21 +91,26 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
         var existing = await Context.Set<PhotoRating>()
             .FirstOrDefaultAsync(r => r.UserId == userId && r.PhotoId == photoId, ct);
 
-        if (existing is null)
+        if (existing != null)
         {
-            Context.Set<PhotoRating>().Add(new PhotoRating
-            {
-                UserId = userId,
-                PhotoId = photoId,
-                Rating = rating,
-                CreatedAt = DateTime.UtcNow,
-            });
+            existing.Rating = rating;
+            await Context.SaveChangesAsync(ct);
         }
         else
         {
-            existing.Rating = rating;
+            try
+            {
+                Context.Set<PhotoRating>().Add(new PhotoRating
+                {
+                    UserId = userId,
+                    PhotoId = photoId,
+                    Rating = rating,
+                    CreatedAt = DateTime.UtcNow,
+                });
+                await Context.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException) { /* concurrent insert -- already rated */ }
         }
-        await Context.SaveChangesAsync(ct);
     }
 
     public Task<PlacePhotoBlobInfo?> GetBlobInfoAsync(int photoId, CancellationToken ct = default)

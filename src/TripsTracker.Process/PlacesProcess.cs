@@ -42,9 +42,9 @@ public class PlacesProcess : IPlacesProcess
             ct);
 
         if (dto.IsHome)
-            await _countries.SetHomeAsync(country.Id, true, ct);
+            await _countries.SetAsHomeAsync(country.Id, ct);
         else
-            await _countries.SetVisitedAsync(country.Id, true, ct);
+            await _countries.SetAsVisitedAsync(country.Id, ct);
 
         if (_userContext.UserId.HasValue)
         {
@@ -81,15 +81,19 @@ public class PlacesProcess : IPlacesProcess
 
         await _places.DeleteAsync(placeId, ct);
 
-        var hasRemainingPlaces = await _places.HasAnyInCountryAsync(place.CountryId, ct);
-        if (!hasRemainingPlaces)
-            await _countries.SetVisitedAsync(place.CountryId, false, ct);
+        var countryStillHasPlaces = await _places.HasAnyInCountryAsync(place.CountryId, ct);
+        if (!countryStillHasPlaces)
+            await _countries.UnsetVisitedAsync(place.CountryId, ct);
 
+        var promptHomeCountry = false;
         if (place.IsHome)
         {
-            var hasRemainingHome = await _places.HasHomeInCountryAsync(place.CountryId, ct);
-            if (!hasRemainingHome)
-                await _countries.SetHomeAsync(place.CountryId, false, ct);
+            var countryStillHasHomePlace = await _places.HasHomeInCountryAsync(place.CountryId, ct);
+            if (!countryStillHasHomePlace)
+            {
+                await _countries.UnsetHomeAsync(place.CountryId, ct);
+                promptHomeCountry = true;
+            }
         }
 
         if (_userContext.UserId.HasValue)
@@ -100,7 +104,7 @@ public class PlacesProcess : IPlacesProcess
             await _points.RevokeAsync(userId, "city_", place.Id, "Place", ct);
 
             // Country tier: stored as (place.Id, "Country") — revoke or reassign
-            if (!hasRemainingPlaces)
+            if (!countryStillHasPlaces)
             {
                 await _points.RevokeAsync(userId, "country_", place.Id, "Country", ct);
             }
@@ -129,6 +133,6 @@ public class PlacesProcess : IPlacesProcess
             }
         }
 
-        return new DeletePlaceResult(false, null, null);
+        return new DeletePlaceResult(promptHomeCountry, promptHomeCountry ? place.CountryId : null, promptHomeCountry ? place.CountryName : null);
     }
 }
