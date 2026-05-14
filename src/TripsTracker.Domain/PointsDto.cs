@@ -1,10 +1,36 @@
 namespace TripsTracker.Domain;
 
-public record PointEventDto(int Id, string EventType, int Points, int? ReferenceId, string? ReferenceType, DateTime CreatedAt,
-    string? CityName = null, string? CountryName = null, string? ContinentName = null);
+public class PointEventDto
+{
+    public int Id { get; init; }
+    public required string EventType { get; init; }
+    public int Points { get; init; }
+    public int? ReferenceId { get; init; }
+    public string? ReferenceType { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public string? CityName { get; init; }
+    public string? CountryName { get; init; }
+    public string? ContinentName { get; init; }
+}
 
-public record UserPointsSummaryDto(int TotalPoints, List<PointEventDto> RecentEvents);
+public class UserPointsSummaryDto
+{
+    public int TotalPoints { get; init; }
+    public required List<PointEventDto> RecentEvents { get; init; }
+}
 
-public record UserStatementDto(int UserId, string DisplayName, int TotalPoints, List<PointEventDto> Events);
+public class UserStatementDto
+{
+    public int UserId { get; init; }
+    public required string DisplayName { get; init; }
+    public int TotalPoints { get; init; }
+    public required List<PointEventDto> Events { get; init; }
+}
 
-public record LeaderboardEntryDto(int UserId, int Rank, string DisplayName, int TotalPoints);
+public class LeaderboardEntryDto
+{
+    public int UserId { get; init; }
+    public int Rank { get; init; }
+    public required string DisplayName { get; init; }
+    public int TotalPoints { get; init; }
+}

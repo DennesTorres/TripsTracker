@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
@@ -26,6 +28,8 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<PlaceDto> AddAsync(AddPlaceDto dto, CancellationToken ct = default)
     {
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
         var country = await _countries.GetByIsoAlpha2Async(dto.CountryIsoAlpha2, ct)
             ?? throw new NotFoundException("Country", dto.CountryIsoAlpha2);
 
@@ -46,31 +50,31 @@ public class PlacesProcess : IPlacesProcess
         else
             await _countries.SetAsVisitedAsync(country.Id, ct);
 
-        if (_userContext.UserId.HasValue)
+        Debug.Assert(_userContext.UserId.HasValue);
+        var userId = _userContext.UserId.Value;
+
+        // City tier: 50 personal, 200 pioneer
+        var cityEvent = isPioneerCountry || isPioneerRegion ? "city_pioneer" : "city_added";
+        var cityPoints = isPioneerCountry || isPioneerRegion ? 200 : 50;
+        await _points.AwardAsync(userId, cityEvent, cityPoints, place.Id, "Place", ct);
+
+        // Country tier: 500 personal, 2000 pioneer — stored as (place.Id, "Country") to enable reassignment
+        if (isFirstInCountry)
         {
-            var userId = _userContext.UserId.Value;
-            // City tier: 50 personal, 200 pioneer
-            var cityEvent = isPioneerCountry || isPioneerRegion ? "city_pioneer" : "city_added";
-            var cityPoints = isPioneerCountry || isPioneerRegion ? 200 : 50;
-            await _points.AwardAsync(userId, cityEvent, cityPoints, place.Id, "Place", ct);
-
-            // Country tier: 500 personal, 2000 pioneer — stored as (place.Id, "Country") to enable reassignment
-            if (isFirstInCountry)
-            {
-                var countryEvent = isPioneerCountry ? "country_pioneer" : "country_first";
-                var countryPoints = isPioneerCountry ? 2000 : 500;
-                await _points.AwardAsync(userId, countryEvent, countryPoints, place.Id, "Country", ct);
-            }
-
-            // Continent tier: 5000 personal, 20000 pioneer — stored as (place.Id, "Continent") to enable reassignment
-            if (isFirstInRegion)
-            {
-                var regionEvent = isPioneerRegion ? "continent_pioneer" : "continent_first";
-                var regionPoints = isPioneerRegion ? 20000 : 5000;
-                await _points.AwardAsync(userId, regionEvent, regionPoints, place.Id, "Continent", ct);
-            }
+            var countryEvent = isPioneerCountry ? "country_pioneer" : "country_first";
+            var countryPoints = isPioneerCountry ? 2000 : 500;
+            await _points.AwardAsync(userId, countryEvent, countryPoints, place.Id, "Country", ct);
         }
 
+        // Continent tier: 5000 personal, 20000 pioneer — stored as (place.Id, "Continent") to enable reassignment
+        if (isFirstInRegion)
+        {
+            var regionEvent = isPioneerRegion ? "continent_pioneer" : "continent_first";
+            var regionPoints = isPioneerRegion ? 20000 : 5000;
+            await _points.AwardAsync(userId, regionEvent, regionPoints, place.Id, "Continent", ct);
+        }
+
+        scope.Complete();
         return place;
     }
 
@@ -96,40 +100,38 @@ public class PlacesProcess : IPlacesProcess
             }
         }
 
-        if (_userContext.UserId.HasValue)
+        Debug.Assert(_userContext.UserId.HasValue);
+        var userId = _userContext.UserId.Value;
+
+        // Always revoke city-tier points for this place
+        await _points.RevokeAsync(userId, "city_", place.Id, "Place", ct);
+
+        // Country tier: stored as (place.Id, "Country") — revoke or reassign
+        if (!countryStillHasPlaces)
         {
-            var userId = _userContext.UserId.Value;
+            await _points.RevokeAsync(userId, "country_", place.Id, "Country", ct);
+        }
+        else
+        {
+            var survivingInCountry = await _places.GetFirstForCurrentUserInCountryAsync(place.CountryId, ct);
+            if (survivingInCountry != null)
+                await _points.ReassignAsync(userId, "country_", place.Id, "Country", survivingInCountry.Id, "Country", ct);
+        }
 
-            // Always revoke city-tier points for this place
-            await _points.RevokeAsync(userId, "city_", place.Id, "Place", ct);
-
-            // Country tier: stored as (place.Id, "Country") — revoke or reassign
-            if (!countryStillHasPlaces)
+        // Continent tier: stored as (place.Id, "Continent") — revoke or reassign
+        var country = await _countries.GetByIdAsync(place.CountryId, ct);
+        if (country != null)
+        {
+            var hasRemainingInRegion = await _places.HasAnyForCurrentUserInRegionAsync(country.Region, ct);
+            if (!hasRemainingInRegion)
             {
-                await _points.RevokeAsync(userId, "country_", place.Id, "Country", ct);
+                await _points.RevokeAsync(userId, "continent_", place.Id, "Continent", ct);
             }
             else
             {
-                var survivingInCountry = await _places.GetFirstForCurrentUserInCountryAsync(place.CountryId, ct);
-                if (survivingInCountry != null)
-                    await _points.ReassignAsync(userId, "country_", place.Id, "Country", survivingInCountry.Id, "Country", ct);
-            }
-
-            // Continent tier: stored as (place.Id, "Continent") — revoke or reassign
-            var country = await _countries.GetByIdAsync(place.CountryId, ct);
-            if (country != null)
-            {
-                var hasRemainingInRegion = await _places.HasAnyForCurrentUserInRegionAsync(country.Region, ct);
-                if (!hasRemainingInRegion)
-                {
-                    await _points.RevokeAsync(userId, "continent_", place.Id, "Continent", ct);
-                }
-                else
-                {
-                    var survivingInRegion = await _places.GetFirstForCurrentUserInRegionAsync(country.Region, ct);
-                    if (survivingInRegion != null)
-                        await _points.ReassignAsync(userId, "continent_", place.Id, "Continent", survivingInRegion.Id, "Continent", ct);
-                }
+                var survivingInRegion = await _places.GetFirstForCurrentUserInRegionAsync(country.Region, ct);
+                if (survivingInRegion != null)
+                    await _points.ReassignAsync(userId, "continent_", place.Id, "Continent", survivingInRegion.Id, "Continent", ct);
             }
         }
 

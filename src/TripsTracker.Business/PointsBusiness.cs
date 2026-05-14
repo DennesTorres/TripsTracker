@@ -77,7 +77,7 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .FirstOrDefaultAsync(ct);
 
         var recent = await GetRecentAsync(10, ct);
-        return new UserPointsSummaryDto(total, recent);
+        return new UserPointsSummaryDto { TotalPoints = total, RecentEvents = recent };
     }
 
     public async Task<List<PointEventDto>> GetRecentAsync(int count = 20, CancellationToken ct = default)
@@ -97,8 +97,7 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             join c in Context.Set<Country>().AsNoTracking() on p.CountryId equals c.Id into cp
             from c in cp.DefaultIfEmpty()
             orderby e.CreatedAt descending
-            select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
-                p.City, c.Name, c.Region)
+            select new PointEventDto { Id = e.Id, EventType = e.EventType, Points = e.Points, ReferenceId = e.ReferenceId, ReferenceType = e.ReferenceType, CreatedAt = e.CreatedAt, CityName = p.City, CountryName = c.Name, ContinentName = c.Region }
         ).Take(count).ToListAsync(ct);
     }
 
@@ -129,7 +128,7 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .FirstOrDefaultAsync(ct);
 
         if (user is null)
-            return new UserStatementDto(userId, "", 0, []);
+            return new UserStatementDto { UserId = userId, DisplayName = "", TotalPoints = 0, Events = [] };
 
         var revokedOriginalIds = await BuildBaseQuery()
             .Where(e => e.UserId == userId && e.OriginalEventId != null)
@@ -146,11 +145,10 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             join c in Context.Set<Country>().AsNoTracking() on p.CountryId equals c.Id into cp
             from c in cp.DefaultIfEmpty()
             orderby e.CreatedAt descending
-            select new PointEventDto(e.Id, e.EventType, e.Points, e.ReferenceId, e.ReferenceType, e.CreatedAt,
-                p.City, c.Name, c.Region)
+            select new PointEventDto { Id = e.Id, EventType = e.EventType, Points = e.Points, ReferenceId = e.ReferenceId, ReferenceType = e.ReferenceType, CreatedAt = e.CreatedAt, CityName = p.City, CountryName = c.Name, ContinentName = c.Region }
         ).ToListAsync(ct);
 
-        return new UserStatementDto(userId, user.DisplayName, user.TotalPoints, events);
+        return new UserStatementDto { UserId = userId, DisplayName = user.DisplayName, TotalPoints = user.TotalPoints, Events = events };
     }
 
     public async Task<List<LeaderboardEntryDto>> GetLeaderboardAsync(int limit = 20, CancellationToken ct = default)
@@ -162,6 +160,6 @@ public class PointsBusiness : BusinessBase<PointEvent>, IPointsBusiness
             .Select(u => new { u.Id, DisplayName = u.DisplayName ?? u.Email, u.TotalPoints })
             .ToListAsync(ct);
 
-        return rows.Select((r, i) => new LeaderboardEntryDto(r.Id, i + 1, r.DisplayName, r.TotalPoints)).ToList();
+        return rows.Select((r, i) => new LeaderboardEntryDto { UserId = r.Id, Rank = i + 1, DisplayName = r.DisplayName, TotalPoints = r.TotalPoints }).ToList();
     }
 }
