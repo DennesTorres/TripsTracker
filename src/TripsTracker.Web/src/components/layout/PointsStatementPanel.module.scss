@@ -65,7 +65,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
@@ -74,6 +74,13 @@
   &:hover {
     background: rgba(255,255,255,0.03);
   }
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .labelWrap {

@@ -90,22 +90,24 @@ export default function PointsStatementPanel({ userId, onClose }: Props) {
                   return loc ? <span className={styles.city}>{loc}</span> : null;
                 })()}
               </div>
-              {description && (
-                <div className={styles.tooltipWrap}>
-                  <button
-                    className={styles.helpBtn}
-                    onClick={(ev) => { ev.stopPropagation(); setOpenTooltip(isOpen ? null : e.id); }}
-                    title="What earns this?"
-                  >
-                    <HelpCircle size={12} />
-                  </button>
-                  {isOpen && (
-                    <div className={styles.tooltip}>{description}</div>
-                  )}
-                </div>
-              )}
               <span className={styles.date}>{formatDate(e.createdAt)}</span>
-              <span className={styles.points}>+{e.points}</span>
+              <div className={styles.rowRight}>
+                {description && (
+                  <div className={styles.tooltipWrap}>
+                    <button
+                      className={styles.helpBtn}
+                      onClick={(ev) => { ev.stopPropagation(); setOpenTooltip(isOpen ? null : e.id); }}
+                      title="What earns this?"
+                    >
+                      <HelpCircle size={12} />
+                    </button>
+                    {isOpen && (
+                      <div className={styles.tooltip}>{description}</div>
+                    )}
+                  </div>
+                )}
+                <span className={styles.points}>+{e.points}</span>
+              </div>
             </div>
           );
         })}
