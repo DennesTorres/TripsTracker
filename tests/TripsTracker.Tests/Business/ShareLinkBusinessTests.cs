@@ -105,6 +105,182 @@ public class ShareLinkBusinessTests
         Assert.AreEqual(dto.Token, inDb.Token);
     }
 
+    // ─── GetUserLinksAsync ────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetUserLinksAsync_ReturnsOnlyCurrentUserLinks_InDescendingOrder()
+    {
+        await using var f = new Fixture();
+        var user1 = MakeUser("u1@test.com");
+        var user2 = MakeUser("u2@test.com");
+        f.Ctx.Users.AddRange(user1, user2);
+        await f.Ctx.SaveChangesAsync();
+
+        var older = MakeLink(user1.Id, "tok-older");
+        older.CreatedAt = DateTime.UtcNow.AddHours(-1);
+        var newer = MakeLink(user1.Id, "tok-newer");
+        newer.CreatedAt = DateTime.UtcNow;
+        var other = MakeLink(user2.Id, "tok-other");
+        f.Ctx.ShareLinks.AddRange(older, newer, other);
+        await f.Ctx.SaveChangesAsync();
+
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(user1.Id);
+        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+
+        var results = await biz.GetUserLinksAsync();
+
+        Assert.HasCount(2, results);
+        Assert.AreEqual("tok-newer", results[0].Token, "Newer link must come first");
+        Assert.AreEqual("tok-older", results[1].Token);
+    }
+
+    // ─── DeactivateAsync ──────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task DeactivateAsync_OwnLink_SetsInactiveAndReturnsTrue()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.ShareLinks.Add(MakeLink(user.Id, "tok"));
+        await f.Ctx.SaveChangesAsync();
+        var linkId = (await f.Ctx.ShareLinks.FirstAsync(l => l.Token == "tok")).Id;
+
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(user.Id);
+        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+
+        var result = await biz.DeactivateAsync(linkId);
+
+        Assert.IsTrue(result);
+        var inDb = await f.Ctx.ShareLinks.AsNoTracking().FirstAsync(l => l.Id == linkId);
+        Assert.IsFalse(inDb.IsActive);
+    }
+
+    [TestMethod]
+    public async Task DeactivateAsync_OtherUsersLink_ReturnsFalseAndLeavesUntouched()
+    {
+        await using var f = new Fixture();
+        var owner = MakeUser("owner@test.com");
+        var other = MakeUser("other@test.com");
+        f.Ctx.Users.AddRange(owner, other);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.ShareLinks.Add(MakeLink(owner.Id, "tok"));
+        await f.Ctx.SaveChangesAsync();
+        var linkId = (await f.Ctx.ShareLinks.FirstAsync(l => l.Token == "tok")).Id;
+
+        var userContext = new Mock<IUserContext>();
+        userContext.Setup(u => u.UserId).Returns(other.Id);
+        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+
+        var result = await biz.DeactivateAsync(linkId);
+
+        Assert.IsFalse(result);
+        var inDb = await f.Ctx.ShareLinks.FindAsync(linkId);
+        Assert.IsTrue(inDb!.IsActive, "Owner's link must remain active");
+    }
+
+    // ─── GetByTokenAsync ──────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetByTokenAsync_ActiveNonExpiredLink_ReturnsDto()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
+        var link = MakeLink(user.Id, "tok-active");
+        link.ExpiresAt = DateTime.UtcNow.AddDays(1);
+        f.Ctx.ShareLinks.Add(link);
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.Biz.GetByTokenAsync("tok-active");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("tok-active", result.Token);
+    }
+
+    [TestMethod]
+    public async Task GetByTokenAsync_InactiveLink_ReturnsNull()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
+        var link = MakeLink(user.Id, "tok-inactive");
+        link.IsActive = false;
+        f.Ctx.ShareLinks.Add(link);
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.Biz.GetByTokenAsync("tok-inactive");
+
+        Assert.IsNull(result);
+    }
+
+    [TestMethod]
+    public async Task GetByTokenAsync_ExpiredLink_ReturnsNull()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
+        var link = MakeLink(user.Id, "tok-expired");
+        link.ExpiresAt = DateTime.UtcNow.AddDays(-1);
+        f.Ctx.ShareLinks.Add(link);
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.Biz.GetByTokenAsync("tok-expired");
+
+        Assert.IsNull(result);
+    }
+
+    // ─── IncrementViewCountAsync ───────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task IncrementViewCountAsync_IncrementsCounter()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.ShareLinks.Add(MakeLink(user.Id, "tok-view"));
+        await f.Ctx.SaveChangesAsync();
+
+        await f.Biz.IncrementViewCountAsync("tok-view");
+
+        var inDb = await f.Ctx.ShareLinks.AsNoTracking().FirstAsync(l => l.Token == "tok-view");
+        Assert.AreEqual(1, inDb.ViewCount);
+    }
+
+    // ─── GetOwnerIdAsync ──────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetOwnerIdAsync_KnownToken_ReturnsOwnerId()
+    {
+        await using var f = new Fixture();
+        var user = MakeUser("u@test.com");
+        f.Ctx.Users.Add(user);
+        await f.Ctx.SaveChangesAsync();
+        f.Ctx.ShareLinks.Add(MakeLink(user.Id, "tok-owner"));
+        await f.Ctx.SaveChangesAsync();
+
+        var result = await f.Biz.GetOwnerIdAsync("tok-owner");
+
+        Assert.AreEqual(user.Id, result);
+    }
+
+    [TestMethod]
+    public async Task GetOwnerIdAsync_UnknownToken_ReturnsNull()
+    {
+        await using var f = new Fixture();
+
+        var result = await f.Biz.GetOwnerIdAsync("no-such-token");
+
+        Assert.IsNull(result);
+    }
+
     // ─── DiscoverAsync ────────────────────────────────────────────────────────
 
     [TestMethod]
