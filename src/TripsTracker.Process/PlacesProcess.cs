@@ -38,6 +38,7 @@ public class PlacesProcess : IPlacesProcess
         // Cascade scoring: evaluate tiers BEFORE inserting so counts exclude the new place
         bool isFirstInCountry = !await _places.HasAnyInCountryAsync(country.Id, ct);
         bool isFirstInRegion = !await _places.HasAnyForCurrentUserInRegionAsync(country.Region, ct);
+        bool isPioneerCity = !await _places.HasAnyGloballyInCityAsync(geocoded.City, country.Id, ct);
         bool isPioneerCountry = isFirstInCountry && !await _places.HasAnyGloballyInCountryAsync(country.Id, ct);
         bool isPioneerRegion = isFirstInRegion && !await _places.HasAnyGloballyInRegionAsync(country.Region, ct);
 
@@ -53,9 +54,9 @@ public class PlacesProcess : IPlacesProcess
         Debug.Assert(_userContext.UserId.HasValue);
         var userId = _userContext.UserId.Value;
 
-        // City tier: 50 personal, 200 pioneer
-        var cityEvent = isPioneerCountry || isPioneerRegion ? "city_pioneer" : "city_added";
-        var cityPoints = isPioneerCountry || isPioneerRegion ? 200 : 50;
+        // City tier: 50 personal, 200 pioneer (pioneer = first globally in this specific city)
+        var cityEvent = isPioneerCity ? "city_pioneer" : "city_added";
+        var cityPoints = isPioneerCity ? 200 : 50;
         await _points.AwardAsync(userId, cityEvent, cityPoints, place.Id, "Place", ct);
 
         // Country tier: 500 personal, 2000 pioneer — stored as (place.Id, "Country") to enable reassignment

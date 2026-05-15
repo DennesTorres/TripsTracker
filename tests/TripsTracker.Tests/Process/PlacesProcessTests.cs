@@ -35,6 +35,7 @@ public class PlacesProcessTests
         StandardMocks(
             bool hasPlaceInCountry = true,
             bool hasPlaceInRegion = true,
+            bool anyGloballyInCity = false,
             bool anyGloballyInCountry = true,
             bool anyGloballyInRegion = true)
     {
@@ -52,6 +53,8 @@ public class PlacesProcessTests
             .ReturnsAsync(hasPlaceInCountry);
         places.Setup(p => p.HasAnyForCurrentUserInRegionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(hasPlaceInRegion);
+        places.Setup(p => p.HasAnyGloballyInCityAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(anyGloballyInCity);
         places.Setup(p => p.HasAnyGloballyInCountryAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(anyGloballyInCountry);
         places.Setup(p => p.HasAnyGloballyInRegionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -115,7 +118,7 @@ public class PlacesProcessTests
     {
         // Not first in country, not first in region → only city_added (50 pts)
         var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: true, hasPlaceInRegion: true);
+            hasPlaceInCountry: true, hasPlaceInRegion: true, anyGloballyInCity: true);
         var (sut, points) = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
@@ -131,7 +134,7 @@ public class PlacesProcessTests
         // First in country for this user, but other users already have places there → personal 500
         var (places, countries, geocoding) = StandardMocks(
             hasPlaceInCountry: false, hasPlaceInRegion: true,
-            anyGloballyInCountry: true);
+            anyGloballyInCity: true, anyGloballyInCountry: true);
         var (sut, points) = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
@@ -163,7 +166,7 @@ public class PlacesProcessTests
         // First in this continent for this user, but others already have places there → personal 5000
         var (places, countries, geocoding) = StandardMocks(
             hasPlaceInCountry: true, hasPlaceInRegion: false,
-            anyGloballyInRegion: true);
+            anyGloballyInCity: true, anyGloballyInRegion: true);
         var (sut, points) = BuildSut(places, countries, geocoding);
 
         await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));

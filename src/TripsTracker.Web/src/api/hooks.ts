@@ -20,6 +20,7 @@ export function useCreatePlace() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['places'] });
       qc.invalidateQueries({ queryKey: ['countries'] });
+      qc.refetchQueries({ queryKey: ['points'], type: 'all' });
     },
   });
 }

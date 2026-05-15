@@ -93,6 +93,9 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             .Join(Context.Set<Country>().AsNoTracking(), p => p.CountryId, c => c.Id, (p, c) => c.Region)
             .AnyAsync(r => r == region, ct);
 
+    public Task<bool> HasAnyGloballyInCityAsync(string city, int countryId, CancellationToken ct = default)
+        => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.City == city, ct);
+
     public Task<bool> HasAnyGloballyInCountryAsync(int countryId, CancellationToken ct = default)
         => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId, ct);
 

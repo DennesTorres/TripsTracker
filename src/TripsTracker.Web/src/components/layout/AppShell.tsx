@@ -114,10 +114,13 @@ export default function AppShell({ children }: Props) {
       </nav>
       <main className={styles.main}>{children(view, setView)}</main>
       {summaryOpen && (
-        <PointsSummaryPopup
-          onClose={() => setSummaryOpen(false)}
-          onViewFull={() => { setSummaryOpen(false); setStatementUserId(user?.id ?? null); setStatementOpen(true); }}
-        />
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 199 }} onClick={() => setSummaryOpen(false)} />
+          <PointsSummaryPopup
+            onClose={() => setSummaryOpen(false)}
+            onViewFull={() => { setSummaryOpen(false); setStatementUserId(user?.id ?? null); setStatementOpen(true); }}
+          />
+        </>
       )}
       {leaderboardOpen && (
         <LeaderboardModal
