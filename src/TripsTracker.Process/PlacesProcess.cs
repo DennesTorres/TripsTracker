@@ -81,6 +81,8 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<DeletePlaceResult> DeleteAsync(int placeId, CancellationToken ct = default)
     {
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
         var place = await _places.GetByIdAsync(placeId, ct)
             ?? throw new NotFoundException("Place", placeId);
 
@@ -136,6 +138,7 @@ public class PlacesProcess : IPlacesProcess
             }
         }
 
+        scope.Complete();
         return new DeletePlaceResult(promptHomeCountry, promptHomeCountry ? place.CountryId : null, promptHomeCountry ? place.CountryName : null);
     }
 }
