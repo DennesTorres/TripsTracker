@@ -1,5 +1,5 @@
 import { PublicClientApplication, EventType } from '@azure/msal-browser';
-import type { AuthenticationResult, EventMessage } from '@azure/msal-browser';
+import type { AccountInfo, EventMessage } from '@azure/msal-browser';
 import { msalConfig } from './authConfig';
 
 /**
@@ -21,10 +21,10 @@ export const msalInitialized = msalInstance.initialize().then(() => {
   // Set active account when login redirect completes.
   // MsalProvider calls handleRedirectPromise() internally, which emits
   // LOGIN_SUCCESS on success. This callback picks up the account.
+  // msal-browser v5: LOGIN_SUCCESS payload is AccountInfo directly (was AuthenticationResult in v3).
   msalInstance.addEventCallback((event: EventMessage) => {
     if (event.eventType === EventType.LOGIN_SUCCESS && event.payload) {
-      const result = event.payload as AuthenticationResult;
-      msalInstance.setActiveAccount(result.account);
+      msalInstance.setActiveAccount(event.payload as AccountInfo);
     }
   });
 });

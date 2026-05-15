@@ -43,6 +43,20 @@ public class PlacesProcess : IPlacesProcess
         return place;
     }
 
+    public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
+    {
+        var place = await _places.GetByIdAsync(id, ct);
+        if (place is null) return null;
+
+        var updated = await _places.UpdateAsync(id, dto, ct);
+        if (updated is null) return null;
+
+        if (dto.IsHome)
+            await _countries.SetHomeAsync(place.CountryId, true, ct);
+
+        return updated;
+    }
+
     public async Task<DeletePlaceResult> DeleteAsync(int placeId, CancellationToken ct = default)
     {
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);

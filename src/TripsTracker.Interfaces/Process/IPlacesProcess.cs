@@ -10,6 +10,12 @@ public interface IPlacesProcess
     Task<PlaceDto> AddAsync(AddPlaceDto dto, CancellationToken ct = default);
 
     /// <summary>
+    /// Updates a place. When <see cref="UpdatePlaceDto.IsHome"/> is true, also syncs
+    /// <see cref="UserCountry.IsHome"/> so the profile home-country dropdown reflects the change.
+    /// </summary>
+    Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default);
+
+    /// <summary>
     /// Deletes a place and manages related country flags:
     /// - Unsets country IsVisited if this was the last place in the country.
     /// - Returns PromptHomeCountry=true if the deleted place was the user's home city,

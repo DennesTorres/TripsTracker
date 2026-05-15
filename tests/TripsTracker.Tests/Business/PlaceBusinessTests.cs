@@ -182,6 +182,25 @@ public class PlaceBusinessTests
     }
 
     [TestMethod]
+    public async Task UpdateAsync_SetIsHome_ClearsHomeOnOtherPlaces()
+    {
+        // HOME_EXCLUSIVITY: only one place per user may be IsHome at a time
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+        var place1 = await f.AddPlaceAsync(country.Id, "HomeCity1", isHome: true);
+        var place2 = await f.AddPlaceAsync(country.Id, "HomeCity2", isHome: false);
+
+        var result = await f.Biz.UpdateAsync(place2.Id, new UpdatePlaceDto("HomeCity2", true));
+
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.IsHome);
+
+        var place1After = await f.Biz.GetByIdAsync(place1.Id);
+        Assert.IsNotNull(place1After);
+        Assert.IsFalse(place1After.IsHome, "HOME_EXCLUSIVITY: IsHome must be cleared on all other places when a new home is set");
+    }
+
+    [TestMethod]
     public async Task UpdateAsync_ReturnsNull_ForOtherUsersPlace()
     {
         await using var f = new Fixture();

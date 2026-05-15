@@ -54,6 +54,15 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
+        // HOME_EXCLUSIVITY: only one place per user may be IsHome at a time
+        if (dto.IsHome)
+        {
+            await ExecuteUpdateAsync(
+                p => p.UserId == _userContext.UserId && p.Id != id && p.IsHome,
+                s => s.SetProperty(p => p.IsHome, false),
+                ct);
+        }
+
         var rows = await ExecuteUpdateAsync(
             p => p.Id == id && p.UserId == _userContext.UserId,
             s =>

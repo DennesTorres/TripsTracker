@@ -9,12 +9,14 @@ export function useBorderLoader(
 ) {
   const { setLoadingMessage } = useMapStatus();
   const fetchingRef = useRef<Set<number>>(new Set());
+  const pendingCountRef = useRef(0);
   const cacheRef = useRef(borderGeoCache);
   cacheRef.current = borderGeoCache;
 
   const loadBorders = useCallback(async (countryId: number, countryName: string) => {
     if (cacheRef.current[countryId] || fetchingRef.current.has(countryId)) return;
     fetchingRef.current.add(countryId);
+    pendingCountRef.current++;
     setLoadingMessage(`Loading borders for ${countryName}…`);
     try {
       const response = await apiClient.get<GeoJSON.FeatureCollection>(
@@ -27,7 +29,8 @@ export function useBorderLoader(
       // Silently ignore — borders won't render for this country
     } finally {
       fetchingRef.current.delete(countryId);
-      setLoadingMessage(null);
+      pendingCountRef.current--;
+      if (pendingCountRef.current === 0) setLoadingMessage(null);
     }
   }, [setBorderGeoCache, setLoadingMessage]);
 

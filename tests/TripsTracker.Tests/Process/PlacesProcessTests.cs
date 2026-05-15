@@ -113,6 +113,68 @@ public class PlacesProcessTests
 
     #endregion
 
+    // ─── UpdateAsync — orchestration (Moq) ────────────────────────────────────
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenIsHome_CallsSetHomeAsync()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        var existing = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, false);
+        var updated = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, true);
+
+        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        places.Setup(p => p.UpdateAsync(1, It.IsAny<UpdatePlaceDto>(), It.IsAny<CancellationToken>())).ReturnsAsync(updated);
+        countries.Setup(c => c.SetHomeAsync(42, true, It.IsAny<CancellationToken>())).ReturnsAsync((CountryDto?)null);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+
+        await sut.UpdateAsync(1, new UpdatePlaceDto("Paris", true));
+
+        countries.Verify(c => c.SetHomeAsync(42, true, It.IsAny<CancellationToken>()), Times.Once,
+            "UpdateAsync must sync UserCountry.IsHome when IsHome is true");
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenNotIsHome_DoesNotCallSetHomeAsync()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        var existing = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, true);
+        var updated = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, false);
+
+        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        places.Setup(p => p.UpdateAsync(1, It.IsAny<UpdatePlaceDto>(), It.IsAny<CancellationToken>())).ReturnsAsync(updated);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+
+        await sut.UpdateAsync(1, new UpdatePlaceDto("Paris", false));
+
+        countries.Verify(c => c.SetHomeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never,
+            "SetHomeAsync must not be called when IsHome is false");
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenPlaceNotFound_ReturnsNull()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        places.Setup(p => p.GetByIdAsync(999, It.IsAny<CancellationToken>())).ReturnsAsync((PlaceDto?)null);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+
+        var result = await sut.UpdateAsync(999, new UpdatePlaceDto("City", false));
+
+        Assert.IsNull(result);
+        countries.Verify(c => c.SetHomeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ─── DeleteAsync (real-DB) ─────────────────────────────────────────────────
 
     [TestMethod]
