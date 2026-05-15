@@ -12,6 +12,7 @@ public class PlaceCommentDto
     public int UpvoteCount { get; init; }
     public int DownvoteCount { get; init; }
     public int? ParentCommentId { get; init; }
+    public bool? CurrentUserVote { get; init; }
 }
 
 public class CreateCommentDto

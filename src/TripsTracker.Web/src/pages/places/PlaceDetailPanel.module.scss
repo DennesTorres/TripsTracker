@@ -187,6 +187,11 @@
   border-radius: 3px;
 
   &:hover { color: #f0b84a; background: rgba(240, 184, 74, 0.1); }
+  &:disabled { cursor: default; }
+}
+
+.starBtnActive {
+  color: #f0b84a;
 }
 
 .uploadRow {
@@ -274,6 +279,10 @@
   border-radius: 3px;
 
   &:hover { color: #94a3b8; background: rgba(255, 255, 255, 0.05); }
+}
+
+.voteBtnActive {
+  color: #4a9eff;
 }
 
 .addCommentForm {

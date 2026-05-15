@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { useExploreContent } from '@/api/hooks';
+import { useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useExploreContent, useRatePhoto, useUploadPhoto, useVoteComment } from '@/api/hooks';
 import type { Place } from '@/types';
+import { Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 import styles from './PlacePopup.module.scss';
 
 interface Props {
@@ -32,14 +34,31 @@ export default function PlacePopup({ places, x, y, onClose, onSeeMore }: Props) 
 }
 
 function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => void }) {
+  const qc = useQueryClient();
   const { data: content } = useExploreContent(place.city, place.countryId);
   const photos = content?.photos ?? [];
   const topLevelComments = (content?.comments ?? []).filter(c => !c.parentCommentId);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [commentIndex, setCommentIndex] = useState(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const ratePhoto = useRatePhoto();
+  const uploadPhoto = useUploadPhoto();
+  const voteComment = useVoteComment();
 
   const photo = photos.length > 0 ? photos[Math.min(photoIndex, photos.length - 1)] : undefined;
   const comment = topLevelComments.length > 0 ? topLevelComments[Math.min(commentIndex, topLevelComments.length - 1)] : undefined;
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['explore-content', place.city, place.countryId] });
+  };
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    uploadPhoto.mutate({ placeId: place.id, file }, { onSuccess: invalidate });
+    if (fileRef.current) fileRef.current.value = '';
+  }
 
   return (
     <div>
@@ -58,6 +77,19 @@ function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => vo
           {photo.ratingCount > 0 && (
             <span className={styles.rating}>{photo.averageRating.toFixed(1)} ★</span>
           )}
+          <div className={styles.photoStars}>
+            {[1, 2, 3, 4, 5].map(r => (
+              <button
+                key={r}
+                className={`${styles.starBtn} ${r <= (photo.currentUserRating ?? 0) ? styles.starBtnActive : ''}`}
+                onClick={() => ratePhoto.mutate({ photoId: photo.id, rating: r, placeId: place.id }, { onSuccess: invalidate })}
+                disabled={ratePhoto.isPending}
+                title={`Rate ${r}`}
+              >
+                <Star size={11} />
+              </button>
+            ))}
+          </div>
           {photos.length > 1 && (
             <div className={styles.photoNav}>
               <button
@@ -98,13 +130,35 @@ function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => vo
           <span className={styles.commentText}>
             {comment.text.length > 80 ? `${comment.text.slice(0, 80)}…` : comment.text}
           </span>
-          {comment.upvoteCount > 0 && (
-            <span className={styles.commentVotes}>👍 {comment.upvoteCount}</span>
-          )}
+          <div className={styles.commentVoteRow}>
+            <button
+              className={`${styles.voteBtn} ${comment.currentUserVote === true ? styles.voteBtnActive : ''}`}
+              onClick={() => voteComment.mutate({ commentId: comment.id, isUpvote: true, placeId: place.id }, { onSuccess: invalidate })}
+              disabled={voteComment.isPending}
+              title="Upvote"
+            >
+              <ThumbsUp size={11} /> <span>{comment.upvoteCount}</span>
+            </button>
+            <button
+              className={`${styles.voteBtn} ${comment.currentUserVote === false ? styles.voteBtnActive : ''}`}
+              onClick={() => voteComment.mutate({ commentId: comment.id, isUpvote: false, placeId: place.id }, { onSuccess: invalidate })}
+              disabled={voteComment.isPending}
+              title="Downvote"
+            >
+              <ThumbsDown size={11} /> <span>{comment.downvoteCount}</span>
+            </button>
+          </div>
         </div>
       )}
       <div className={styles.actions}>
-        <button className={styles.actionBtn} onClick={onSeeMore}>+ Add photo</button>
+        <button
+          className={styles.actionBtn}
+          onClick={() => fileRef.current?.click()}
+          disabled={uploadPhoto.isPending}
+        >
+          {uploadPhoto.isPending ? 'Uploading…' : '+ Add photo'}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
         <button className={styles.actionBtn} onClick={onSeeMore}>+ Add comment</button>
         <button className={styles.seeMoreBtn} onClick={onSeeMore}>See more →</button>
       </div>

@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
@@ -71,6 +73,7 @@ public class ExploreBusinessTests
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
+        private readonly Mock<IUserContext> _userContextMock = new();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -82,7 +85,11 @@ public class ExploreBusinessTests
             Ctx = new TripsTrackerDbContext(_options);
         }
 
-        public ExploreBusiness Business() => new(Ctx);
+        public ExploreBusiness Business(int? userId = null)
+        {
+            _userContextMock.Setup(u => u.UserId).Returns(userId);
+            return new ExploreBusiness(Ctx, _userContextMock.Object);
+        }
 
         public async ValueTask DisposeAsync()
         {

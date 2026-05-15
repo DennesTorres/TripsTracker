@@ -46,16 +46,24 @@ public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blob
         int photoId,
         CancellationToken ct)
     {
-        var photo = await photos.GetBlobInfoAsync(photoId, ct);
-        if (photo is null) return new NotFoundResult();
-
-        var stream = await blobs.DownloadAsync(photo.BlobName, ct);
-        if (stream is null) return new NotFoundResult();
-
-        return new FileStreamResult(stream, photo.ContentType)
+        try
         {
-            EnableRangeProcessing = true,
-        };
+            var photo = await photos.GetBlobInfoAsync(photoId, ct);
+            if (photo is null) return new NotFoundResult();
+
+            var stream = await blobs.DownloadAsync(photo.BlobName, ct);
+            if (stream is null) return new NotFoundResult();
+
+            return new FileStreamResult(stream, photo.ContentType)
+            {
+                EnableRangeProcessing = true,
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            // Client closed connection (e.g. rapid photo slider navigation). Not an error.
+            return new StatusCodeResult(499);
+        }
     }
 
     [Function("DeletePhoto")]

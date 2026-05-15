@@ -91,6 +91,7 @@ export interface PlacePhoto {
   uploadedAt: string;
   averageRating: number;
   ratingCount: number;
+  currentUserRating?: number | null;
 }
 
 export interface PlaceComment {
@@ -104,6 +105,7 @@ export interface PlaceComment {
   upvoteCount: number;
   downvoteCount: number;
   parentCommentId?: number | null;
+  currentUserVote?: boolean | null;
 }
 
 export interface PublicShareSummary {

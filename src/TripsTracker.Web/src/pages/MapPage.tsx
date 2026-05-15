@@ -45,11 +45,13 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
   const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
   const [activeDetail, setActiveDetail] = useState<DetailInfo | null>(null);
   const autoSelectRef = useRef(false);
+  const pendingExploreCityRef = useRef<string | null>(null);
 
   const { data: exploreResults = [] } = useExploreSearch(exploreQuery);
 
   useEffect(() => {
     if (exploreCity) {
+      pendingExploreCityRef.current = exploreCity;
       autoSelectRef.current = true;
       setExploreQuery(exploreCity);
       onExploreCityConsumed?.();
@@ -66,9 +68,15 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
 
   useEffect(() => {
     if (autoSelectRef.current && exploreResults.length > 0) {
-      autoSelectRef.current = false;
-      handleExploreSelectCity(exploreResults[0]);
-      setExploreQuery('');
+      const expected = pendingExploreCityRef.current?.toLowerCase() ?? '';
+      const first = exploreResults[0].city.toLowerCase();
+      // Only auto-select if results match the city we're looking for (prevents stale-result races)
+      if (!expected || first.includes(expected) || expected.includes(first)) {
+        autoSelectRef.current = false;
+        pendingExploreCityRef.current = null;
+        handleExploreSelectCity(exploreResults[0]);
+        setExploreQuery('');
+      }
     }
   }, [exploreResults]);
 
@@ -208,6 +216,7 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
           onClose={() => setAdding(false)}
           onExplore={city => {
             setAdding(false);
+            pendingExploreCityRef.current = city;
             autoSelectRef.current = true;
             setExploreQuery(city);
           }}

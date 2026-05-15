@@ -122,7 +122,13 @@ function PhotosSection({ city, countryId, placeId, photos, isLoading }: SectionP
           </div>
           <div className={styles.photoActions}>
             {[1, 2, 3, 4, 5].map(r => (
-              <button key={r} className={styles.starBtn} onClick={() => ratePhoto.mutate({ photoId: photo.id, rating: r, placeId: placeId! }, { onSuccess: invalidate })} title={`Rate ${r}`}>
+              <button
+                key={r}
+                className={`${styles.starBtn} ${r <= (photo.currentUserRating ?? 0) ? styles.starBtnActive : ''}`}
+                onClick={() => ratePhoto.mutate({ photoId: photo.id, rating: r, placeId: placeId! }, { onSuccess: invalidate })}
+                disabled={ratePhoto.isPending}
+                title={`Rate ${r}`}
+              >
                 <Star size={13} />
               </button>
             ))}
@@ -292,10 +298,20 @@ function CommentRow({ comment, isOwn, canEdit, onDelete, onVote, votePending = f
       </div>
       <p className={styles.commentText}>{comment.text}</p>
       <div className={styles.commentFooter}>
-        <button className={styles.voteBtn} onClick={() => onVote(true)} disabled={votePending} title="Upvote">
+        <button
+          className={`${styles.voteBtn} ${comment.currentUserVote === true ? styles.voteBtnActive : ''}`}
+          onClick={() => onVote(true)}
+          disabled={votePending}
+          title="Upvote"
+        >
           <ThumbsUp size={13} /> <span>{comment.upvoteCount}</span>
         </button>
-        <button className={styles.voteBtn} onClick={() => onVote(false)} disabled={votePending} title="Downvote">
+        <button
+          className={`${styles.voteBtn} ${comment.currentUserVote === false ? styles.voteBtnActive : ''}`}
+          onClick={() => onVote(false)}
+          disabled={votePending}
+          title="Downvote"
+        >
           <ThumbsDown size={13} /> <span>{comment.downvoteCount}</span>
         </button>
         {onReply && (

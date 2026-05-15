@@ -13,6 +13,7 @@ public class PlacePhotoDto
     public DateTime UploadedAt { get; init; }
     public double AverageRating { get; init; }
     public int RatingCount { get; init; }
+    public int? CurrentUserRating { get; init; }
 }
 
 public class PlacePhotoBlobInfo

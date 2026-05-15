@@ -151,6 +151,54 @@
   color: #475569;
 }
 
+.photoStars {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.starBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+
+  &:hover { color: #f0b84a; }
+  &:disabled { cursor: default; }
+}
+
+.starBtnActive {
+  color: #f0b84a;
+}
+
+.commentVoteRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.voteBtn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+
+  &:hover { background: rgba(255, 255, 255, 0.05); }
+  &:disabled { cursor: default; }
+}
+
+.voteBtnActive {
+  color: #4a9eff;
+}
+
 .actions {
   display: flex;
   gap: 6px;
