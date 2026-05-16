@@ -282,4 +282,46 @@ public class PlaceBusinessTests
 
         Assert.IsFalse(result);
     }
+
+    [TestMethod]
+    public async Task ClearAllHomePlacesAsync_ClearsAllHomeFlags()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+        var p1 = await f.AddPlaceAsync(country.Id, "HomeCity1", isHome: true);
+        var p2 = await f.AddPlaceAsync(country.Id, "HomeCity2", isHome: true);
+
+        await f.Biz.ClearAllHomePlacesAsync();
+
+        var p1After = await f.Biz.GetByIdAsync(p1.Id);
+        var p2After = await f.Biz.GetByIdAsync(p2.Id);
+        Assert.IsNotNull(p1After);
+        Assert.IsNotNull(p2After);
+        Assert.IsFalse(p1After.IsHome, "ClearAllHomePlacesAsync must clear IsHome on all places");
+        Assert.IsFalse(p2After.IsHome, "ClearAllHomePlacesAsync must clear IsHome on all places");
+    }
+
+    [TestMethod]
+    public async Task ClearAllHomePlacesAsync_WhenNoHomePlaces_IsNoOp()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+        await f.AddPlaceAsync(country.Id, "NonHomeCity", isHome: false);
+
+        await f.Biz.ClearAllHomePlacesAsync(); // must not throw
+    }
+
+    [TestMethod]
+    public async Task MarkAsHomeAsync_SetsIsHome()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+        var place = await f.AddPlaceAsync(country.Id, "City1", isHome: false);
+
+        await f.Biz.MarkAsHomeAsync(place.Id);
+
+        var result = await f.Biz.GetByIdAsync(place.Id);
+        Assert.IsNotNull(result);
+        Assert.IsTrue(result.IsHome, "MarkAsHomeAsync must set IsHome=true on the target place");
+    }
 }

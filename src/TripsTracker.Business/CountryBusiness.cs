@@ -125,6 +125,19 @@ public class CountryBusiness : BusinessBase<Country>, ICountryBusiness
         return await GetByIdForUserAsync(id, userId, ct);
     }
 
+    public async Task SyncHomeFlagAsync(int countryId, CancellationToken ct = default)
+    {
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");
+        // Clear IsHome on all countries for this user
+        await Context.Set<UserCountry>()
+            .Where(uc => uc.UserId == userId && uc.IsHome)
+            .ExecuteUpdateAsync(s => s.SetProperty(uc => uc.IsHome, false), ct);
+        // Set IsHome on the target country (requires UserCountry row to exist)
+        await Context.Set<UserCountry>()
+            .Where(uc => uc.UserId == userId && uc.CountryId == countryId)
+            .ExecuteUpdateAsync(s => s.SetProperty(uc => uc.IsHome, true), ct);
+    }
+
     public async Task<CountryDto?> SetShowStateBordersAsync(int id, bool show, CancellationToken ct = default)
     {
         var userId = _userContext.UserId ?? throw new InvalidOperationException("Not authenticated.");

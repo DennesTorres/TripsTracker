@@ -87,4 +87,16 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
     public Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default)
         => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.IsHome && p.UserId == _userContext.UserId, ct);
 
+    public Task ClearAllHomePlacesAsync(CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            p => p.UserId == _userContext.UserId && p.IsHome,
+            s => s.SetProperty(p => p.IsHome, false),
+            ct);
+
+    public Task MarkAsHomeAsync(int placeId, CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            p => p.Id == placeId && p.UserId == _userContext.UserId,
+            s => s.SetProperty(p => p.IsHome, true),
+            ct);
+
 }

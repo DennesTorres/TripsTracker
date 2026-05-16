@@ -36,11 +36,27 @@ public class PlacesProcess : IPlacesProcess
             ct);
 
         if (dto.IsHome)
-            await _countries.SetHomeAsync(country.Id, true, ct);
+        {
+            // SetVisitedAsync first to ensure UserCountry row exists for SyncHomeFlagAsync
+            await _countries.SetVisitedAsync(country.Id, true, ct);
+            await SetHomeAsync(place.Id, ct);
+        }
         else
             await _countries.SetVisitedAsync(country.Id, true, ct);
 
         return place;
+    }
+
+    public async Task SetHomeAsync(int placeId, CancellationToken ct = default)
+    {
+        var place = await _places.GetByIdAsync(placeId, ct)
+            ?? throw new NotFoundException("Place", placeId);
+
+        // HOME_EXCLUSIVITY: clear all home places first, then mark the target
+        await _places.ClearAllHomePlacesAsync(ct);
+        await _places.MarkAsHomeAsync(placeId, ct);
+        // HOME_DERIVATION: sync country home flag via bulk update (no SaveChanges — avoids Ctx conflict)
+        await _countries.SyncHomeFlagAsync(place.CountryId, ct);
     }
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
