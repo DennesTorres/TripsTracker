@@ -158,7 +158,7 @@ export default function WorldMap({
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [statusLabel, setStatusLabel] = useState<{ country: string; state: string | null }>({ country: '', state: null });
-  const { loadingMessage } = useMapStatus();
+  const { loadingMessage, popStatus } = useMapStatus();
 
   // ── D3 selection refs — set by Effect 1, read by all other effects ───────────
   const projRef          = useRef<d3.GeoProjection | null>(null);
@@ -450,11 +450,13 @@ export default function WorldMap({
               currentShow: country.showStateBorders,
             });
           });
+
+        popStatus(country.id);
       });
 
     updateStateBorderVisibility();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [borderGeoCache, countries, visitedStates]);
+  }, [borderGeoCache, countries, visitedStates, popStatus]);
 
   return (
     <div className={styles.container} onClick={closeContextMenu}>

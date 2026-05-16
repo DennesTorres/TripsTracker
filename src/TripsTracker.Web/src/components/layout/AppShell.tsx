@@ -4,6 +4,7 @@ import { useEnsureUser } from '@/api/hooks';
 import { User, LogOut } from 'lucide-react';
 import styles from './AppShell.module.scss';
 import { MapStatusProvider } from '@/context/MapStatusContext';
+import { BorderGeoCacheProvider } from '@/context/BorderGeoCacheContext';
 
 export type View = 'map' | 'places' | 'countries' | 'profile';
 
@@ -79,7 +80,9 @@ export default function AppShell({ children }: Props) {
         </div>
       </nav>
       <main className={styles.main}>
-        <MapStatusProvider>{children(view, setView)}</MapStatusProvider>
+        <BorderGeoCacheProvider>
+          <MapStatusProvider>{children(view, setView)}</MapStatusProvider>
+        </BorderGeoCacheProvider>
       </main>
     </div>
   );

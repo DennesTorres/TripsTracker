@@ -23,6 +23,7 @@ export default function PlacesPage() {
   const { data: places = [], isLoading } = usePlaces();
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<Place | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('city');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [search, setSearch] = useState('');
@@ -126,31 +127,40 @@ export default function PlacesPage() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map(p => (
-              <tr key={p.id}>
-                <td className={styles.flag}>{p.countryFlag}</td>
-                <td>{p.city}</td>
-                <td>{p.countryName}</td>
-                <td className={styles.stateCell} title={p.stateName ?? p.stateAbbr ?? ''}>
-                  {p.stateName ?? p.stateAbbr ?? ''}
-                </td>
-                <td className={styles.coord}>{p.lon.toFixed(4)}</td>
-                <td className={styles.coord}>{p.lat.toFixed(4)}</td>
-                <td>{p.isHome ? '✓' : ''}</td>
-                <td className={styles.actions}>
-                  {!p.isHome && (
+            {sorted.map(p => {
+              const isDeleting = p.id === deletingId;
+              return (
+                <tr key={p.id} className={isDeleting ? styles.deletingRow : undefined}>
+                  <td className={styles.flag}>{p.countryFlag}</td>
+                  <td>{p.city}</td>
+                  <td>{p.countryName}</td>
+                  <td className={styles.stateCell} title={p.stateName ?? p.stateAbbr ?? ''}>
+                    {p.stateName ?? p.stateAbbr ?? ''}
+                  </td>
+                  <td className={styles.coord}>{p.lon.toFixed(4)}</td>
+                  <td className={styles.coord}>{p.lat.toFixed(4)}</td>
+                  <td>{p.isHome ? '✓' : ''}</td>
+                  <td className={styles.actions}>
+                    {!p.isHome && (
+                      <button
+                        className={styles.homeBtn}
+                        onClick={() => updatePlace.mutate({ id: p.id, dto: { city: p.city, isHome: true } })}
+                        disabled={updatePlace.isPending || isDeleting}
+                      >
+                        Set home
+                      </button>
+                    )}
                     <button
-                      className={styles.homeBtn}
-                      onClick={() => updatePlace.mutate({ id: p.id, dto: { city: p.city, isHome: true } })}
-                      disabled={updatePlace.isPending}
+                      className={styles.deleteBtn}
+                      onClick={() => setDeleting(p)}
+                      disabled={isDeleting}
                     >
-                      Set home
+                      {isDeleting ? 'Deleting…' : 'Delete'}
                     </button>
-                  )}
-                  <button className={styles.deleteBtn} onClick={() => setDeleting(p)}>Delete</button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -163,7 +173,8 @@ export default function PlacesPage() {
           onConfirm={() => {
             const place = deleting;
             setDeleting(null);
-            deletePlace.mutate(place.id);
+            setDeletingId(place.id);
+            deletePlace.mutate(place.id, { onSettled: () => setDeletingId(null) });
           }}
           onCancel={() => setDeleting(null)}
         />

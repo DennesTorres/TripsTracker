@@ -4,6 +4,7 @@ import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
 import { usePlaces, useCountries, useVisitedStates, useSetStateBorders } from '@/api/hooks';
 import { useBorderLoader } from '@/hooks/useBorderLoader';
+import { useBorderGeoCache } from '@/context/BorderGeoCacheContext';
 import styles from './MapPage.module.scss';
 
 export default function MapPage() {
@@ -13,7 +14,7 @@ export default function MapPage() {
   const setStateBorders = useSetStateBorders();
 
   const [worldGeo, setWorldGeo] = useState<GeoJSON.FeatureCollection | null>(null);
-  const [borderGeoCache, setBorderGeoCache] = useState<Record<number, GeoJSON.FeatureCollection>>({});
+  const { borderGeoCache, setBorderGeoCache } = useBorderGeoCache();
   const [adding, setAdding] = useState(false);
 
   const { loadBorders } = useBorderLoader(borderGeoCache, setBorderGeoCache);
