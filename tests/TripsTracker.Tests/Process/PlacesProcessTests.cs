@@ -1,13 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using System.Net;
+using System.Text;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
+using TripsTracker.Integration;
 using TripsTracker.Interfaces;
-using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Configuration;
 using TripsTracker.Process;
 
@@ -62,6 +64,27 @@ public class PlacesProcessTests
         _user2Id = u2.Id;
     }
 
+    /// <summary>
+    /// Returns canned geocoding responses for Photon and Nominatim without making real HTTP calls.
+    /// Photon URL (photon.komoot.io): returns Itacuruça, Brazil at (-22.93, -43.90).
+    /// Nominatim URL (/search): returns state abbreviation RJ.
+    /// </summary>
+    private sealed class FakeGeocodingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            var url = request.RequestUri?.ToString() ?? "";
+            string json = url.Contains("photon.komoot.io")
+                ? """{"features":[{"properties":{"name":"Itacuruça","osm_value":"city","countrycode":"BR","country":"Brazil","state":"Rio de Janeiro"},"geometry":{"coordinates":[-43.90,-22.93]}}]}"""
+                : """[{"lat":"-22.93","lon":"-43.90","address":{"state_code":"RJ"}}]""";
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        }
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
@@ -79,15 +102,14 @@ public class PlacesProcessTests
             var userContextMock = new Mock<IUserContext>();
             userContextMock.Setup(u => u.UserId).Returns(_user1Id);
 
-            var geocodingMock = new Mock<IGeocodingBusiness>();
-            geocodingMock
-                .Setup(g => g.GeocodeAsync(It.IsAny<string>(), It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
+            var httpClient = new HttpClient(new FakeGeocodingHandler())
+                { BaseAddress = new Uri("https://nominatim.openstreetmap.org") };
+            var geocoding = new GeocodingBusiness(new NominatimGeocodingService(httpClient));
 
             var places = new PlaceBusiness(Ctx, userContextMock.Object);
             var countries = new CountryBusiness(Ctx, userContextMock.Object);
             var points = new PointsBusiness(Ctx, userContextMock.Object);
-            Sut = new PlacesProcess(places, countries, geocodingMock.Object, points, userContextMock.Object);
+            Sut = new PlacesProcess(places, countries, geocoding, points, userContextMock.Object);
         }
 
         public async ValueTask DisposeAsync()

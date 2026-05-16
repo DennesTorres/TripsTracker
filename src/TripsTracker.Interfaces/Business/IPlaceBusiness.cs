@@ -18,4 +18,5 @@ public interface IPlaceBusiness
     Task<bool> HasAnyGloballyInRegionAsync(string region, CancellationToken ct = default);
     Task<PlaceDto?> GetFirstForCurrentUserInCountryAsync(int countryId, CancellationToken ct = default);
     Task<PlaceDto?> GetFirstForCurrentUserInRegionAsync(string region, CancellationToken ct = default);
+    Task ClearAllHomePlacesAsync(CancellationToken ct = default);
 }

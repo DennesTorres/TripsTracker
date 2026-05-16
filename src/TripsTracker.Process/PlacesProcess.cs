@@ -28,7 +28,10 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<PlaceDto> AddAsync(AddPlaceDto dto, CancellationToken ct = default)
     {
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        using var scope = new TransactionScope(
+            TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
 
         var country = await _countries.GetByIsoAlpha2Async(dto.CountryIsoAlpha2, ct)
             ?? throw new NotFoundException("Country", dto.CountryIsoAlpha2);
@@ -81,7 +84,10 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<DeletePlaceResult> DeleteAsync(int placeId, CancellationToken ct = default)
     {
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        using var scope = new TransactionScope(
+            TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
 
         var place = await _places.GetByIdAsync(placeId, ct)
             ?? throw new NotFoundException("Place", placeId);

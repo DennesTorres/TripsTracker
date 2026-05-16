@@ -5,6 +5,7 @@ using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
+using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Configuration;
 
@@ -86,9 +87,9 @@ public class PlaceBusinessTests
         }
     }
 
-    private static Place SeedPlace(TripsTrackerDbContext ctx, int userId, int countryId, string city)
+    private static Place SeedPlace(TripsTrackerDbContext ctx, int userId, int countryId, string city, bool isHome = false)
     {
-        var place = new Place { UserId = userId, CountryId = countryId, City = city, Lat = 1, Lon = 1 };
+        var place = new Place { UserId = userId, CountryId = countryId, City = city, Lat = 1, Lon = 1, IsHome = isHome };
         ctx.Places.Add(place);
         ctx.SaveChanges();
         return place;
@@ -221,5 +222,36 @@ public class PlaceBusinessTests
         var result = await f.ForUser(_user1Id).GetFirstForCurrentUserInRegionAsync("RegionAlpha");
         Assert.IsNotNull(result);
         Assert.AreEqual(p1.Id, result.Id);
+    }
+
+    // ── HOME_EXCLUSIVITY ─────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task CreateAsync_WhenIsHomeTrue_ClearsOtherHomePlaces()
+    {
+        await using var f = new Fixture();
+        var existing = SeedPlace(f.Ctx, _user1Id, _countryAId, "OldHome", isHome: true);
+        var sut = f.ForUser(_user1Id);
+
+        await sut.CreateAsync(new CreatePlaceDto(1, 1, _countryBId, "NewHome", null, null, true));
+
+        f.Ctx.ChangeTracker.Clear();
+        var oldPlace = await f.Ctx.Places.AsNoTracking().FirstAsync(p => p.Id == existing.Id);
+        Assert.IsFalse(oldPlace.IsHome, "Old home place must have IsHome cleared when a new home place is created");
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenIsHomeTrue_ClearsOtherHomePlaces()
+    {
+        await using var f = new Fixture();
+        var existing = SeedPlace(f.Ctx, _user1Id, _countryAId, "OldHome", isHome: true);
+        var target = SeedPlace(f.Ctx, _user1Id, _countryBId, "Target");
+        var sut = f.ForUser(_user1Id);
+
+        await sut.UpdateAsync(target.Id, new UpdatePlaceDto("Target", true));
+
+        f.Ctx.ChangeTracker.Clear();
+        var oldPlace = await f.Ctx.Places.AsNoTracking().FirstAsync(p => p.Id == existing.Id);
+        Assert.IsFalse(oldPlace.IsHome, "Old home place must have IsHome cleared when another place is updated to IsHome=true");
     }
 }
