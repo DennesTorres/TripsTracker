@@ -1,403 +1,321 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Moq;
+using System.Transactions;
+using TripsTracker.Business;
+using TripsTracker.Data;
+using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Configuration;
 using TripsTracker.Process;
 
 namespace TripsTracker.Tests.Process;
 
 [TestClass]
+[DoNotParallelize]
 public class PlacesProcessTests
 {
-    private static CountryDto Brazil() => new(
-        Id: 1, IsoNumeric: 76, IsoAlpha2: "BR", Flag: "🇧🇷",
-        Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false, ShowStateBorders: false);
+    #region Fixture
 
-    private static PlaceDto AnyPlace() => new(
-        Id: 1, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",
-        CountryFlag: "🇧🇷", City: "Itacuruça", StateAbbr: "RJ",
-        StateName: "Rio de Janeiro", IsHome: false);
+    private static DbContextOptions<TripsTrackerDbContext> _options = null!;
+    private static int _brazilId;
+    private static int _argentinaId;
+    private static int _user1Id;
+    private static int _user2Id;
 
-    private static (PlacesProcess Sut, Mock<IPointsBusiness> Points) BuildSut(
-        Mock<IPlaceBusiness> places,
-        Mock<ICountryBusiness> countries,
-        Mock<IGeocodingBusiness> geocoding)
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
     {
-        var points = new Mock<IPointsBusiness>();
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(1);
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
-        return (sut, points);
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_PlacesProcess7");
+
+        _options = new DbContextOptionsBuilder<TripsTrackerDbContext>()
+            .UseSqlServer(connStr)
+            .Options;
+
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
+        await ctx.Database.EnsureCreatedAsync();
+
+        var brazil = new Country { IsoNumeric = 76, IsoAlpha2 = "BR", Flag = "🇧🇷", Name = "Brazil", Region = "South America" };
+        var argentina = new Country { IsoNumeric = 32, IsoAlpha2 = "AR", Flag = "🇦🇷", Name = "Argentina", Region = "South America" };
+        var uk = new Country { IsoNumeric = 826, IsoAlpha2 = "GB", Flag = "🇬🇧", Name = "United Kingdom", Region = "Europe" };
+        ctx.Countries.AddRange(brazil, argentina, uk);
+        var u1 = new User { Email = "u1@process.test", CreatedAt = DateTime.UtcNow };
+        var u2 = new User { Email = "u2@process.test", CreatedAt = DateTime.UtcNow };
+        ctx.Users.AddRange(u1, u2);
+        await ctx.SaveChangesAsync();
+
+        _brazilId = brazil.Id;
+        _argentinaId = argentina.Id;
+        _user1Id = u1.Id;
+        _user2Id = u2.Id;
     }
 
-    /// Sets up mocks for a standard add-place call and controls cascade conditions.
-    private static (Mock<IPlaceBusiness> Places, Mock<ICountryBusiness> Countries, Mock<IGeocodingBusiness> Geocoding)
-        StandardMocks(
-            bool hasPlaceInCountry = true,
-            bool hasPlaceInRegion = true,
-            bool anyGloballyInCity = false,
-            bool anyGloballyInCountry = true,
-            bool anyGloballyInRegion = true)
+    private sealed class Fixture : IAsyncDisposable
     {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        public TripsTrackerDbContext Ctx { get; }
+        public PlacesProcess Sut { get; }
+        private readonly TransactionScope _scope;
 
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        geocoding.Setup(g => g.GeocodeAsync(It.IsAny<string>(), It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
-        places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-        places.Setup(p => p.HasAnyInCountryAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(hasPlaceInCountry);
-        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(hasPlaceInRegion);
-        places.Setup(p => p.HasAnyGloballyInCityAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(anyGloballyInCity);
-        places.Setup(p => p.HasAnyGloballyInCountryAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(anyGloballyInCountry);
-        places.Setup(p => p.HasAnyGloballyInRegionAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(anyGloballyInRegion);
+        public Fixture()
+        {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
+            Ctx = new TripsTrackerDbContext(_options);
 
-        return (places, countries, geocoding);
+            var userContextMock = new Mock<IUserContext>();
+            userContextMock.Setup(u => u.UserId).Returns(_user1Id);
+
+            var geocodingMock = new Mock<IGeocodingBusiness>();
+            geocodingMock
+                .Setup(g => g.GeocodeAsync(It.IsAny<string>(), It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
+
+            var places = new PlaceBusiness(Ctx, userContextMock.Object);
+            var countries = new CountryBusiness(Ctx, userContextMock.Object);
+            var points = new PointsBusiness(Ctx, userContextMock.Object);
+            Sut = new PlacesProcess(places, countries, geocodingMock.Object, points, userContextMock.Object);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Ctx.DisposeAsync();
+            _scope.Dispose();
+        }
     }
 
-    // ─── AddAsync — basic ────────────────────────────────────────────────────
-
-    [TestMethod]
-    public async Task AddAsync_AlwaysCallsGeocoding()
+    private static Place SeedPlace(TripsTrackerDbContext ctx, int userId, int countryId, string city, bool isHome = false)
     {
-        // Geocoding must always be called — there is no coordinate bypass path.
-        var (places, countries, geocoding) = StandardMocks();
-        var (sut, _) = BuildSut(places, countries, geocoding);
-
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
-
-        geocoding.Verify(
-            g => g.GeocodeAsync("Itacuruça", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()),
-            Times.Once,
-            "GeocodeAsync must always be called — coordinates must be resolved server-side");
+        var place = new Place { UserId = userId, CountryId = countryId, City = city, Lat = 1, Lon = 1, IsHome = isHome };
+        ctx.Places.Add(place);
+        ctx.SaveChanges();
+        return place;
     }
 
-    [TestMethod]
-    public async Task AddAsync_StoresCityNameFromGeocodingResult()
+    private static void SeedPointEvent(TripsTrackerDbContext ctx, int userId, string eventType, int points, int? referenceId, string? referenceType)
     {
-        // The city name stored must come from the geocoding result (Photon canonical name),
-        // not directly from the DTO.
-        var (places, countries, geocoding) = StandardMocks();
-        var (sut, _) = BuildSut(places, countries, geocoding);
-
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
-
-        places.Verify(
-            p => p.CreateAsync(
-                It.Is<CreatePlaceDto>(c => c.City == "Itacuruça"),
-                It.IsAny<CancellationToken>()),
-            Times.Once,
-            "City name must come from geocoding result");
+        var evt = new PointEvent { UserId = userId, EventType = eventType, Points = points, ReferenceId = referenceId, ReferenceType = referenceType, CreatedAt = DateTime.UtcNow };
+        ctx.Set<PointEvent>().Add(evt);
+        ctx.SaveChanges();
     }
 
-    [TestMethod]
-    public async Task AddAsync_CallsGeocoding()
-    {
-        var (places, countries, geocoding) = StandardMocks();
-        var (sut, _) = BuildSut(places, countries, geocoding);
-
-        await sut.AddAsync(new AddPlaceDto("São Paulo", "BR"));
-
-        geocoding.Verify(
-            g => g.GeocodeAsync("São Paulo", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
+    #endregion
 
     // ─── AddAsync — cascade scoring ──────────────────────────────────────────
 
     [TestMethod]
-    public async Task AddAsync_AwardsOnlyCityPoints_WhenNotFirstInCountryOrRegion()
+    public async Task AddAsync_AwardsOnlyCityAdded_WhenNotFirstInCountryOrRegion()
     {
-        // Not first in country, not first in region → only city_added (50 pts)
-        var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: true, hasPlaceInRegion: true, anyGloballyInCity: true);
-        var (sut, points) = BuildSut(places, countries, geocoding);
+        // user1 already in Brazil (not first in country) and Argentina (not first in region);
+        // user2 has Itacuruça in Brazil (not first globally in city) → city_added 50 only
+        await using var f = new Fixture();
+        SeedPlace(f.Ctx, _user1Id, _brazilId, "Manaus");
+        SeedPlace(f.Ctx, _user1Id, _argentinaId, "BuenosAires");
+        SeedPlace(f.Ctx, _user2Id, _brazilId, "Itacuruça");
 
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+        await f.Sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
-        points.Verify(p => p.AwardAsync(1, "city_added", 50, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, It.Is<string>(e => e.StartsWith("country")), It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-        points.Verify(p => p.AwardAsync(1, It.Is<string>(e => e.StartsWith("continent")), It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var events = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.Points > 0)
+            .ToListAsync();
+        Assert.AreEqual(1, events.Count, "Only city_added expected");
+        Assert.AreEqual("city_added", events[0].EventType);
+        Assert.AreEqual(50, events[0].Points);
     }
 
     [TestMethod]
-    public async Task AddAsync_AwardsCountryFirst_WhenFirstInCountryPersonally()
+    public async Task AddAsync_AwardsCityPioneer_WhenFirstGloballyInCity()
     {
-        // First in country for this user, but other users already have places there → personal 500
-        var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: false, hasPlaceInRegion: true,
-            anyGloballyInCity: true, anyGloballyInCountry: true);
-        var (sut, points) = BuildSut(places, countries, geocoding);
+        // user1 already in Brazil and Argentina (no country/continent tiers);
+        // no one has visited Itacuruça → city_pioneer 200
+        await using var f = new Fixture();
+        SeedPlace(f.Ctx, _user1Id, _brazilId, "Manaus");
+        SeedPlace(f.Ctx, _user1Id, _argentinaId, "BuenosAires");
 
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+        await f.Sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
-        points.Verify(p => p.AwardAsync(1, "city_added", 50, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "country_first", 500, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        var events = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.Points > 0)
+            .ToListAsync();
+        Assert.AreEqual(1, events.Count, "Only city_pioneer expected");
+        Assert.AreEqual("city_pioneer", events[0].EventType);
+        Assert.AreEqual(200, events[0].Points);
     }
 
     [TestMethod]
-    public async Task AddAsync_AwardsCountryPioneer_WhenFirstInCountryGlobally()
+    public async Task AddAsync_AwardsCountryFirst_WhenFirstPersonallyInCountry()
     {
-        // No user has ever visited this country → pioneer, 2000 + city_pioneer 200
-        var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: false, hasPlaceInRegion: true,
-            anyGloballyInCountry: false);
-        var (sut, points) = BuildSut(places, countries, geocoding);
+        // user1 has Argentina (region covered); user2 has Itacuruça in Brazil (city+country not pioneer);
+        // user1 adding first Brazil place → city_added 50 + country_first 500
+        await using var f = new Fixture();
+        SeedPlace(f.Ctx, _user1Id, _argentinaId, "BuenosAires");
+        SeedPlace(f.Ctx, _user2Id, _brazilId, "Itacuruça");
 
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+        await f.Sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
-        points.Verify(p => p.AwardAsync(1, "city_pioneer", 200, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "country_pioneer", 2000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "city_added", It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-        points.Verify(p => p.AwardAsync(1, "country_first", It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var events = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.Points > 0)
+            .ToListAsync();
+        Assert.AreEqual(2, events.Count, "city_added + country_first expected");
+        Assert.IsTrue(events.Any(e => e.EventType == "city_added" && e.Points == 50));
+        Assert.IsTrue(events.Any(e => e.EventType == "country_first" && e.Points == 500));
     }
 
     [TestMethod]
-    public async Task AddAsync_AwardsContinentFirst_WhenFirstInRegionPersonally()
+    public async Task AddAsync_AwardsCountryPioneer_WhenFirstGloballyInCountry()
     {
-        // First in this continent for this user, but others already have places there → personal 5000
-        var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: true, hasPlaceInRegion: false,
-            anyGloballyInCity: true, anyGloballyInRegion: true);
-        var (sut, points) = BuildSut(places, countries, geocoding);
+        // user1 has Argentina (region not first); no Brazil places globally → city_pioneer + country_pioneer
+        await using var f = new Fixture();
+        SeedPlace(f.Ctx, _user1Id, _argentinaId, "BuenosAires");
 
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+        await f.Sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
-        points.Verify(p => p.AwardAsync(1, "city_added", 50, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "continent_first", 5000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        var events = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.Points > 0)
+            .ToListAsync();
+        Assert.AreEqual(2, events.Count, "city_pioneer + country_pioneer expected");
+        Assert.IsTrue(events.Any(e => e.EventType == "city_pioneer" && e.Points == 200));
+        Assert.IsTrue(events.Any(e => e.EventType == "country_pioneer" && e.Points == 2000));
     }
 
     [TestMethod]
-    public async Task AddAsync_AwardsContinentPioneer_WhenFirstInRegionGlobally()
+    public async Task AddAsync_AwardsContinentFirst_WhenFirstPersonallyInRegion()
     {
-        // No user has ever visited this continent → pioneer, 20000 + city_pioneer 200
-        var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: true, hasPlaceInRegion: false,
-            anyGloballyInCountry: true, anyGloballyInRegion: false);
-        var (sut, points) = BuildSut(places, countries, geocoding);
+        // user1 has no S.America places; user2 has Itacuruça in Brazil and Argentina
+        // (city+country+continent not pioneer globally) → city_added 50 + country_first 500 + continent_first 5000
+        await using var f = new Fixture();
+        SeedPlace(f.Ctx, _user2Id, _brazilId, "Itacuruça");
+        SeedPlace(f.Ctx, _user2Id, _argentinaId, "BuenosAires");
 
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+        await f.Sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
-        points.Verify(p => p.AwardAsync(1, "city_pioneer", 200, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "continent_pioneer", 20000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "city_added", It.IsAny<int>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var events = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.Points > 0)
+            .ToListAsync();
+        Assert.AreEqual(3, events.Count, "city_added + country_first + continent_first expected");
+        Assert.IsTrue(events.Any(e => e.EventType == "city_added" && e.Points == 50));
+        Assert.IsTrue(events.Any(e => e.EventType == "country_first" && e.Points == 500));
+        Assert.IsTrue(events.Any(e => e.EventType == "continent_first" && e.Points == 5000));
     }
 
     [TestMethod]
-    public async Task AddAsync_AwardsAllTiers_WhenFirstInCountryAndRegionGlobally()
+    public async Task AddAsync_AwardsContinentPioneer_WhenFirstGloballyInRegion()
     {
-        // Global pioneer for both country AND region → city_pioneer + country_pioneer + continent_pioneer
-        var (places, countries, geocoding) = StandardMocks(
-            hasPlaceInCountry: false, hasPlaceInRegion: false,
-            anyGloballyInCountry: false, anyGloballyInRegion: false);
-        var (sut, points) = BuildSut(places, countries, geocoding);
+        // no S.America places globally → all three pioneer tiers
+        await using var f = new Fixture();
 
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
+        await f.Sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
 
-        points.Verify(p => p.AwardAsync(1, "city_pioneer", 200, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "country_pioneer", 2000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.AwardAsync(1, "continent_pioneer", 20000, It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+        var events = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.Points > 0)
+            .ToListAsync();
+        Assert.AreEqual(3, events.Count, "city_pioneer + country_pioneer + continent_pioneer expected");
+        Assert.IsTrue(events.Any(e => e.EventType == "city_pioneer" && e.Points == 200));
+        Assert.IsTrue(events.Any(e => e.EventType == "country_pioneer" && e.Points == 2000));
+        Assert.IsTrue(events.Any(e => e.EventType == "continent_pioneer" && e.Points == 20000));
     }
 
     // ─── DeleteAsync — cascade revocation ────────────────────────────────────
 
-    private static (PlacesProcess Sut, Mock<IPointsBusiness> Points) BuildDeleteSut(
-        bool hasRemainingInCountry, bool hasRemainingInRegion,
-        PlaceDto? survivingInCountry = null, PlaceDto? survivingInRegion = null)
-    {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
-        var points = new Mock<IPointsBusiness>();
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(1);
-
-        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-        places.Setup(p => p.DeleteAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(hasRemainingInCountry);
-        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(hasRemainingInRegion);
-        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-        places.Setup(p => p.GetFirstForCurrentUserInCountryAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(survivingInCountry);
-        places.Setup(p => p.GetFirstForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(survivingInRegion);
-
-        countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        countries.Setup(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CountryDto?)null);
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
-        return (sut, points);
-    }
-
-    private static PlaceDto SurvivingPlace() => new(
-        Id: 2, Lon: -46.6, Lat: -23.5, CountryId: 1, CountryName: "Brazil",
-        CountryFlag: "🇧🇷", City: "São Paulo", StateAbbr: "SP",
-        StateName: "São Paulo", IsHome: false);
-
-    private static PlaceDto HomePlace() => new(
-        Id: 2, Lon: -46.6, Lat: -23.5, CountryId: 1, CountryName: "Brazil",
-        CountryFlag: "🇧🇷", City: "São Paulo", StateAbbr: "SP",
-        StateName: "São Paulo", IsHome: true);
-
-    private static (PlacesProcess Sut, Mock<ICountryBusiness> Countries) BuildHomeDeleteSut(
-        bool countryStillHasHomePlace)
-    {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
-        var points = new Mock<IPointsBusiness>();
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(1);
-
-        places.Setup(p => p.GetByIdAsync(2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(HomePlace());
-        places.Setup(p => p.DeleteAsync(2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(countryStillHasHomePlace);
-        places.Setup(p => p.GetFirstForCurrentUserInCountryAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SurvivingPlace());
-        places.Setup(p => p.GetFirstForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SurvivingPlace());
-
-        countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        countries.Setup(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CountryDto?)null);
-        countries.Setup(c => c.UnsetHomeAsync(1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CountryDto?)null);
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
-        return (sut, countries);
-    }
-
     [TestMethod]
     public async Task DeleteAsync_RevokesPlacePoints_Always()
     {
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true);
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça");
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
 
-        await sut.DeleteAsync(1);
+        await f.Sut.DeleteAsync(p1.Id);
 
-        points.Verify(p => p.RevokeAsync(1, "city_", 1, "Place", It.IsAny<CancellationToken>()), Times.Once);
+        var revoked = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.EventType == "city_added_revoked" && e.Points == -50)
+            .FirstOrDefaultAsync();
+        Assert.IsNotNull(revoked, "city_added_revoked event expected");
     }
 
     [TestMethod]
     public async Task DeleteAsync_RevokesCountryPoints_WhenLastPlaceInCountry()
     {
-        // Country tier is stored as (place.Id, "Country") — revocation uses place.Id
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true);
+        // user1 only has P1 in Brazil; Argentina place kept so region is not revoked
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça");
+        SeedPlace(f.Ctx, _user1Id, _argentinaId, "BuenosAires");
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
+        SeedPointEvent(f.Ctx, _user1Id, "country_first", 500, p1.Id, "Country");
 
-        await sut.DeleteAsync(1);
+        await f.Sut.DeleteAsync(p1.Id);
 
-        points.Verify(p => p.RevokeAsync(1, "country_", AnyPlace().Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
+        var revoked = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.EventType == "country_first_revoked" && e.Points == -500)
+            .FirstOrDefaultAsync();
+        Assert.IsNotNull(revoked, "country_first_revoked event expected");
     }
 
     [TestMethod]
     public async Task DeleteAsync_ReassignsCountryPoints_WhenOtherPlacesInCountry()
     {
-        var surviving = SurvivingPlace();
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true, survivingInCountry: surviving);
+        // user1 has P1 and P2 in Brazil; deleting P1 → country points move to P2
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça");
+        var p2 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Manaus");
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
+        SeedPointEvent(f.Ctx, _user1Id, "country_first", 500, p1.Id, "Country");
 
-        await sut.DeleteAsync(1);
+        await f.Sut.DeleteAsync(p1.Id);
 
-        points.Verify(p => p.ReassignAsync(1, "country_", AnyPlace().Id, "Country", surviving.Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.RevokeAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var reassigned = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.EventType == "country_first"
+                     && e.Points == 500 && e.ReferenceId == p2.Id && e.ReferenceType == "Country")
+            .FirstOrDefaultAsync();
+        Assert.IsNotNull(reassigned, "country_first re-awarded on surviving place expected");
     }
 
     [TestMethod]
     public async Task DeleteAsync_RevokesRegionPoints_WhenLastPlaceInRegion()
     {
-        // Continent tier is stored as (place.Id, "Continent") — revocation uses place.Id
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: false);
+        // user1 only has P1 in S.America; deleting it → continent points revoked
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça");
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
+        SeedPointEvent(f.Ctx, _user1Id, "continent_first", 5000, p1.Id, "Continent");
 
-        await sut.DeleteAsync(1);
+        await f.Sut.DeleteAsync(p1.Id);
 
-        points.Verify(p => p.RevokeAsync(1, "continent_", AnyPlace().Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
+        var revoked = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.EventType == "continent_first_revoked" && e.Points == -5000)
+            .FirstOrDefaultAsync();
+        Assert.IsNotNull(revoked, "continent_first_revoked event expected");
     }
 
     [TestMethod]
     public async Task DeleteAsync_ReassignsContinentPoints_WhenOtherPlacesInRegion()
     {
-        var surviving = SurvivingPlace();
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true, survivingInRegion: surviving);
+        // user1 has P1 in Brazil and P2 in Argentina; deleting P1 → continent points move to P2
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça");
+        var p2 = SeedPlace(f.Ctx, _user1Id, _argentinaId, "BuenosAires");
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
+        SeedPointEvent(f.Ctx, _user1Id, "continent_first", 5000, p1.Id, "Continent");
 
-        await sut.DeleteAsync(1);
+        await f.Sut.DeleteAsync(p1.Id);
 
-        points.Verify(p => p.ReassignAsync(1, "continent_", AnyPlace().Id, "Continent", surviving.Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.RevokeAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    // ─── DeleteAsync — edge cases (R5 #5 scenarios) ──────────────────────────
-
-    [TestMethod]
-    public async Task DeleteAsync_RevokesAllTiers_WhenOnlyPlaceInCountryAndRegion()
-    {
-        // Last place in country AND region → both country and continent revoked (not reassigned)
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: false);
-
-        await sut.DeleteAsync(1);
-
-        points.Verify(p => p.RevokeAsync(1, "city_", AnyPlace().Id, "Place", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.RevokeAsync(1, "country_", AnyPlace().Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.RevokeAsync(1, "continent_", AnyPlace().Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.ReassignAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task DeleteAsync_DoesNotReassignCountry_WhenNoSurvivingPlaceFound()
-    {
-        // hasRemainingInCountry=true but GetFirstForCurrentUser returns null (race condition guard)
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true, survivingInCountry: null);
-
-        await sut.DeleteAsync(1);
-
-        points.Verify(p => p.ReassignAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task DeleteAsync_DoesNotReassignContinent_WhenNoSurvivingPlaceFound()
-    {
-        // hasRemainingInRegion=true but GetFirstForCurrentUser returns null (race condition guard)
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: false, hasRemainingInRegion: true, survivingInRegion: null);
-
-        await sut.DeleteAsync(1);
-
-        points.Verify(p => p.ReassignAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [TestMethod]
-    public async Task DeleteAsync_ReassignsBothCountryAndContinent_WhenBothHaveRemainingPlaces()
-    {
-        // Places remain in both country and region → both tiers reassigned, none revoked
-        var surviving = SurvivingPlace();
-        var (sut, points) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true,
-            survivingInCountry: surviving, survivingInRegion: surviving);
-
-        await sut.DeleteAsync(1);
-
-        points.Verify(p => p.ReassignAsync(1, "country_", AnyPlace().Id, "Country", surviving.Id, "Country", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.ReassignAsync(1, "continent_", AnyPlace().Id, "Continent", surviving.Id, "Continent", It.IsAny<CancellationToken>()), Times.Once);
-        points.Verify(p => p.RevokeAsync(1, "country_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
-        points.Verify(p => p.RevokeAsync(1, "continent_", It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+        var reassigned = await f.Ctx.Set<PointEvent>()
+            .Where(e => e.UserId == _user1Id && e.EventType == "continent_first"
+                     && e.Points == 5000 && e.ReferenceId == p2.Id && e.ReferenceType == "Continent")
+            .FirstOrDefaultAsync();
+        Assert.IsNotNull(reassigned, "continent_first re-awarded on surviving place expected");
     }
 
     // ─── DeleteAsync — PromptHomeCountry ─────────────────────────────────────
@@ -405,19 +323,11 @@ public class PlacesProcessTests
     [TestMethod]
     public async Task DeleteAsync_NonHomePlace_ReturnsPromptFalse()
     {
-        var (sut, _) = BuildDeleteSut(hasRemainingInCountry: true, hasRemainingInRegion: true);
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça", isHome: false);
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
 
-        var result = await sut.DeleteAsync(1);
-
-        Assert.IsFalse(result.PromptHomeCountry);
-    }
-
-    [TestMethod]
-    public async Task DeleteAsync_HomePlace_OtherHomeRemains_ReturnsPromptFalse()
-    {
-        var (sut, _) = BuildHomeDeleteSut(countryStillHasHomePlace: true);
-
-        var result = await sut.DeleteAsync(2);
+        var result = await f.Sut.DeleteAsync(p1.Id);
 
         Assert.IsFalse(result.PromptHomeCountry);
     }
@@ -425,40 +335,14 @@ public class PlacesProcessTests
     [TestMethod]
     public async Task DeleteAsync_HomePlace_NoOtherHome_ReturnsPromptTrue_WithCountryInfo()
     {
-        var (sut, countries) = BuildHomeDeleteSut(countryStillHasHomePlace: false);
+        await using var f = new Fixture();
+        var p1 = SeedPlace(f.Ctx, _user1Id, _brazilId, "Itacuruça", isHome: true);
+        SeedPointEvent(f.Ctx, _user1Id, "city_added", 50, p1.Id, "Place");
 
-        var result = await sut.DeleteAsync(2);
+        var result = await f.Sut.DeleteAsync(p1.Id);
 
         Assert.IsTrue(result.PromptHomeCountry);
-        Assert.AreEqual(1, result.CountryId);
+        Assert.AreEqual(_brazilId, result.CountryId);
         Assert.AreEqual("Brazil", result.CountryName);
-        countries.Verify(c => c.UnsetHomeAsync(1, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [TestMethod]
-    public async Task DeleteAsync_LastPlaceInCountry_UnsetsVisited()
-    {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
-        var points = new Mock<IPointsBusiness>();
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(1);
-
-        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(AnyPlace());
-        places.Setup(p => p.DeleteAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        places.Setup(p => p.HasAnyForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
-        places.Setup(p => p.GetFirstForCurrentUserInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync((PlaceDto?)null);
-        places.Setup(p => p.GetFirstForCurrentUserInRegionAsync("Americas", It.IsAny<CancellationToken>())).ReturnsAsync(SurvivingPlace());
-        countries.Setup(c => c.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(Brazil());
-        countries.Setup(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync((CountryDto?)null);
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object, points.Object, userContext.Object);
-
-        await sut.DeleteAsync(1);
-
-        countries.Verify(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

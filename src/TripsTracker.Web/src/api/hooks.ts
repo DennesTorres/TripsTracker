@@ -1,9 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, LeaderboardEntry, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, UpdatePlace, UpdateUser, UserPointsSummary, UserProfile, UserStatement, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
 import apiClient, { publicApiClient } from './client';
+
+const refreshPoints = (qc: QueryClient) => qc.refetchQueries({ queryKey: ['points'], type: 'all' });
 
 export function usePlaces() {
   return useQuery<Place[]>({
@@ -20,7 +22,7 @@ export function useCreatePlace() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['places'] });
       qc.invalidateQueries({ queryKey: ['countries'] });
-      qc.refetchQueries({ queryKey: ['points'], type: 'all' });
+      refreshPoints(qc);
     },
   });
 }
@@ -42,7 +44,7 @@ export function useDeletePlace() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['places'] });
       qc.invalidateQueries({ queryKey: ['countries'], refetchType: 'all' });
-      qc.refetchQueries({ queryKey: ['points'], type: 'all' });
+      refreshPoints(qc);
     },
   });
 }
