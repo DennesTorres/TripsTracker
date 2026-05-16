@@ -192,4 +192,44 @@ public class ExploreBusinessTests
         var content = await f.Business().GetContentAsync("CityA", _countryId);
         Assert.AreEqual(0, content.Photos.Count, "CityA content should not include CityB photos");
     }
+
+    [TestMethod]
+    public async Task GetContentAsync_WhenAuthenticated_PopulatesCurrentUserRating()
+    {
+        await using var f = new Fixture();
+
+        var photo = new PlacePhoto
+        {
+            PlaceId = _place1Id, UserId = _user1Id, BlobName = "rating-auth-test", ContentType = "image/jpeg",
+            SizeBytes = 100, SortOrder = 1, UploadedAt = DateTime.UtcNow,
+        };
+        f.Ctx.Set<PlacePhoto>().Add(photo);
+        await f.Ctx.SaveChangesAsync();
+
+        f.Ctx.Set<PhotoRating>().Add(new PhotoRating { UserId = _user1Id, PhotoId = photo.Id, Rating = 4, CreatedAt = DateTime.UtcNow });
+        await f.Ctx.SaveChangesAsync();
+
+        var content = await f.Business(_user1Id).GetContentAsync("CityA", _countryId);
+        var target = content.Photos.SingleOrDefault(p => p.Id == photo.Id);
+        Assert.IsNotNull(target, "Photo should appear in GetContentAsync results");
+        Assert.AreEqual(4, target.CurrentUserRating, "CurrentUserRating should reflect the authenticated user's rating");
+    }
+
+    [TestMethod]
+    public async Task GetContentAsync_WhenAuthenticated_PopulatesCurrentUserVote()
+    {
+        await using var f = new Fixture();
+
+        var comment = new PlaceComment { PlaceId = _place1Id, UserId = _user1Id, Text = "Vote auth test", CreatedAt = DateTime.UtcNow };
+        f.Ctx.Set<PlaceComment>().Add(comment);
+        await f.Ctx.SaveChangesAsync();
+
+        f.Ctx.Set<CommentRating>().Add(new CommentRating { UserId = _user1Id, CommentId = comment.Id, IsUpvote = true, CreatedAt = DateTime.UtcNow });
+        await f.Ctx.SaveChangesAsync();
+
+        var content = await f.Business(_user1Id).GetContentAsync("CityA", _countryId);
+        var target = content.Comments.SingleOrDefault(c => c.Id == comment.Id);
+        Assert.IsNotNull(target, "Comment should appear in GetContentAsync results");
+        Assert.AreEqual(true, target.CurrentUserVote, "CurrentUserVote should reflect the authenticated user's vote");
+    }
 }
