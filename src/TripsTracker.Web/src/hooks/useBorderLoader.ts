@@ -7,7 +7,7 @@ export function useBorderLoader(
   borderGeoCache: Record<number, GeoJSON.FeatureCollection>,
   setBorderGeoCache: Dispatch<SetStateAction<Record<number, GeoJSON.FeatureCollection>>>
 ) {
-  const { pushStatus, popStatus } = useMapStatus();
+  const { pushStatus, promoteStatus, dismissStatus } = useMapStatus();
   const fetchingRef = useRef<Set<number>>(new Set());
   const cacheRef = useRef(borderGeoCache);
   cacheRef.current = borderGeoCache;
@@ -21,17 +21,18 @@ export function useBorderLoader(
         `/api/countries/${countryId}/borders`
       );
       if (response.data) {
+        promoteStatus(countryId);
         setBorderGeoCache(prev => ({ ...prev, [countryId]: response.data }));
-        // Pop happens in Effect 4 after borders are drawn
+        // Dismiss happens in Effect 4 after borders are drawn
       } else {
-        popStatus(countryId);
+        dismissStatus(countryId);
       }
     } catch {
-      popStatus(countryId);
+      dismissStatus(countryId);
     } finally {
       fetchingRef.current.delete(countryId);
     }
-  }, [setBorderGeoCache, pushStatus, popStatus]);
+  }, [setBorderGeoCache, pushStatus, promoteStatus, dismissStatus]);
 
   return { loadBorders };
 }

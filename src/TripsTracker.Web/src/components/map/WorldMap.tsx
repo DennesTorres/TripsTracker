@@ -158,7 +158,7 @@ export default function WorldMap({
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [statusLabel, setStatusLabel] = useState<{ country: string; state: string | null }>({ country: '', state: null });
-  const { loadingMessage, popStatus } = useMapStatus();
+  const { loadingMessage, dismissStatus } = useMapStatus();
 
   // ── D3 selection refs — set by Effect 1, read by all other effects ───────────
   const projRef          = useRef<d3.GeoProjection | null>(null);
@@ -451,12 +451,12 @@ export default function WorldMap({
             });
           });
 
-        popStatus(country.id);
+        dismissStatus(country.id);
       });
 
     updateStateBorderVisibility();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [borderGeoCache, countries, visitedStates, popStatus]);
+  }, [borderGeoCache, countries, visitedStates, dismissStatus]);
 
   return (
     <div className={styles.container} onClick={closeContextMenu}>
@@ -480,7 +480,7 @@ export default function WorldMap({
       )}
       <div className={styles.statusBar}>
         {loadingMessage ? (
-          <span style={{ fontStyle: 'italic' }}>Loading borders for {loadingMessage}</span>
+          <span style={{ fontStyle: 'italic' }}>{loadingMessage}</span>
         ) : statusLabel.country ? (
           <>
             <span>{statusLabel.country}</span>
