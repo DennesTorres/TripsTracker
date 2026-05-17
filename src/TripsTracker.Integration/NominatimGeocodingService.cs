@@ -32,7 +32,15 @@ public class NominatimGeocodingService : INominatimService
 
         // Photon has no server-side country filter — fetch more and filter client-side.
         var url = $"{PhotonBaseUrl}/api/?q={Uri.EscapeDataString(query)}&lang=en&limit={limit * 10}";
-        var response = await _http.GetFromJsonAsync<PhotonFeatureCollection>(url, ct);
+        PhotonFeatureCollection? response;
+        try
+        {
+            response = await _http.GetFromJsonAsync<PhotonFeatureCollection>(url, ct);
+        }
+        catch (HttpRequestException)
+        {
+            return [];
+        }
         if (response?.Features is null or { Length: 0 })
             return [];
 

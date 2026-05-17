@@ -50,12 +50,24 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
   const { data: exploreResults = [] } = useExploreSearch(exploreQuery);
 
   useEffect(() => {
-    if (exploreCity) {
-      pendingExploreCityRef.current = exploreCity;
-      autoSelectRef.current = true;
-      setExploreQuery(exploreCity);
-      onExploreCityConsumed?.();
+    if (!exploreCity) return;
+    pendingExploreCityRef.current = exploreCity;
+    autoSelectRef.current = true;
+    setExploreQuery(exploreCity);
+    onExploreCityConsumed?.();
+    // If React Query already has cached results for this query, exploreResults won't change
+    // reference → the [exploreResults] effect won't re-fire → auto-select would be blocked.
+    // Check immediately: if matching results are already present, select now.
+    if (exploreResults.length > 0) {
+      const cityLC = exploreCity.toLowerCase();
+      const first = exploreResults[0].city.toLowerCase();
+      if (first.includes(cityLC) || cityLC.includes(first)) {
+        autoSelectRef.current = false;
+        pendingExploreCityRef.current = null;
+        handleExploreSelectCity(exploreResults[0]);
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exploreCity]);
 
   useEffect(() => {

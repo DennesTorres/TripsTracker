@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useExploreContent, useRatePhoto, useUploadPhoto, useVoteComment } from '@/api/hooks';
 import type { Place } from '@/types';
@@ -41,6 +41,7 @@ function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => vo
   const [photoIndex, setPhotoIndex] = useState(0);
   const [commentIndex, setCommentIndex] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  const justUploadedRef = useRef(false);
 
   const ratePhoto = useRatePhoto();
   const uploadPhoto = useUploadPhoto();
@@ -53,10 +54,20 @@ function SinglePreview({ place, onSeeMore }: { place: Place; onSeeMore: () => vo
     qc.invalidateQueries({ queryKey: ['explore-content', place.city, place.countryId] });
   };
 
+  useEffect(() => {
+    if (justUploadedRef.current && photos.length > 0) {
+      setPhotoIndex(photos.length - 1);
+      justUploadedRef.current = false;
+    }
+  }, [photos.length]);
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    uploadPhoto.mutate({ placeId: place.id, file }, { onSuccess: invalidate });
+    uploadPhoto.mutate(
+      { placeId: place.id, file },
+      { onSuccess: () => { invalidate(); justUploadedRef.current = true; } }
+    );
     if (fileRef.current) fileRef.current.value = '';
   }
 

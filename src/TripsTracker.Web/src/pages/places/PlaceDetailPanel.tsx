@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useExploreContent, useUploadPhoto, useDeletePhoto, useRatePhoto,
@@ -60,15 +60,26 @@ function PhotosSection({ city, countryId, placeId, photos, isLoading }: SectionP
   const deletePhoto = useDeletePhoto();
   const ratePhoto = useRatePhoto();
   const fileRef = useRef<HTMLInputElement>(null);
+  const justUploadedRef = useRef(false);
   const [caption, setCaption] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['explore-content', city, countryId] });
 
+  useEffect(() => {
+    if (justUploadedRef.current && photos.length > 0) {
+      setPhotoIndex(photos.length - 1);
+      justUploadedRef.current = false;
+    }
+  }, [photos.length]);
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || placeId === undefined) return;
-    upload.mutate({ placeId, file, caption: caption || undefined }, { onSuccess: invalidate });
+    upload.mutate(
+      { placeId, file, caption: caption || undefined },
+      { onSuccess: () => { invalidate(); justUploadedRef.current = true; } }
+    );
     setCaption('');
     if (fileRef.current) fileRef.current.value = '';
   }
