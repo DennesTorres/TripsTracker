@@ -65,11 +65,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
         var rows = await ExecuteUpdateAsync(
             p => p.Id == id && p.UserId == _userContext.UserId,
-            s =>
-            {
-                s.SetProperty(p => p.City, dto.City);
-                s.SetProperty(p => p.IsHome, dto.IsHome);
-            },
+            s => s.SetProperty(p => p.IsHome, dto.IsHome),
             ct);
         if (rows == 0) return null;
         return await GetByIdAsync(id, ct);

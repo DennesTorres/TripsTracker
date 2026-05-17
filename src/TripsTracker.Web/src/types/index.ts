@@ -30,7 +30,6 @@ export interface Country {
 }
 
 export interface UpdatePlace {
-  city: string;
   isHome: boolean;
 }
 

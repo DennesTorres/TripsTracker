@@ -131,7 +131,7 @@ public class PlacesProcessTests
 
         var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
 
-        await sut.UpdateAsync(1, new UpdatePlaceDto("Paris", true));
+        await sut.UpdateAsync(1, new UpdatePlaceDto(true));
 
         countries.Verify(c => c.SetHomeAsync(42, true, It.IsAny<CancellationToken>()), Times.Once,
             "UpdateAsync must sync UserCountry.IsHome when IsHome is true");
@@ -152,7 +152,7 @@ public class PlacesProcessTests
 
         var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
 
-        await sut.UpdateAsync(1, new UpdatePlaceDto("Paris", false));
+        await sut.UpdateAsync(1, new UpdatePlaceDto(false));
 
         countries.Verify(c => c.SetHomeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never,
             "SetHomeAsync must not be called when IsHome is false");
@@ -169,7 +169,7 @@ public class PlacesProcessTests
 
         var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
 
-        var result = await sut.UpdateAsync(999, new UpdatePlaceDto("City", false));
+        var result = await sut.UpdateAsync(999, new UpdatePlaceDto(false));
 
         Assert.IsNull(result);
         countries.Verify(c => c.SetHomeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);

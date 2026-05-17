@@ -168,17 +168,32 @@ public class PlaceBusinessTests
     }
 
     [TestMethod]
-    public async Task UpdateAsync_UpdatesCityAndIsHome()
+    public async Task UpdateAsync_UpdatesIsHome_CityIsImmutable()
     {
         await using var f = new Fixture();
         var country = await f.AddCountryAsync();
-        var place = await f.AddPlaceAsync(country.Id, "OldCity");
+        var place = await f.AddPlaceAsync(country.Id, "OriginalCity");
 
-        var result = await f.Biz.UpdateAsync(place.Id, new UpdatePlaceDto("NewCity", true));
+        var result = await f.Biz.UpdateAsync(place.Id, new UpdatePlaceDto(true));
 
         Assert.IsNotNull(result);
-        Assert.AreEqual("NewCity", result.City);
+        Assert.AreEqual("OriginalCity", result.City, "PLACE_IMMUTABILITY: City must not be changed by UpdateAsync");
         Assert.IsTrue(result.IsHome);
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_CityIsImmutable_NotChangedByUpdate()
+    {
+        // PLACE_IMMUTABILITY: City is set once by geocoding and cannot be changed via PUT
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+        var place = await f.AddPlaceAsync(country.Id, "GeocodeCity");
+
+        var result = await f.Biz.UpdateAsync(place.Id, new UpdatePlaceDto(false));
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual("GeocodeCity", result.City, "PLACE_IMMUTABILITY: City must remain as set by geocoding");
+        Assert.IsFalse(result.IsHome);
     }
 
     [TestMethod]
@@ -190,7 +205,7 @@ public class PlaceBusinessTests
         var place1 = await f.AddPlaceAsync(country.Id, "HomeCity1", isHome: true);
         var place2 = await f.AddPlaceAsync(country.Id, "HomeCity2", isHome: false);
 
-        var result = await f.Biz.UpdateAsync(place2.Id, new UpdatePlaceDto("HomeCity2", true));
+        var result = await f.Biz.UpdateAsync(place2.Id, new UpdatePlaceDto(true));
 
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IsHome);
@@ -207,7 +222,7 @@ public class PlaceBusinessTests
         var country = await f.AddCountryAsync();
         var place = await f.AddPlaceAsync(country.Id, "Rome", userId: OtherUserId);
 
-        var result = await f.Biz.UpdateAsync(place.Id, new UpdatePlaceDto("Rome2", false));
+        var result = await f.Biz.UpdateAsync(place.Id, new UpdatePlaceDto(false));
 
         Assert.IsNull(result);
     }
