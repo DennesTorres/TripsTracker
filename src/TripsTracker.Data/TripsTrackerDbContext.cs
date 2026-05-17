@@ -12,6 +12,7 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
     public DbSet<VisitedState> VisitedStates => Set<VisitedState>();
     public DbSet<User> Users => Set<User>();
     public DbSet<UserCountry> UserCountries => Set<UserCountry>();
+    public DbSet<UserPlace> UserPlaces => Set<UserPlace>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,9 +21,14 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         modelBuilder.Entity<Place>(e =>
         {
             e.HasIndex(p => p.CountryId);
-            e.HasIndex(p => p.UserId);
-            e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Country>().WithMany().HasForeignKey(p => p.CountryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<UserPlace>(e =>
+        {
+            e.HasKey(up => new { up.UserId, up.PlaceId });
+            e.HasOne<User>().WithMany().HasForeignKey(up => up.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Place>().WithMany().HasForeignKey(up => up.PlaceId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Country>(e =>

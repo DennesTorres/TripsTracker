@@ -13,4 +13,6 @@ public interface IPlaceBusiness
     Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default);
     Task ClearAllHomePlacesAsync(CancellationToken ct = default);
     Task MarkAsHomeAsync(int placeId, CancellationToken ct = default);
+    /// <summary>Returns coordinate+name data for a globally-stored place if it already exists, or null if geocoding is required.</summary>
+    Task<CreatePlaceDto?> FindGlobalAsync(string city, int countryId, CancellationToken ct = default);
 }

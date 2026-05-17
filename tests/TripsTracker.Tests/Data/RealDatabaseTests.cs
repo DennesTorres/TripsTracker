@@ -155,10 +155,13 @@ public class RealDatabaseTests
             CountryId = brazil.Id,
             Lat = -23.5,
             Lon = -46.6,
-            IsHome = false,
-            UserId = f.OwnerUserId,
         };
         f.Context.Set<Place>().Add(testPlace);
+        await f.Context.SaveChangesAsync();
+
+        // VISITED_MEANS_LINKED: place is only visible to a user via their UserPlaces row
+        var userPlace = new UserPlace { UserId = f.OwnerUserId, PlaceId = testPlace.Id, IsHome = false };
+        f.Context.Set<UserPlace>().Add(userPlace);
         await f.Context.SaveChangesAsync();
 
         var found = await f.Places.GetAllAsync();

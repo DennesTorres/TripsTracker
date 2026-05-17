@@ -62,6 +62,7 @@ public class PlaceBusinessTests
             return country;
         }
 
+        /// <summary>Creates a global Place + a UserPlaces link for the given user.</summary>
         public async Task<Place> AddPlaceAsync(int countryId, string city = "TestCity", bool isHome = false, int? userId = null)
         {
             var place = new Place
@@ -69,11 +70,19 @@ public class PlaceBusinessTests
                 Lon = 0, Lat = 0,
                 CountryId = countryId,
                 City = city,
-                IsHome = isHome,
-                UserId = userId ?? UserId,
             };
             Ctx.Set<Place>().Add(place);
             await Ctx.SaveChangesAsync();
+
+            var userPlace = new UserPlace
+            {
+                UserId = userId ?? UserId,
+                PlaceId = place.Id,
+                IsHome = isHome,
+            };
+            Ctx.Set<UserPlace>().Add(userPlace);
+            await Ctx.SaveChangesAsync();
+
             return place;
         }
 
@@ -81,6 +90,7 @@ public class PlaceBusinessTests
         {
             if (_countryId.HasValue)
             {
+                // UserPlaces cascade-deletes when Places are deleted
                 await Ctx.Set<Place>()
                     .Where(p => p.CountryId == _countryId.Value)
                     .ExecuteDeleteAsync();
@@ -108,6 +118,7 @@ public class PlaceBusinessTests
         var country = await f.AddCountryAsync();
         var p1 = await f.AddPlaceAsync(country.Id, "City1");
         var p2 = await f.AddPlaceAsync(country.Id, "City2");
+        // Other user links to a separate global place (different city to avoid dedup)
         var other = await f.AddPlaceAsync(country.Id, "OtherCity", userId: OtherUserId);
 
         var result = await f.Biz.GetAllAsync();
@@ -123,13 +134,30 @@ public class PlaceBusinessTests
         await using var f = new Fixture();
         var country = await f.AddCountryAsync();
 
-        var dto = new CreatePlaceDto(10.5, 20.3, country.Id, "Paris", "IDF", "Île-de-France", false);
+        var dto = new CreatePlaceDto(10.5, 20.3, country.Id, "Paris", "IDF", "Île-de-France");
         var result = await f.Biz.CreateAsync(dto);
 
         Assert.IsNotNull(result);
         Assert.AreEqual("Paris", result.City);
         Assert.AreEqual(country.Id, result.CountryId);
         Assert.IsFalse(result.IsHome);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_WhenGlobalPlaceExists_ReusesItAndCreatesUserLink()
+    {
+        // GEOCODING_IS_INTERNAL: second user links to the same global Place
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+
+        var dto = new CreatePlaceDto(10.5, 20.3, country.Id, "SharedCity", null, null);
+        var place1 = await f.Biz.CreateAsync(dto);
+
+        // CreateAsync for a second user pointing at the same city should reuse the global Place
+        var otherBiz = new PlaceBusiness(f.Ctx, new FakeUserContext(OtherUserId));
+        var place2 = await otherBiz.CreateAsync(dto);
+
+        Assert.AreEqual(place1.Id, place2.Id, "Both users must reference the same global Place row");
     }
 
     [TestMethod]
@@ -228,8 +256,9 @@ public class PlaceBusinessTests
     }
 
     [TestMethod]
-    public async Task DeleteAsync_ReturnsTrue_AndRemovesPlace()
+    public async Task DeleteAsync_ReturnsTrue_AndUnlinksPlace()
     {
+        // DELETE_IS_UNLINK: removes UserPlaces row; global Place row remains
         await using var f = new Fixture();
         var country = await f.AddCountryAsync();
         var place = await f.AddPlaceAsync(country.Id, "Madrid");
@@ -238,7 +267,11 @@ public class PlaceBusinessTests
         var found = await f.Biz.GetByIdAsync(place.Id);
 
         Assert.IsTrue(deleted);
-        Assert.IsNull(found);
+        Assert.IsNull(found, "After delete, place must not be visible to the user");
+
+        // Global Place row must still exist (not deleted)
+        var globalPlace = await f.Ctx.Set<Place>().FindAsync(place.Id);
+        Assert.IsNotNull(globalPlace, "Global Place row must remain after user unlinks");
     }
 
     [TestMethod]
@@ -338,5 +371,30 @@ public class PlaceBusinessTests
         var result = await f.Biz.GetByIdAsync(place.Id);
         Assert.IsNotNull(result);
         Assert.IsTrue(result.IsHome, "MarkAsHomeAsync must set IsHome=true on the target place");
+    }
+
+    [TestMethod]
+    public async Task FindGlobalAsync_ReturnsExistingPlaceData()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+        await f.AddPlaceAsync(country.Id, "GlobalCity");
+
+        var result = await f.Biz.FindGlobalAsync("GlobalCity", country.Id);
+
+        Assert.IsNotNull(result, "FindGlobalAsync must return data when a global Place exists");
+        Assert.AreEqual("GlobalCity", result.City);
+        Assert.AreEqual(country.Id, result.CountryId);
+    }
+
+    [TestMethod]
+    public async Task FindGlobalAsync_ReturnsNull_WhenNotFound()
+    {
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync();
+
+        var result = await f.Biz.FindGlobalAsync("NoSuchCity", country.Id);
+
+        Assert.IsNull(result);
     }
 }

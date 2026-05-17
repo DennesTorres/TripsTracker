@@ -29,11 +29,15 @@ public class PlacesProcess : IPlacesProcess
                 $"'{dto.CityName}' is a country name, not a city. Please enter a specific city within {country.Name}.",
                 "CITY_IS_COUNTRY");
 
-        var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
+        // GEOCODING_IS_INTERNAL: only geocode when the city is not already in global Places
+        var createDto = await _places.FindGlobalAsync(dto.CityName, country.Id, ct);
+        if (createDto == null)
+        {
+            var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
+            createDto = new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName);
+        }
 
-        var place = await _places.CreateAsync(
-            new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
-            ct);
+        var place = await _places.CreateAsync(createDto, ct);
 
         if (dto.IsHome)
         {
