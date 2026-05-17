@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
+using TripsTracker.Domain;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Interfaces;
@@ -44,12 +44,9 @@ public class PointsBusinessTests
     {
         public TripsTrackerDbContext Ctx { get; }
         private readonly TransactionScope _scope;
-        private readonly Mock<IUserContext> _userContextMock = new();
-
         public PointsBusiness ForUser(int userId)
         {
-            _userContextMock.Setup(u => u.UserId).Returns(userId);
-            return new PointsBusiness(Ctx, _userContextMock.Object);
+            return new PointsBusiness(Ctx, new TestUserContext(userId));
         }
 
         public Fixture()

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
@@ -62,7 +61,6 @@ public class PlaceBusinessTests
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private readonly Mock<IUserContext> _userContextMock = new();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -76,8 +74,7 @@ public class PlaceBusinessTests
 
         public PlaceBusiness ForUser(int userId)
         {
-            _userContextMock.Setup(u => u.UserId).Returns(userId);
-            return new PlaceBusiness(Ctx, _userContextMock.Object);
+            return new PlaceBusiness(Ctx, new TestUserContext(userId));
         }
 
         public async ValueTask DisposeAsync()

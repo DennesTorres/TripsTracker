@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Net;
 using System.Text;
 using System.Transactions;
@@ -99,17 +98,16 @@ public class PlacesProcessTests
                 TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
 
-            var userContextMock = new Mock<IUserContext>();
-            userContextMock.Setup(u => u.UserId).Returns(_user1Id);
+            var userContext = new TestUserContext(_user1Id);
 
             var httpClient = new HttpClient(new FakeGeocodingHandler())
                 { BaseAddress = new Uri("https://nominatim.openstreetmap.org") };
             var geocoding = new GeocodingBusiness(new NominatimGeocodingService(httpClient));
 
-            var places = new PlaceBusiness(Ctx, userContextMock.Object);
-            var countries = new CountryBusiness(Ctx, userContextMock.Object);
-            var points = new PointsBusiness(Ctx, userContextMock.Object);
-            Sut = new PlacesProcess(places, countries, geocoding, points, userContextMock.Object);
+            var places = new PlaceBusiness(Ctx, userContext);
+            var countries = new CountryBusiness(Ctx, userContext);
+            var points = new PointsBusiness(Ctx, userContext);
+            Sut = new PlacesProcess(places, countries, geocoding, points, userContext);
         }
 
         public async ValueTask DisposeAsync()
