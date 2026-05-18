@@ -3,66 +3,165 @@ name: Deploy — Test
 on:
   push:
     branches: [test]
+  workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
-  DOTNET_VERSION: '10.x'
-  NODE_VERSION: '22.x'
-  FUNCTIONS_PROJECT: src/TripsTracker.Functions/TripsTracker.Functions.csproj
-  PUBLISH_DIR: ./publish/functions
+  AZURE_RG: rg-tripstracker-test
+  AZURE_LOCATION: uksouth
+  ENV: test
+  UNIQUE_SUFFIX: ttk
+  SQL_SERVER: sql-tripstracker-test-ttk.database.windows.net
+  SQL_SERVER_NAME: sql-tripstracker-test-ttk
+  SQL_DATABASE: TripsTracker
+  FUNCTION_APP_NAME: func-tripstracker-test-ttk
+  FUNCTION_APP_URL: https://func-tripstracker-test-ttk.azurewebsites.net/api
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Provision + Deploy
     runs-on: ubuntu-latest
     environment: test
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure Login
+      - name: Azure login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # ── Infra ────────────────────────────────────────────────────────────────
+
+      - name: Create resource group (idempotent)
+        run: |
+          az group create \
+            --name $AZURE_RG \
+            --location $AZURE_LOCATION \
+            --tags environment=test project=tripstracker
+
+      - name: Deploy Bicep (incremental — idempotent)
+        id: bicep
+        run: |
+          output=$(az deployment group create \
+            --resource-group $AZURE_RG \
+            --template-file infra/main.bicep \
+            --parameters infra/test.parameters.json \
+            --mode Incremental \
+            --query properties.outputs \
+            --output json)
+          swa_token=$(echo "$output" | jq -r '.staticWebAppDeploymentToken.value')
+          echo "swa_token=$swa_token" >> $GITHUB_OUTPUT
+
+      # ── Database: firewall + access grants + migrations ───────────────────────
+
+      - name: Open SQL firewall for GitHub runner
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "Runner IP: $RUNNER_IP"
+          az sql server firewall-rule create \
+            --server $SQL_SERVER_NAME \
+            --resource-group $AZURE_RG \
+            --name GitHubActionsRunner \
+            --start-ip-address $RUNNER_IP \
+            --end-ip-address $RUNNER_IP
+
+      - name: Install go-sqlcmd
+        run: |
+          curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+            | gpg --batch --no-tty --dearmor \
+            | sudo tee /usr/share/keyrings/microsoft-prod.gpg > /dev/null
+          echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/22.04/prod jammy main" \
+            | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update -q
+          sudo ACCEPT_EULA=Y apt-get install -yq sqlcmd
+          sqlcmd --version
+
+      - name: Setup SQL access (idempotent)
+        run: |
+          sqlcmd \
+            -S $SQL_SERVER \
+            -d $SQL_DATABASE \
+            --authentication-method ActiveDirectoryDefault \
+            -b \
+            -v FunctionAppName="$FUNCTION_APP_NAME" \
+            -i infra/sql/setup.sql
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-version: '10.x'
 
-      - name: Build Functions
-        run: dotnet publish ${{ env.FUNCTIONS_PROJECT }} -c Release -o ${{ env.PUBLISH_DIR }}
+      - name: Restore NuGet packages
+        run: dotnet restore TripsTracker.slnx
 
-      - name: Deploy Azure Functions
-        uses: azure/functions-action@v1
+      - name: Run EF Core migrations
+        run: |
+          dotnet tool install --global dotnet-ef
+          dotnet ef database update \
+            --project src/TripsTracker.Data/TripsTracker.Data.csproj \
+            --startup-project src/TripsTracker.Functions/TripsTracker.Functions.csproj \
+            --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
+
+      - name: Close SQL firewall
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --server $SQL_SERVER_NAME \
+            --resource-group $AZURE_RG \
+            --name GitHubActionsRunner \
+            --yes 2>/dev/null || true
+
+      # ── Backend: compile + deploy ─────────────────────────────────────────────
+
+      - name: Publish Functions
+        run: |
+          dotnet publish src/TripsTracker.Functions/TripsTracker.Functions.csproj \
+            --configuration Release \
+            --output ./publish/functions
+
+      - name: Deploy Functions
+        uses: Azure/functions-action@v1
         with:
-          app-name: ${{ secrets.AZURE_FUNCTION_APP_NAME }}
-          package: ${{ env.PUBLISH_DIR }}
+          app-name: ${{ env.FUNCTION_APP_NAME }}
+          package: ./publish/functions
+
+      # ── Frontend — Static Web App ─────────────────────────────────────────────
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: src/TripsTracker.Web/package-lock.json
 
-      - name: Install & Build Frontend
+      - name: Build frontend
         working-directory: src/TripsTracker.Web
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: |
           npm ci
           npm run build
+        env:
+          VITE_API_BASE_URL: https://${{ env.FUNCTION_APP_NAME }}.azurewebsites.net
+          VITE_AUTH_CLIENT_ID: ${{ secrets.VITE_AUTH_CLIENT_ID }}
 
       - name: Deploy Static Web App
-        uses: azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.SWA_DEPLOYMENT_TOKEN }}
+          azure_static_web_apps_api_token: ${{ steps.bicep.outputs.swa_token }}
           action: upload
-          app_location: src/TripsTracker.Web
-          output_location: dist
+          app_location: src/TripsTracker.Web/dist
           skip_app_build: true
+
+      # ── Smoke test ───────────────────────────────────────────────────────────
+
+      - name: Smoke test — verify API responds
+        run: |
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_APP_URL/health")
+            echo "Smoke test attempt $i: HTTP $STATUS"
+            [ "$STATUS" = "200" ] && exit 0
+            [ "$i" = "3" ] && echo "Smoke test FAILED — deployment did not result in a working API" && exit 1
+            sleep 15
+          done
