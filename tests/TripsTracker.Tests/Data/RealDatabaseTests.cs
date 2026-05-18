@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
+using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
@@ -29,7 +29,7 @@ file sealed class OwnerUserContext : IUserContext
 /// <summary>
 /// Integration tests that hit the real SQL Server database.
 /// No mocking — business classes run against the actual schema and data.
-/// Write tests wrap operations in a transaction that is rolled back on cleanup.
+/// Write tests use a TransactionScope that rolls back on dispose.
 /// </summary>
 [TestClass]
 public class RealDatabaseTests
@@ -43,7 +43,7 @@ public class RealDatabaseTests
         public CountryBusiness Countries { get; }
         public VisitedStateBusiness States { get; }
         public int OwnerUserId { get; }
-        private IDbContextTransaction? _transaction;
+        private TransactionScope? _scope;
 
         public Fixture()
         {
@@ -72,17 +72,21 @@ public class RealDatabaseTests
             States = new VisitedStateBusiness(Context, userContext);
         }
 
-        public async Task BeginTransactionAsync()
-            => _transaction = await Context.Database.BeginTransactionAsync();
+        public void BeginScope()
+        {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
+            Context.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
+        }
 
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-            }
+            if (_scope != null)
+                Context.Database.CloseConnection();
             await Context.DisposeAsync();
+            _scope?.Dispose(); // no Complete() → automatic rollback
         }
     }
 
@@ -145,7 +149,7 @@ public class RealDatabaseTests
     public async Task PlaceBusiness_CreateAndRead_RollsBackWithoutAffectingRealData()
     {
         await using var f = new Fixture();
-        await f.BeginTransactionAsync();
+        f.BeginScope();
 
         var brazil = f.Context.Set<Country>().First(c => c.IsoAlpha2 == "BR");
         var testPlace = new Place
@@ -163,7 +167,7 @@ public class RealDatabaseTests
         var found = await f.Places.GetAllAsync();
         Assert.IsTrue(found.Any(p => p.City == "__TEST_CITY__"), "Test place should be visible within the transaction.");
 
-        // Fixture.DisposeAsync rolls back — real data unaffected
+        // Fixture.DisposeAsync disposes scope without Complete() → rolls back
     }
 
     #endregion

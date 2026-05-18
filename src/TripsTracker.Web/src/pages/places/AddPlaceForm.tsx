@@ -10,6 +10,8 @@ import styles from './AddPlaceForm.module.scss';
 
 interface Props {
   onClose: () => void;
+  initialCity?: string;
+  onExplore?: (city: string, countryIsoAlpha2: string, stateName?: string) => void;
 }
 
 interface MismatchSuggestion {
@@ -18,13 +20,14 @@ interface MismatchSuggestion {
   isHome: boolean;
 }
 
-export default function AddPlaceForm({ onClose }: Props) {
+export default function AddPlaceForm({ onClose, initialCity = '', onExplore }: Props) {
   const { data: countries = [] } = useCountries();
   const create = useCreatePlace();
   const [countryIsoAlpha2, setCountryIsoAlpha2] = useState('');
-  const [cityName, setCityName] = useState('');
+  const [cityName, setCityName] = useState(initialCity);
   const [selectedStateName, setSelectedStateName] = useState<string | undefined>();
   const [isHome, setIsHome] = useState(false);
+  const [cityConfirmed, setCityConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<MismatchSuggestion | null>(null);
 
@@ -33,10 +36,12 @@ export default function AddPlaceForm({ onClose }: Props) {
     setCountryIsoAlpha2(s.countryIsoAlpha2);
     setSelectedStateName(s.stateName ?? undefined);
     setError(null);
+    setCityConfirmed(true);
   }
 
   function handleCityChange(value: string) {
     setCityName(value);
+    setCityConfirmed(false);
     if (selectedStateName) setSelectedStateName(undefined);
   }
 
@@ -86,6 +91,7 @@ export default function AddPlaceForm({ onClose }: Props) {
             value={countryIsoAlpha2}
             onChange={handleCountryChange}
             required
+            allowClear
           />
         </label>
 
@@ -100,6 +106,16 @@ export default function AddPlaceForm({ onClose }: Props) {
             required
           />
         </label>
+
+        {onExplore && cityConfirmed && (
+          <button
+            type="button"
+            className={styles.exploreLink}
+            onClick={() => onExplore(cityName.trim(), countryIsoAlpha2, selectedStateName)}
+          >
+            Explore photos &amp; comments for this place first →
+          </button>
+        )}
 
         <FormCheckbox
           label="Home location"

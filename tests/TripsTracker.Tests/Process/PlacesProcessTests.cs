@@ -10,12 +10,91 @@ public class PlacesProcessTests
 {
     private static CountryDto Brazil() => new(
         Id: 1, IsoNumeric: 76, IsoAlpha2: "BR", Flag: "🇧🇷",
-        Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false);
+        Name: "Brazil", Region: "Americas", IsHome: false, IsVisited: false, ShowStateBorders: false);
 
     private static PlaceDto AnyPlace() => new(
         Id: 1, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",
         CountryFlag: "🇧🇷", City: "Itacuruça", StateAbbr: "RJ",
         StateName: "Rio de Janeiro", IsHome: false);
+
+    private static PlaceDto HomePlace() => new(
+        Id: 2, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",
+        CountryFlag: "🇧🇷", City: "Niterói", StateAbbr: "RJ",
+        StateName: "Rio de Janeiro", IsHome: true);
+
+    // ─── DeleteAsync ──────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task DeleteAsync_NonHomePlace_ReturnsPromptFalse()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(AnyPlace());
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        var result = await sut.DeleteAsync(1);
+
+        Assert.IsFalse(result.PromptHomeCountry);
+        Assert.IsNull(result.CountryId);
+        Assert.IsNull(result.CountryName);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_HomePlace_OtherHomeRemains_ReturnsPromptFalse()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        places.Setup(p => p.GetByIdAsync(2, It.IsAny<CancellationToken>())).ReturnsAsync(HomePlace());
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        var result = await sut.DeleteAsync(2);
+
+        Assert.IsFalse(result.PromptHomeCountry);
+        countries.Verify(c => c.UnsetHomeAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_HomePlace_NoOtherHome_ReturnsPromptTrue_WithCountryInfo()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        places.Setup(p => p.GetByIdAsync(2, It.IsAny<CancellationToken>())).ReturnsAsync(HomePlace());
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        places.Setup(p => p.HasHomeInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        var result = await sut.DeleteAsync(2);
+
+        Assert.IsTrue(result.PromptHomeCountry);
+        Assert.AreEqual(1, result.CountryId);
+        Assert.AreEqual("Brazil", result.CountryName);
+        countries.Verify(c => c.UnsetHomeAsync(1, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task DeleteAsync_LastPlaceInCountry_UnsetsVisited()
+    {
+        var places = new Mock<IPlaceBusiness>();
+        var countries = new Mock<ICountryBusiness>();
+        var geocoding = new Mock<IGeocodingBusiness>();
+
+        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(AnyPlace());
+        places.Setup(p => p.HasAnyInCountryAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        await sut.DeleteAsync(1);
+
+        countries.Verify(c => c.UnsetVisitedAsync(1, It.IsAny<CancellationToken>()), Times.Once);
+    }
 
     // ─── AddAsync ─────────────────────────────────────────────────────────────
 

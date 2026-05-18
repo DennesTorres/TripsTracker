@@ -81,6 +81,21 @@
   }
 }
 
+.exploreLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #7dd3fc;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    text-decoration: underline;
+    color: #bae6fd;
+  }
+}
+
 .saveBtn {
   background: #4ade80 !important;
   color: #0f172a !important;

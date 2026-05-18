@@ -12,5 +12,5 @@ public class Place
     [MaxLength(10)] public string? StateAbbr { get; set; }
     public string? StateName { get; set; }
     public bool IsHome { get; set; }
-    public int? UserId { get; set; }
+    public int UserId { get; set; }
 }

@@ -4,6 +4,7 @@ using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Business;
 
@@ -18,6 +19,14 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<PlaceDto> CreateAsync(CreatePlaceDto dto, CancellationToken ct = default)
     {
+        var userId = _userContext.UserId!.Value;
+        var duplicate = await BuildBaseQuery()
+            .AnyAsync(p => p.UserId == userId && p.CountryId == dto.CountryId
+                && p.City.ToLower() == dto.City.ToLower(), ct);
+        if (duplicate)
+            throw new BusinessRuleException(
+                $"You already have '{dto.City}' in your places.", "DUPLICATE_PLACE");
+
         var place = new Place
         {
             Lon = dto.Lon,
@@ -27,7 +36,7 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             StateAbbr = dto.StateAbbr,
             StateName = dto.StateName,
             IsHome = dto.IsHome,
-            UserId = _userContext.UserId
+            UserId = userId
         };
         await InsertAsync(place, ct);
         return await GetByIdAsync(place.Id, ct)
@@ -78,4 +87,12 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
     public Task<bool> HasHomeInCountryAsync(int countryId, CancellationToken ct = default)
         => BuildBaseQuery().AnyAsync(p => p.CountryId == countryId && p.IsHome && p.UserId == _userContext.UserId, ct);
 
+    public Task<List<PlaceDto>> GetAllForUserAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .Where(p => p.UserId == userId)
+            .Join(Context.Set<Country>().AsNoTracking(),
+                p => p.CountryId,
+                c => c.Id,
+                (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
+            .ToListAsync(ct);
 }

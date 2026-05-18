@@ -15,44 +15,46 @@
 </head>
 <body>
 <h1>TripsTracker — Backend Architecture</h1>
-<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-04-08 (after stories #122–#131, #137)</h2>
+<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-05-13 (after Stage 6 — stories #98–#101 — UGC: photos, comments, ratings, explore, storage)</h2>
 <div class="diagram-wrap">
   <div class="mermaid">
 flowchart TB
     subgraph ENTRY["🚀 Root — TripsTracker.Functions (entry point + DI)"]
         direction LR
-        F1["Azure Functions\nHTTP Triggers\nPlaceFunctions · CountryFunctions\nVisitedStateFunctions · CityFunctions"]
+        F1["Azure Functions\nHTTP Triggers\nPlaceFunctions · CountryFunctions · VisitedStateFunctions\nCityFunctions · UserFunctions · ShareFunctions\nPhotoFunctions · CommentFunctions\nExploreFunctions · StorageFunctions · MapFunctions"]
         F2["DI Wiring\nScrutor auto-registration\nCastle DynamicProxy\nIOptions config"]
     end
 
     subgraph PROCESS["⚙️ Process Layer — TripsTracker.Process"]
         direction LR
         P1["PlacesProcess\nAddAsync (geocode → create → mark visited)\nDeleteAsync (delete → manage IsVisited/IsHome)"]
-        P2["IQueryable composition\nacross Business classes\nTransactionScope(Required)"]
+        P2["PublicMapProcess\nGetSharedMapAsync (cross-user public map)"]
+        P3["UserProcess\nEnsureUserAsync · UpdateAsync\n(DisplayName + HomeCountry)"]
     end
 
     subgraph INTEGRATION["🌐 Integration — TripsTracker.Integration"]
         direction LR
         G1["NominatimGeocodingService\n: INominatimService\nGeocodeAsync(city, countryCode) → Nominatim\nSuggestCitiesAsync(query, country) → Photon API\n(photon.komoot.io — prefix autocomplete)"]
         G2["HttpClient (named)\nNominatimOptions\n(BaseUrl · UserAgent · Timeout)"]
+        G3["BlobStorageService\n: IBlobStorageService\nUpload · Download · Delete · GetUserBlobs\nLocal: Azurite (UseDevelopmentStorage)\nAzure: Managed Identity (blobServiceUri)"]
     end
 
     subgraph BUSINESS["🧠 Business Layer — TripsTracker.Business"]
         direction LR
         B1["BusinessBase&lt;TEntity&gt;\nCrudBase&lt;TEntity&gt;\nQueryBase&lt;TEntity&gt;"]
-        B2["PlaceBusiness · PlaceQuery\nCountryBusiness · CountryQuery\nVisitedStateBusiness · VisitedStateQuery\nGeocodingBusiness (wraps INominatimService)"]
+        B2["PlaceBusiness · CountryBusiness\nVisitedStateBusiness · GeocodingBusiness\nUserBusiness · ShareLinkBusiness\nPlacePhotoBusiness · PlaceCommentBusiness\nStorageBusiness · ExploreBusiness"]
     end
 
     subgraph DATA["🗄️ Data Layer — TripsTracker.Data"]
         direction LR
         D1["TripsTrackerDbContext\n: BaseContext"]
-        D2["EF Core entities\nPlace · Country\n(VisitedStates = SQL VIEW)"]
+        D2["EF Core entities\nPlace · Country · User · UserCountry\nShareLink · PlacePhoto · PlaceComment\nPhotoRating · CommentRating\n(VisitedStates = SQL VIEW)"]
         D3["Base classes:\nBusinessBase · CrudBase · QueryBase\n(live in Data — Business inherits)"]
     end
 
     subgraph INTERFACES["📐 Interfaces — TripsTracker.Interfaces"]
         direction LR
-        I1["IBusinessBase · IProcessBase\nIContext · INominatimService"]
+        I1["IBusinessBase · IProcessBase\nIContext · INominatimService\nIUserContext (per-request identity)"]
         I2["FluentValidation validators"]
         I3["Custom exception hierarchy\nNotFoundException\nBusinessRuleException"]
         I4["IOptions config classes\nDatabaseOptions · NominatimOptions"]
@@ -69,7 +71,7 @@ flowchart TB
     end
 
     subgraph TESTS["🧪 Tests — TripsTracker.Tests"]
-        TS1["84+ MSTests\nSQLite in-memory for bulk ops\nReal SQL Server for integration\n(transaction rollback isolation)"]
+        TS1["119+ MSTests\nSQL Server dedicated databases only\n(SQLite/InMemory removed — cascade repair)\nTransactionScope rollback isolation"]
     end
 
     ENTRY -->|"calls via interfaces"| PROCESS

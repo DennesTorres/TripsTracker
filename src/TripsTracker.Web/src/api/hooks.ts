@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, Place, UpdatePlace, VisitedState } from '@/types';
+import type { AddPlace, CitySuggestion, Country, DeletePlaceResult, ExploreContent, ExploreLocation, Place, PlaceComment, PlacePhoto, PublicMapData, PublicShareSummary, ShareLink, StorageUsage, UpdatePlace, UpdateUser, UserProfile, VisitedState } from '@/types';
 // VisitedState import kept — useVisitedStates still used by MapPage for map colouring
 // useSetCountryVisited removed — IsVisited is now derived from Places (auto-managed by PlacesProcess)
 import { decodeStrings } from '@/lib/cp1252';
-import apiClient from './client';
+import apiClient, { publicApiClient } from './client';
 
 export function usePlaces() {
   return useQuery<Place[]>({
@@ -66,6 +66,102 @@ export function useCitySuggestions(query: string, countryCode = '') {
   });
 }
 
+// ── Photos & Comments ───────────────────────────────────────────────────────
+
+export function usePlacePhotos(placeId: number) {
+  return useQuery<PlacePhoto[]>({
+    queryKey: ['photos', placeId],
+    queryFn: () => apiClient.get<PlacePhoto[]>(`/api/places/${placeId}/photos`).then(r => r.data),
+    enabled: placeId > 0,
+  });
+}
+
+export function useUploadPhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ placeId, file, caption }: { placeId: number; file: File; caption?: string }) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (caption) form.append('caption', caption);
+      return apiClient.post<PlacePhoto>(`/api/places/${placeId}/photos`, form).then(r => r.data);
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+  });
+}
+
+export function useDeletePhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ photoId }: { photoId: number; placeId: number }) =>
+      apiClient.delete(`/api/photos/${photoId}`),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+  });
+}
+
+export function useRatePhoto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ photoId, rating }: { photoId: number; rating: number; placeId: number }) =>
+      apiClient.put(`/api/photos/${photoId}/rating`, { rating }),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+  });
+}
+
+export function usePlaceComments(placeId: number) {
+  return useQuery<PlaceComment[]>({
+    queryKey: ['comments', placeId],
+    queryFn: () => apiClient.get<PlaceComment[]>(`/api/places/${placeId}/comments`).then(r => r.data),
+    enabled: placeId > 0,
+  });
+}
+
+export function useCreateComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ placeId, text }: { placeId: number; text: string }) =>
+      apiClient.post<PlaceComment>(`/api/places/${placeId}/comments`, { text }).then(r => r.data),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+export function useCreateReply() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ parentCommentId, text }: { parentCommentId: number; text: string; placeId: number }) =>
+      apiClient.post<PlaceComment>(`/api/comments/${parentCommentId}/replies`, { text }).then(r => r.data),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+export function useDeleteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId }: { commentId: number; placeId: number }) =>
+      apiClient.delete(`/api/comments/${commentId}`),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+export function useVoteComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ commentId, isUpvote }: { commentId: number; isUpvote: boolean; placeId: number }) =>
+      apiClient.put(`/api/comments/${commentId}/vote`, { isUpvote }),
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+  });
+}
+
+// ── Countries ───────────────────────────────────────────────────────────────
+
+export function useSetStateBorders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, show }: { id: number; show: boolean }) =>
+      apiClient.put<Country>(`/api/countries/${id}/state-borders?value=${show}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['countries'] }),
+  });
+}
+
 export function useVisitedStates() {
   return useQuery<VisitedState[]>({
     queryKey: ['visited-states'],
@@ -79,10 +175,106 @@ export function useVisitedStates() {
  * legacy unassigned places/country flags. A no-op on subsequent logins.
  */
 export function useEnsureUser() {
-  return useQuery({
+  return useQuery<UserProfile>({
     queryKey: ['me'],
-    queryFn: () => apiClient.get('/api/me').then(r => r.data),
-    staleTime: Infinity, // Run once per session — no need to re-fetch
+    queryFn: () => apiClient.get<UserProfile>('/api/me').then(r => r.data),
+    staleTime: Infinity,
     retry: false,
+  });
+}
+
+export function useShareLinks() {
+  return useQuery<ShareLink[]>({
+    queryKey: ['share-links'],
+    queryFn: () => apiClient.get<ShareLink[]>('/api/share-links').then(r => r.data),
+  });
+}
+
+export function useCreateShareLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient.post<ShareLink>('/api/share-links', {}).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['share-links'] }),
+  });
+}
+
+export function useDiscoverMaps(query: string) {
+  return useQuery<PublicShareSummary[]>({
+    queryKey: ['discover-maps', query],
+    queryFn: () =>
+      publicApiClient.get<PublicShareSummary[]>(`/api/discover?q=${encodeURIComponent(query)}`).then(r => r.data),
+    staleTime: 30_000,
+    placeholderData: [],
+  });
+}
+
+export function useDeactivateShareLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/api/share-links/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['share-links'] }),
+  });
+}
+
+export function useSharedMap(token: string) {
+  return useQuery<PublicMapData>({
+    queryKey: ['shared-map', token],
+    queryFn: () => publicApiClient.get<PublicMapData>(`/api/shared/${token}`).then(r => r.data),
+    enabled: !!token,
+    retry: false,
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: UpdateUser) =>
+      apiClient.put<UserProfile>('/api/me', dto).then(r => r.data),
+    onSuccess: (data) => {
+      qc.setQueryData(['me'], data);
+      qc.invalidateQueries({ queryKey: ['countries'] });
+      qc.invalidateQueries({ queryKey: ['discover-maps'] });
+    },
+  });
+}
+
+export function useExploreSearch(query: string) {
+  return useQuery<ExploreLocation[]>({
+    queryKey: ['explore-search', query],
+    queryFn: () =>
+      apiClient.get<ExploreLocation[]>(`/api/explore?q=${encodeURIComponent(query)}`).then(r => r.data),
+    enabled: query.length >= 2 || query === '',
+    staleTime: 30_000,
+  });
+}
+
+export function useExploreContent(city: string, countryId: number | null) {
+  return useQuery<ExploreContent>({
+    queryKey: ['explore-content', city, countryId],
+    queryFn: () =>
+      apiClient.get<ExploreContent>(
+        `/api/explore/content?city=${encodeURIComponent(city)}&countryId=${countryId}`
+      ).then(r => r.data),
+    enabled: !!city && !!countryId,
+    staleTime: 30_000,
+  });
+}
+
+export function useStorageUsage() {
+  return useQuery<StorageUsage>({
+    queryKey: ['storage-usage'],
+    queryFn: () => apiClient.get<StorageUsage>('/api/storage/usage').then(r => r.data),
+    staleTime: 60_000,
+  });
+}
+
+export function useRefreshStorage() {
+  const queryClient = useQueryClient();
+  return useMutation<StorageUsage>({
+    mutationFn: () => apiClient.post<StorageUsage>('/api/storage/refresh').then(r => r.data),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['storage-usage'], data);
+    },
   });
 }
