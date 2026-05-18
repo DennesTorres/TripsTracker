@@ -18,7 +18,6 @@ env:
   SQL_DATABASE: TripsTracker
   FUNCTION_APP_NAME: func-tripstracker-test-ttk
   FUNCTION_APP_URL: https://func-tripstracker-test-ttk.azurewebsites.net/api
-  DIRECTORY_READERS_ROLE_ID: 88d8e3e3-8f55-4a1e-953a-9b9898b8876b
 
 jobs:
   deploy:
@@ -59,25 +58,6 @@ jobs:
           echo "sql_server_identity_id=$sql_server_identity_id" >> $GITHUB_OUTPUT
 
       # ── Database: firewall + access grants + migrations ───────────────────────
-
-      - name: Assign Directory Readers to SQL server identity (idempotent)
-        run: |
-          SQL_IDENTITY="${{ steps.bicep.outputs.sql_server_identity_id }}"
-          echo "SQL server identity: $SQL_IDENTITY"
-
-          EXISTING=$(az rest --method GET \
-            --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?\$filter=principalId eq '$SQL_IDENTITY' and roleDefinitionId eq '$DIRECTORY_READERS_ROLE_ID'" \
-            --query 'value[0].id' -o tsv 2>/dev/null || true)
-
-          if [ -z "$EXISTING" ] || [ "$EXISTING" = "None" ]; then
-            az rest --method POST \
-              --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments" \
-              --body "{\"@odata.type\":\"#microsoft.graph.unifiedRoleAssignment\",\"roleDefinitionId\":\"$DIRECTORY_READERS_ROLE_ID\",\"principalId\":\"$SQL_IDENTITY\",\"directoryScopeId\":\"/\"}"
-            echo "Directory Readers assigned — waiting 30s for Entra propagation"
-            sleep 30
-          else
-            echo "Directory Readers already assigned (idempotent)"
-          fi
 
       - name: Open SQL firewall for GitHub runner
         run: |
