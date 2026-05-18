@@ -1,13 +1,16 @@
 <Solution>
-  <Folder Name="/src/">
     <Project Path="src/TripsTracker.Business/TripsTracker.Business.csproj" />
+    <Project Path="src/TripsTracker.Integration/TripsTracker.Integration.csproj" />
     <Project Path="src/TripsTracker.Data/TripsTracker.Data.csproj" />
     <Project Path="src/TripsTracker.Domain/TripsTracker.Domain.csproj" />
     <Project Path="src/TripsTracker.Functions/TripsTracker.Functions.csproj" />
     <Project Path="src/TripsTracker.Interfaces/TripsTracker.Interfaces.csproj" />
     <Project Path="src/TripsTracker.Process/TripsTracker.Process.csproj" />
     <Project Path="src/TripsTracker.Tools/TripsTracker.Tools.csproj" />
-  </Folder>
+    <Project Path="src/TripsTracker.Web/TripsTracker.Web.esproj">
+      <Build />
+      <Deploy />
+    </Project>
   <Folder Name="/tests/">
     <Project Path="tests/TripsTracker.Tests/TripsTracker.Tests.csproj" />
   </Folder>

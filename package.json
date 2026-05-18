@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "build": "npm --prefix src/TripsTracker.Web run build",
+    "start": "npm --prefix src/TripsTracker.Web start"
+  }
+}

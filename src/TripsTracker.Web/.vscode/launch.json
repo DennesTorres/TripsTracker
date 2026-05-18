@@ -1,0 +1,36 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "localhost (Edge)",
+      "type": "edge",
+      "request": "launch",
+      "url": "http://localhost:4173",
+      "webRoot": "${workspaceFolder}\\public"
+    },
+    {
+      "name": "localhost (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4173",
+      "webRoot": "${workspaceFolder}\\public"
+    },
+    {
+      "name": "Launch TripsTracker.Web",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/bin",
+      "program": "${workspaceFolder}/bin/www",
+      "stopOnEntry": false
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Launch Node and Browser",
+      "configurations": [
+        "Launch TripsTracker.Web",
+        "localhost (Chrome)"
+      ]
+    }
+  ]
+}

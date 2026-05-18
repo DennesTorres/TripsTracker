@@ -15,6 +15,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.5" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="MSTest" Version="4.0.1" />
@@ -25,9 +27,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.local.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\TripsTracker.Interfaces\TripsTracker.Interfaces.csproj" />
     <ProjectReference Include="..\..\src\TripsTracker.Domain\TripsTracker.Domain.csproj" />
     <ProjectReference Include="..\..\src\TripsTracker.Business\TripsTracker.Business.csproj" />
+    <ProjectReference Include="..\..\src\TripsTracker.Integration\TripsTracker.Integration.csproj" />
     <ProjectReference Include="..\..\src\TripsTracker.Process\TripsTracker.Process.csproj" />
     <ProjectReference Include="..\..\src\TripsTracker.Tools\TripsTracker.Tools.csproj" />
     <ProjectReference Include="..\..\src\TripsTracker.Data\TripsTracker.Data.csproj" />

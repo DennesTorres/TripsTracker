@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Local environment overrides — never commit
+**/appsettings.local.json
+
 # User-specific files
 *.rsuser
 *.suo
@@ -10,6 +13,9 @@
 *.userosscache
 *.sln.docstates
 *.env
+
+# Exceptions — committed because content is machine-independent
+!TripsTracker.slnLaunch.user
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -417,3 +423,6 @@ FodyWeavers.xsd
 *.msm
 *.msp
 .claude/worktrees/
+
+# Test local configuration (connection strings)
+**/appsettings.local.json

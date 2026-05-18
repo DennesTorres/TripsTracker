@@ -1,0 +1,146 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  height: 100%;
+  padding: 20px;
+  overflow-y: auto;
+  color: #f1f5f9;
+}
+
+.section {
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #f1f5f9;
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.stats {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  flex: 1;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checkLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #4ade80;
+    cursor: pointer;
+  }
+}
+
+.regionSelect {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: #4ade80;
+  }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #334155;
+    color: #94a3b8;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #1e293b;
+    color: #cbd5e1;
+    vertical-align: middle;
+  }
+
+  tr:hover td {
+    background: #1e293b;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #4ade80;
+  }
+
+  input[type="radio"] {
+    accent-color: #60a5fa;
+  }
+}
+
+.flag {
+  font-size: 18px;
+  width: 36px;
+}
+
+.region {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.stateTag {
+  display: inline-block;
+  background: #1e3a5f;
+  color: #7dd3fc;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 11px;
+  margin: 1px 2px 1px 0;
+  cursor: default;
+}
+
+.visited {
+  color: #4ade80;
+  text-align: center;
+  font-size: 15px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #94a3b8;
+}
