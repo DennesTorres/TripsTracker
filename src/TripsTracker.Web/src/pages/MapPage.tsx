@@ -226,11 +226,11 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
         <AddPlaceForm
           initialCity=""
           onClose={() => setAdding(false)}
-          onExplore={city => {
+          onExplore={(city, countryIsoAlpha2, stateName) => {
             setAdding(false);
-            pendingExploreCityRef.current = city;
-            autoSelectRef.current = true;
-            setExploreQuery(city);
+            const country = countries.find(c => c.isoAlpha2 === countryIsoAlpha2);
+            if (!country) return;
+            setActiveDetail({ city, stateName, countryName: country.name, countryId: country.id });
           }}
         />
       )}

@@ -11,7 +11,7 @@ import styles from './AddPlaceForm.module.scss';
 interface Props {
   onClose: () => void;
   initialCity?: string;
-  onExplore?: (city: string) => void;
+  onExplore?: (city: string, countryIsoAlpha2: string, stateName?: string) => void;
 }
 
 interface MismatchSuggestion {
@@ -111,7 +111,7 @@ export default function AddPlaceForm({ onClose, initialCity = '', onExplore }: P
           <button
             type="button"
             className={styles.exploreLink}
-            onClick={() => onExplore(cityName.trim())}
+            onClick={() => onExplore(cityName.trim(), countryIsoAlpha2, selectedStateName)}
           >
             Explore photos &amp; comments for this place first →
           </button>
