@@ -188,6 +188,14 @@
   }
 }
 
+.detailBtn {
+  &:hover {
+    border-color: #7dd3fc !important;
+    color: #7dd3fc !important;
+    background: transparent !important;
+  }
+}
+
 .homeBtn {
   &:hover {
     border-color: #4ade80 !important;

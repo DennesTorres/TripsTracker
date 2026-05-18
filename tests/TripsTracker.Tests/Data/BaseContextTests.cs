@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Transactions;
 using TripsTracker.Data;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Data;
 
@@ -18,14 +21,57 @@ public class BaseContextTests
     {
         public TestDbContext(DbContextOptions<TestDbContext> options) : base(options) { }
         public DbSet<TestEntity> TestEntities => Set<TestEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<TestEntity>().Property(t => t.Id).ValueGeneratedNever();
+        }
     }
 
-    private static TestDbContext CreateContext()
+    private static DbContextOptions<TestDbContext> _options = null!;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
     {
-        var options = new DbContextOptionsBuilder<TestDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_BaseContext");
+
+        _options = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlServer(connStr)
             .Options;
-        return new TestDbContext(options);
+
+        await using var ctx = new TestDbContext(_options);
+        await ctx.Database.EnsureCreatedAsync();
+    }
+
+    private sealed class Fixture : IAsyncDisposable
+    {
+        public TestDbContext Ctx { get; }
+        private readonly TransactionScope _scope;
+
+        public Fixture()
+        {
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
+            Ctx = new TestDbContext(_options);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Ctx.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
+        }
     }
 
     #endregion
@@ -33,18 +79,18 @@ public class BaseContextTests
     [TestMethod]
     public void BaseContext_CanBeInstantiated()
     {
-        using var context = CreateContext();
+        using var context = new TestDbContext(_options);
         Assert.IsNotNull(context);
     }
 
     [TestMethod]
     public async Task BaseContext_CanAddAndRetrieveEntities()
     {
-        using var context = CreateContext();
-        context.TestEntities.Add(new TestEntity { Id = 1, CreatedAt = DateTime.UtcNow });
-        await context.SaveChangesAsync();
+        await using var f = new Fixture();
+        f.Ctx.TestEntities.Add(new TestEntity { Id = 1, CreatedAt = DateTime.UtcNow });
+        await f.Ctx.SaveChangesAsync();
 
-        var entity = await context.TestEntities.FindAsync(1);
+        var entity = await f.Ctx.TestEntities.FindAsync(1);
         Assert.IsNotNull(entity);
         Assert.AreEqual(1, entity.Id);
     }

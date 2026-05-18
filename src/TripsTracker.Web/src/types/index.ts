@@ -21,11 +21,13 @@ export interface Country {
   id: number;
   isoNumeric: number;
   isoAlpha2: string;
+  isoAlpha3?: string;
   flag: string;
   name: string;
   region: string;
   isHome: boolean;
   isVisited: boolean;
+  showStateBorders: boolean;
 }
 
 export interface UpdatePlace {
@@ -52,4 +54,99 @@ export interface VisitedState {
   countryId: number;
   stateAbbr: string;
   stateName?: string;
+}
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  displayName?: string;
+  createdAt: string;
+  isDiscoverable: boolean;
+}
+
+export interface UpdateUser {
+  displayName?: string;
+  homeCountryId?: number;
+  isDiscoverable?: boolean;
+}
+
+export interface ShareLink {
+  id: number;
+  token: string;
+  isActive: boolean;
+  createdAt: string;
+  expiresAt?: string;
+  viewCount: number;
+}
+
+export interface PlacePhoto {
+  id: number;
+  placeId: number;
+  userId: number;
+  originalFileName?: string;
+  contentType: string;
+  sizeBytes: number;
+  caption?: string;
+  sortOrder: number;
+  uploadedAt: string;
+  averageRating: number;
+  ratingCount: number;
+}
+
+export interface PlaceComment {
+  id: number;
+  placeId: number;
+  userId: number;
+  userDisplayName: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
+  upvoteCount: number;
+  downvoteCount: number;
+}
+
+export interface PublicShareSummary {
+  token: string;
+  displayName: string;
+  continentsVisited: number;
+  countriesVisited: number;
+  placesCount: number;
+}
+
+export interface PointEvent {
+  id: number;
+  eventType: string;
+  points: number;
+  referenceId?: number;
+  referenceType?: string;
+  createdAt: string;
+  cityName?: string | null;
+  countryName?: string | null;
+  continentName?: string | null;
+}
+
+export interface UserPointsSummary {
+  totalPoints: number;
+  recentEvents: PointEvent[];
+}
+
+export interface LeaderboardEntry {
+  userId: number;
+  rank: number;
+  displayName: string;
+  totalPoints: number;
+}
+
+export interface UserStatement {
+  userId: number;
+  displayName: string;
+  totalPoints: number;
+  events: PointEvent[];
+}
+
+export interface PublicMapData {
+  ownerDisplayName: string;
+  places: Place[];
+  countries: Country[];
+  visitedStates: VisitedState[];
 }

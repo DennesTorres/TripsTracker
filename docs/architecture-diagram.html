@@ -15,44 +15,45 @@
 </head>
 <body>
 <h1>TripsTracker — Backend Architecture</h1>
-<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-04-08 (after stories #122–#131, #137)</h2>
+<h2>Projects, layers, base classes, AOP, DI wiring &nbsp;·&nbsp; Azure Functions isolated worker / .NET 10 &nbsp;·&nbsp; Updated 2026-05-13 (after Stage 7 — stories #102, #174, #178–#181 — Gamification)</h2>
 <div class="diagram-wrap">
   <div class="mermaid">
 flowchart TB
     subgraph ENTRY["🚀 Root — TripsTracker.Functions (entry point + DI)"]
         direction LR
-        F1["Azure Functions\nHTTP Triggers\nPlaceFunctions · CountryFunctions\nVisitedStateFunctions · CityFunctions"]
+        F1["Azure Functions\nHTTP Triggers\nPlaceFunctions · CountryFunctions · UserFunctions\nVisitedStateFunctions · CityFunctions · ShareFunctions\nPhotoFunctions · CommentFunctions · PointsFunctions"]
         F2["DI Wiring\nScrutor auto-registration\nCastle DynamicProxy\nIOptions config"]
     end
 
     subgraph PROCESS["⚙️ Process Layer — TripsTracker.Process"]
         direction LR
-        P1["PlacesProcess\nAddAsync (geocode → create → mark visited)\nDeleteAsync (delete → manage IsVisited/IsHome)"]
-        P2["IQueryable composition\nacross Business classes\nTransactionScope(Required)"]
+        P1["PlacesProcess\nAddAsync (geocode → create → mark visited → award points)\nDeleteAsync (delete → manage IsVisited/IsHome → revoke points)"]
+        P2["PublicMapProcess · UserProcess\nIQueryable composition across Business classes\nTransactionScope(Required)"]
     end
 
     subgraph INTEGRATION["🌐 Integration — TripsTracker.Integration"]
         direction LR
         G1["NominatimGeocodingService\n: INominatimService\nGeocodeAsync(city, countryCode) → Nominatim\nSuggestCitiesAsync(query, country) → Photon API\n(photon.komoot.io — prefix autocomplete)"]
         G2["HttpClient (named)\nNominatimOptions\n(BaseUrl · UserAgent · Timeout)"]
+        G3["BlobStorageService\n: IBlobStorageService\nUploadAsync · DeleteAsync · GetSasUriAsync\nAzurite locally · Managed Identity on Azure"]
     end
 
     subgraph BUSINESS["🧠 Business Layer — TripsTracker.Business"]
         direction LR
         B1["BusinessBase&lt;TEntity&gt;\nCrudBase&lt;TEntity&gt;\nQueryBase&lt;TEntity&gt;"]
-        B2["PlaceBusiness · PlaceQuery\nCountryBusiness · CountryQuery\nVisitedStateBusiness · VisitedStateQuery\nGeocodingBusiness (wraps INominatimService)"]
+        B2["PlaceBusiness · PlaceQuery · CountryBusiness · CountryQuery\nVisitedStateBusiness · VisitedStateQuery · GeocodingBusiness\nUserBusiness · ShareLinkBusiness\nPlacePhotoBusiness · PlaceCommentBusiness · PointsBusiness"]
     end
 
     subgraph DATA["🗄️ Data Layer — TripsTracker.Data"]
         direction LR
         D1["TripsTrackerDbContext\n: BaseContext"]
-        D2["EF Core entities\nPlace · Country\n(VisitedStates = SQL VIEW)"]
+        D2["EF Core entities\nPlace · Country · User · UserCountry · ShareLink\nPlacePhoto · PlaceComment · PhotoRating · CommentRating\nPointEvent · (VisitedStates = SQL VIEW)"]
         D3["Base classes:\nBusinessBase · CrudBase · QueryBase\n(live in Data — Business inherits)"]
     end
 
     subgraph INTERFACES["📐 Interfaces — TripsTracker.Interfaces"]
         direction LR
-        I1["IBusinessBase · IProcessBase\nIContext · INominatimService"]
+        I1["IBusinessBase · IProcessBase\nIContext · INominatimService\nIUserContext (per-request identity)"]
         I2["FluentValidation validators"]
         I3["Custom exception hierarchy\nNotFoundException\nBusinessRuleException"]
         I4["IOptions config classes\nDatabaseOptions · NominatimOptions"]
@@ -69,7 +70,7 @@ flowchart TB
     end
 
     subgraph TESTS["🧪 Tests — TripsTracker.Tests"]
-        TS1["84+ MSTests\nSQLite in-memory for bulk ops\nReal SQL Server for integration\n(transaction rollback isolation)"]
+        TS1["156+ MSTests\nSQL Server only (SQLite/InMemory removed)\nTransactionScope rollback isolation\nDedicated branch DBs per test class"]
     end
 
     ENTRY -->|"calls via interfaces"| PROCESS
@@ -100,6 +101,9 @@ flowchart TB
     <div class="legend-item">Base classes (BusinessBase / CrudBase / QueryBase) live in Data project — Business references Data for inheritance. TDomain generic removed; projection is Business responsibility.</div>
     <div class="legend-item">Process layer never references Data or Integration directly — composes Business interfaces only</div>
     <div class="legend-item">Integration layer holds all external HTTP calls. NominatimGeocodingService uses two APIs: Nominatim for geocoding (GeocodeAsync) and Photon (photon.komoot.io) for prefix autocomplete (SuggestCitiesAsync). Wrapped by GeocodingBusiness — Process calls IGeocodingBusiness, never INominatimService directly.</div>
+    <div class="legend-item">BlobStorageService registered via AddAzureClients (Azure.Storage.Blobs). Uses Azurite locally (UseDevelopmentStorage=true) and Managed Identity on Azure. PlacePhotoBusiness calls IBlobStorageService for upload/delete/SAS URL generation.</div>
+    <div class="legend-item">Stage 7 note: PointsBusiness.AwardAsync is called from PlacesProcess.AddAsync (cascade pioneer scoring — city 50/200, country 500/2000, continent 5000/20000). RevokeAsync called from PlacesProcess.DeleteAsync. PointsFunctions exposes GET /api/me/points, GET /api/users/{id}/points, GET /api/leaderboard.</div>
+    <div class="legend-item">Stage 7 does NOT include ExploreBusiness, StorageBusiness, ExploreFunctions, or StorageFunctions — those were added to Stage 6 after Stage 7 was branched.</div>
     <div class="legend-item">VisitedStates is a SQL VIEW — no entity class, no write API. VisitedStateBusiness reads it via a raw SQL query projection.</div>
   </div>
 </div>

@@ -3,6 +3,7 @@ import { usePlaces, useDeletePlace, useUpdatePlace } from '@/api/hooks';
 import type { Place } from '@/types';
 import AddPlaceForm from './AddPlaceForm';
 import DeleteConfirm from './DeleteConfirm';
+import PlaceDetailModal from './PlaceDetailModal';
 import styles from './PlacesPage.module.scss';
 
 type SortKey = 'city' | 'countryName' | 'stateAbbr' | 'lon' | 'lat';
@@ -23,6 +24,7 @@ export default function PlacesPage() {
   const { data: places = [], isLoading } = usePlaces();
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<Place | null>(null);
+  const [detail, setDetail] = useState<Place | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('city');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [search, setSearch] = useState('');
@@ -138,6 +140,7 @@ export default function PlacesPage() {
                 <td className={styles.coord}>{p.lat.toFixed(4)}</td>
                 <td>{p.isHome ? '✓' : ''}</td>
                 <td className={styles.actions}>
+                  <button className={styles.detailBtn} onClick={() => setDetail(p)}>Details</button>
                   {!p.isHome && (
                     <button
                       className={styles.homeBtn}
@@ -156,6 +159,7 @@ export default function PlacesPage() {
       </div>
 
       {adding && <AddPlaceForm onClose={() => setAdding(false)} />}
+      {detail && <PlaceDetailModal place={detail} onClose={() => setDetail(null)} />}
 
       {deleting && (
         <DeleteConfirm

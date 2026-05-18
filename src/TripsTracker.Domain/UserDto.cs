@@ -1,3 +1,3 @@
 namespace TripsTracker.Domain;
 
-public record UserDto(int Id, string Email, string? DisplayName, DateTime CreatedAt);
+public record UserDto(int Id, string Email, string? DisplayName, DateTime CreatedAt, bool IsDiscoverable = false);

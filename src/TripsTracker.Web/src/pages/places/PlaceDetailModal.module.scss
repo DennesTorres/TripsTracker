@@ -1,0 +1,246 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 4px;
+}
+
+.empty {
+  font-size: 0.82rem;
+  color: #475569;
+  margin: 0;
+  font-style: italic;
+}
+
+// ── Photos ───────────────────────────────────────────────────────────────────
+
+.photoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}
+
+.photoThumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.photoMeta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.photoName {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photoInfo {
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.photoActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.starBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 3px;
+
+  &:hover { color: #fbbf24; background: rgba(251,191,36,0.1); }
+}
+
+.uploadRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.captionInput {
+  flex: 1;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid #1e3050;
+  background: #0d1828;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+
+  &::placeholder { color: #334155; }
+  &:focus { outline: none; border-color: #0078d4; }
+}
+
+.uploadBtn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: none;
+  background: #0078d4;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover { background: #106ebe; }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+// ── Comments ─────────────────────────────────────────────────────────────────
+
+.commentRow {
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.commentHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.commentAuthor {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.commentDate {
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.commentText {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.commentFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voteBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.72rem;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+}
+
+.addCommentForm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 4px;
+}
+
+.commentInput {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #1e3050;
+  background: #0d1828;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  resize: vertical;
+  font-family: inherit;
+
+  &::placeholder { color: #334155; }
+  &:focus { outline: none; border-color: #0078d4; }
+}
+
+.submitBtn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  background: #0078d4;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover { background: #106ebe; }
+  &:disabled { opacity: 0.6; cursor: default; }
+}
+
+// ── Shared icon button ────────────────────────────────────────────────────────
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+
+  &:hover { background: rgba(255,255,255,0.08); color: #94a3b8; }
+}
+
+.deleteBtn {
+  &:hover { background: rgba(248,81,73,0.15); color: #f85149; }
+}

@@ -9,15 +9,15 @@
   h1 { color: #94a3b8; font-size: 1.15rem; font-weight: 600; text-align: center;
        letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
   h2 { color: #475569; font-size: 0.78rem; font-weight: 400; text-align: center; margin-bottom: 20px; }
-  svg { display: block; margin: 0 auto; width: 100%; max-width: 1380px; }
-  .leg { display:flex; flex-wrap:wrap; gap:10px 22px; max-width:1380px; margin:12px auto 0;
+  svg { display: block; margin: 0 auto; width: 100%; max-width: 1560px; }
+  .leg { display:flex; flex-wrap:wrap; gap:10px 22px; max-width:1560px; margin:12px auto 0;
          padding:10px 14px; background:#1e2533; border-radius:8px;
          font-size:0.7rem; color:#64748b; align-items:center; }
   .li  { display:flex; align-items:center; gap:7px; }
   .lc  { flex-shrink:0; width:26px; height:3px; border-radius:2px; }
 
   /* ── Process detail section ── */
-  .proc-section { max-width: 1380px; margin: 48px auto 0; }
+  .proc-section { max-width: 1560px; margin: 48px auto 0; }
   .proc-section > h3 {
     font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
     color: #475569; margin-bottom: 24px; padding-bottom: 10px;
@@ -83,9 +83,9 @@
 </head>
 <body>
 <h1>TripsTracker — Architecture Overview</h1>
-<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-04-08 (after stories #122–#131, #137 and #146)</h2>
+<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-05-13 (Stage 7 — stories #102, #174, #178–#181 — Gamification)</h2>
 
-<svg viewBox="0 0 1380 710" xmlns="http://www.w3.org/2000/svg"
+<svg viewBox="0 0 2100 890" xmlns="http://www.w3.org/2000/svg"
      font-family="'Segoe UI', Consolas, sans-serif">
   <defs>
     <marker id="ab" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker>
@@ -94,32 +94,34 @@
     <marker id="ae" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#79c0ff"/></marker>
     <marker id="ar" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#f85149"/></marker>
     <marker id="av" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#a78bfa"/></marker>
+    <marker id="aa" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e3b341"/></marker>
+    <marker id="at" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2dd4bf"/></marker>
   </defs>
 
   <!-- ═══════════════════ LAYER BANDS ═══════════════════ -->
 
   <!-- Frontend  y=25  h=105 -->
-  <rect x="120" y="25"  width="910" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
+  <rect x="120" y="25"  width="1820" height="105" rx="8" fill="#1a0e00" stroke="#f0883e" stroke-width="2.5"/>
   <text x="137" y="43" font-size="10" font-weight="700" letter-spacing="1.8" fill="#f0883e">FRONTEND · React + React Query</text>
 
   <!-- Functions  y=175  h=85 -->
-  <rect x="120" y="175" width="910" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
+  <rect x="120" y="175" width="1820" height="85"  rx="8" fill="#0e0a18" stroke="#d2a8ff" stroke-width="2"/>
   <text x="137" y="193" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">AZURE FUNCTIONS · HTTP Triggers</text>
 
   <!-- Process  y=305  h=95 -->
-  <rect x="120" y="305" width="910" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
+  <rect x="120" y="305" width="1820" height="95"  rx="8" fill="#110d38" stroke="#8a6fef" stroke-width="3"/>
   <text x="137" y="323" font-size="10" font-weight="700" letter-spacing="1.8" fill="#d2a8ff">PROCESS · TripsTracker.Process</text>
 
   <!-- Business  y=445  h=105 -->
-  <rect x="120" y="445" width="910" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
+  <rect x="120" y="445" width="1820" height="105" rx="8" fill="#061428" stroke="#58a6ff" stroke-width="3"/>
   <text x="137" y="463" font-size="10" font-weight="700" letter-spacing="1.8" fill="#58a6ff">BUSINESS · TripsTracker.Business · AOP wraps all calls</text>
 
-  <!-- External  x=1048  y=445  h=200 -->
-  <rect x="1048" y="445" width="215" height="200" rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
-  <text x="1064" y="463" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL · Integration</text>
+  <!-- External  x=1960  y=445  h=240 -->
+  <rect x="1960" y="445" width="120" height="240" rx="8" fill="#061018" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="7,3"/>
+  <text x="1970" y="463" font-size="9"  font-weight="700" letter-spacing="1.8" fill="#79c0ff">EXTERNAL</text>
 
-  <!-- Database  y=595  h=80 -->
-  <rect x="120" y="595" width="910" height="80"  rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
+  <!-- Database  y=595  h=165 -->
+  <rect x="120" y="595" width="1820" height="165" rx="8" fill="#061806" stroke="#3fb950" stroke-width="2"/>
   <text x="137" y="613" font-size="10" font-weight="700" letter-spacing="1.8" fill="#3fb950">DATABASE · Azure SQL · EF Core 10</text>
 
   <!-- ═══════════════════ USER ACTOR ═══════════════════ -->
@@ -132,6 +134,8 @@
   <line x1="108" y1="373" x2="430" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
   <line x1="108" y1="380" x2="640" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
   <line x1="108" y1="387" x2="840" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="394" x2="1080" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
+  <line x1="108" y1="398" x2="1295" y2="103" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,2"/>
 
   <!-- ═══════════════════ COMPONENT OVALS ═══════════════════ -->
 
@@ -152,6 +156,10 @@
   <text x="853" y="73"  text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">Countries Page</text>
   <text x="853" y="87"  text-anchor="middle" font-size="9"  fill="#a87040">CountriesPage.tsx</text>
 
+  <ellipse cx="1080" cy="77" rx="90" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1080" y="73" text-anchor="middle" font-size="11" font-weight="bold" fill="#f0883e">ProfilePage</text>
+  <text x="1080" y="86" text-anchor="middle" font-size="9" fill="#a87040">AppShell · avatar dropdown · sign out</text>
+
   <!-- Functions (cy=217) -->
   <ellipse cx="215" cy="217" rx="84"  ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
   <text x="215" y="213" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">POST /api/places</text>
@@ -169,6 +177,10 @@
   <ellipse cx="900" cy="217" rx="80"  ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
   <text x="900" y="213" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">PUT /api/countries</text>
   <text x="900" y="226" text-anchor="middle" font-size="9"  fill="#8a6fef">CountryFunctions</text>
+
+  <ellipse cx="1100" cy="217" rx="90" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1100" y="213" text-anchor="middle" font-size="10" font-weight="bold" fill="#d2a8ff">GET · PUT /api/me</text>
+  <text x="1100" y="225" text-anchor="middle" font-size="9" fill="#8a6fef">UserFunctions</text>
 
   <!-- Process (cy=352) -->
   <ellipse cx="245" cy="352" rx="118" ry="28" fill="#19153a" stroke="#8a6fef" stroke-width="1.5"/>
@@ -196,28 +208,134 @@
   <text x="930" y="492" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">GeocodingBusiness</text>
   <text x="930" y="506" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync · SuggestCitiesAsync</text>
 
+  <ellipse cx="1130" cy="497" rx="90" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1130" y="490" text-anchor="middle" font-size="11" font-weight="bold" fill="#79c0ff">UserBusiness</text>
+  <text x="1130" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">GetByIdAsync · GetByEmailAsync</text>
+  <text x="1130" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">CreateAsync · UpdateAsync</text>
+
   <!-- External — Nominatim -->
-  <ellipse cx="1145" cy="487" rx="88" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
-  <text x="1145" y="482" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
-  <text x="1145" y="495" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync</text>
+  <ellipse cx="2020" cy="487" rx="65" ry="26" fill="#0a1820" stroke="#1f6feb" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="2020" y="482" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">Nominatim OSM</text>
+  <text x="2020" y="495" text-anchor="middle" font-size="9"  fill="#4a80b0">GeocodeAsync</text>
 
   <!-- External — Photon -->
-  <ellipse cx="1145" cy="572" rx="88" ry="26" fill="#12091a" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,2"/>
-  <text x="1145" y="567" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Photon API</text>
-  <text x="1145" y="580" text-anchor="middle" font-size="9"  fill="#7c5fa8">photon.komoot.io · SuggestCitiesAsync</text>
+  <ellipse cx="2020" cy="557" rx="65" ry="26" fill="#12091a" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="2020" y="552" text-anchor="middle" font-size="11" font-weight="600" fill="#a78bfa">Photon API</text>
+  <text x="2020" y="565" text-anchor="middle" font-size="9"  fill="#7c5fa8">SuggestCitiesAsync</text>
+
+  <!-- External — Azure Blob / Azurite -->
+  <ellipse cx="2020" cy="630" rx="65" ry="26" fill="#0a1a10" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="5,2"/>
+  <text x="2020" y="625" text-anchor="middle" font-size="10" font-weight="600" fill="#7ee787">Blob Storage</text>
+  <text x="2020" y="638" text-anchor="middle" font-size="9"  fill="#4a7a4a">Azurite / Azure Blob</text>
+
+  <!-- Stage 7 Frontend components -->
+  <!-- PlaceDetailPanel (cy=77) -->
+  <ellipse cx="1510" cy="77" rx="90" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1510" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">PlaceDetailPanel</text>
+  <text x="1510" y="87" text-anchor="middle" font-size="9" fill="#a87040">photos · comments · ratings</text>
+
+  <!-- AppShell points badge (cy=77) -->
+  <ellipse cx="1730" cy="77" rx="100" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1730" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">AppShell · Points badge</text>
+  <text x="1730" y="87" text-anchor="middle" font-size="9" fill="#a87040">PointsStatementPanel · LeaderboardModal</text>
+
+  <!-- Stage 7 Functions components -->
+  <!-- PhotoFunctions + CommentFunctions (cy=217) -->
+  <ellipse cx="1510" cy="217" rx="110" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1510" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">POST/GET/DEL /api/places/{id}/photos</text>
+  <text x="1510" y="221" text-anchor="middle" font-size="9" fill="#8a6fef">PhotoFunctions</text>
+  <text x="1510" y="232" text-anchor="middle" font-size="8" fill="#8a6fef">+ CommentFunctions (comments · ratings)</text>
+
+  <!-- PointsFunctions (cy=217) -->
+  <ellipse cx="1740" cy="217" rx="110" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1740" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#d2a8ff">GET /api/me/points · /api/leaderboard</text>
+  <text x="1740" y="221" text-anchor="middle" font-size="9" fill="#8a6fef">PointsFunctions</text>
+  <text x="1740" y="232" text-anchor="middle" font-size="8" fill="#8a6fef">+ GET /api/users/{id}/points</text>
+
+  <!-- Stage 7 Business components -->
+  <!-- PlacePhotoBusiness + PlaceCommentBusiness (cy=497) -->
+  <ellipse cx="1520" cy="497" rx="110" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1520" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">PlacePhotoBusiness</text>
+  <text x="1520" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">UploadAsync · DeleteAsync · GetForPlaceAsync</text>
+  <text x="1520" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">+ PlaceCommentBusiness (CRUD · ratings)</text>
+
+  <!-- PointsBusiness (cy=497) -->
+  <ellipse cx="1750" cy="497" rx="100" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1750" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">PointsBusiness</text>
+  <text x="1750" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">AwardAsync · RevokeAsync · ReassignAsync</text>
+  <text x="1750" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">GetStatementAsync · GetLeaderboardAsync</text>
+
+  <!-- Stage 7 Database row 2 (cy=720) -->
+  <ellipse cx="430" cy="720" rx="110" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="430" cy="715" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">PlacePhotos</text>
+  <text x="430" cy="729" text-anchor="middle" font-size="9" fill="#3a7a3a">PlaceId FK · UserId FK · BlobName · SizeBytes</text>
+  <text x="430" y="715" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">PlacePhotos</text>
+  <text x="430" y="729" text-anchor="middle" font-size="9" fill="#3a7a3a">PlaceId FK · UserId FK · BlobName · SizeBytes</text>
+
+  <ellipse cx="680" cy="720" rx="110" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="680" y="715" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">PlaceComments</text>
+  <text x="680" y="729" text-anchor="middle" font-size="9" fill="#3a7a3a">PlaceId FK · UserId FK · Text · CreatedAt</text>
+
+  <ellipse cx="920" cy="720" rx="100" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="920" y="715" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">PhotoRatings</text>
+  <text x="920" y="729" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId PK/FK · PhotoId PK/FK · Rating tinyint</text>
+
+  <ellipse cx="1150" cy="720" rx="105" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="1150" y="715" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">CommentRatings</text>
+  <text x="1150" y="729" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId PK/FK · CommentId PK/FK · IsUpvote</text>
+
+  <ellipse cx="1400" cy="720" rx="105" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="1400" y="715" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">PointEvents</text>
+  <text x="1400" y="729" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId FK · EventType · Points · OriginalEventId?</text>
 
   <!-- Database (cy=635) -->
   <ellipse cx="215" cy="635" rx="75"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
   <text x="215" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Places</text>
-  <text x="215" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">CountryId FK · StateAbbr · StateName</text>
+  <text x="215" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">UserId FK · CountryId FK · StateAbbr · StateName</text>
 
-  <ellipse cx="470" cy="635" rx="82"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
-  <text x="470" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Countries</text>
-  <text x="470" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">IsVisited · IsHome · Flag</text>
+  <ellipse cx="420" cy="635" rx="82"  ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="420" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">Countries</text>
+  <text x="420" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">Flag · IsoAlpha2 · Region</text>
 
-  <ellipse cx="710" cy="635" rx="96"  ry="26" fill="#071a07" stroke="#2d5c2d" stroke-width="1.5" stroke-dasharray="4,2"/>
-  <text x="710" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#5ca87e">VisitedStates</text>
-  <text x="710" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">SQL VIEW — derived from Places</text>
+  <ellipse cx="640" cy="635" rx="96"  ry="26" fill="#071a07" stroke="#2d5c2d" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="640" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#5ca87e">VisitedStates</text>
+  <text x="640" y="644" text-anchor="middle" font-size="9"  fill="#3a7a3a">SQL VIEW — UserId · CountryId · StateAbbr</text>
+
+  <ellipse cx="870" cy="635" rx="110" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="870" y="631" text-anchor="middle" font-size="12" font-weight="bold" fill="#7ee787">UserCountries</text>
+  <text x="870" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId FK · CountryId FK · IsHome · IsVisited · ShowStateBorders</text>
+
+  <ellipse cx="1110" cy="635" rx="80" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="1110" y="631" text-anchor="middle" font-size="12" font-weight="bold" fill="#7ee787">Users</text>
+  <text x="1110" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">Id · Email · DisplayName · CreatedAt</text>
+
+  <!-- Stage 5 components -->
+  <!-- SharedMapPage (Frontend cy=77) -->
+  <ellipse cx="1295" cy="77" rx="90" ry="26" fill="#261408" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="1295" y="73" text-anchor="middle" font-size="11" font-weight="600" fill="#f0883e">SharedMapPage</text>
+  <text x="1295" y="87" text-anchor="middle" font-size="9" fill="#a87040">/#/shared/{token} · read-only map</text>
+
+  <!-- ShareFunctions (Functions cy=217) -->
+  <ellipse cx="1330" cy="217" rx="115" ry="24" fill="#19122a" stroke="#d2a8ff" stroke-width="1.5"/>
+  <text x="1330" y="211" text-anchor="middle" font-size="9" font-weight="600" fill="#d2a8ff">POST·GET·DEL /api/share-links</text>
+  <text x="1330" y="222" text-anchor="middle" font-size="9" fill="#d2a8ff">GET /api/shared/{token}</text>
+  <text x="1330" y="232" text-anchor="middle" font-size="8" fill="#8a6fef">ShareFunctions</text>
+
+  <!-- PublicMapProcess (Process cy=352) -->
+  <ellipse cx="950" cy="352" rx="125" ry="28" fill="#19153a" stroke="#8a6fef" stroke-width="1.5"/>
+  <text x="950" y="347" text-anchor="middle" font-size="11" font-weight="600" fill="#d2a8ff">PublicMapProcess · GetSharedMapAsync</text>
+  <text x="950" y="361" text-anchor="middle" font-size="9" fill="#8a6fef">validate token → load owner data (cross-user)</text>
+
+  <!-- ShareLinkBusiness (Business cy=497) -->
+  <ellipse cx="1360" cy="497" rx="95" ry="28" fill="#0a1a30" stroke="#58a6ff" stroke-width="1.5"/>
+  <text x="1360" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#79c0ff">ShareLinkBusiness</text>
+  <text x="1360" y="502" text-anchor="middle" font-size="9" fill="#4a80b0">CreateAsync · GetUserLinksAsync</text>
+  <text x="1360" y="513" text-anchor="middle" font-size="9" fill="#4a80b0">GetByTokenAsync · GetOwnerIdAsync</text>
+
+  <!-- ShareLinks (Database cy=635) -->
+  <ellipse cx="1385" cy="635" rx="90" ry="26" fill="#0a200a" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="1385" y="630" text-anchor="middle" font-size="12" font-weight="600" fill="#7ee787">ShareLinks</text>
+  <text x="1385" y="644" text-anchor="middle" font-size="9" fill="#3a7a3a">UserId FK · Token · IsActive · ExpiresAt · ViewCount</text>
 
   <!-- ═══════════════════ OPERATION FLOWS ═══════════════════ -->
 
@@ -241,7 +359,7 @@
   <text x="374" y="367" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">3</text>
 
   <!-- GeocodingBusiness → Nominatim -->
-  <line x1="1022" y1="487" x2="1057" y2="487" stroke="#79c0ff" stroke-width="2" marker-end="url(#ae)"/>
+  <line x1="1022" y1="487" x2="1955" y2="487" stroke="#79c0ff" stroke-width="2" marker-end="url(#ae)"/>
 
   <!-- ④ AddAsync → PlaceBusiness -->
   <line x1="218" y1="380" x2="210" y2="469" stroke="#58a6ff" stroke-width="2.5" marker-end="url(#ab)"/>
@@ -298,6 +416,60 @@
   <line x1="870" y1="241" x2="556" y2="469" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
   <line x1="462" y1="525" x2="462" y2="609" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
 
+  <!-- ── ORANGE: Borders toggle — CountryBusiness → UserCountries (conditional) ── -->
+  <line x1="582" y1="525" x2="762" y2="609" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="5,2" marker-end="url(#ao)"/>
+  <text x="700" y="576" text-anchor="middle" font-size="8" fill="#f0883e" font-style="italic">borders toggle</text>
+
+  <!-- ── AMBER: Profile read/update flow ── -->
+
+  <!-- Profile read/update flow — amber -->
+  <line x1="1080" y1="103" x2="1100" y2="193" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <circle cx="1090" cy="148" r="10" fill="#e3b341"/><text x="1090" y="152" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">1</text>
+  <line x1="1100" y1="241" x2="1130" y2="469" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <circle cx="1113" cy="354" r="10" fill="#e3b341"/><text x="1113" y="358" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">2</text>
+  <line x1="1130" y1="525" x2="1110" y2="609" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <circle cx="1120" cy="566" r="10" fill="#e3b341"/><text x="1120" y="570" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">3</text>
+
+  <!-- UserBusiness writes ONLY to Users table; UserCountries is CountryBusiness's domain -->
+
+  <!-- ── TEAL: Public Sharing (Stage 5) ── -->
+
+  <!-- ① MapPage → ShareFunctions (create/manage links) -->
+  <line x1="430" y1="103" x2="1220" y2="193" stroke="#2dd4bf" stroke-width="2" marker-end="url(#at)"/>
+  <circle cx="828" cy="148" r="10" fill="#2dd4bf"/>
+  <text x="828" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">1</text>
+
+  <!-- ② ShareFunctions → ShareLinkBusiness -->
+  <line x1="1330" y1="241" x2="1355" y2="469" stroke="#2dd4bf" stroke-width="2" marker-end="url(#at)"/>
+  <circle cx="1342" cy="355" r="10" fill="#2dd4bf"/>
+  <text x="1342" y="359" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">2</text>
+
+  <!-- ③ ShareLinkBusiness → ShareLinks DB -->
+  <line x1="1360" y1="525" x2="1382" y2="609" stroke="#2dd4bf" stroke-width="2" marker-end="url(#at)"/>
+  <circle cx="1371" cy="566" r="10" fill="#2dd4bf"/>
+  <text x="1371" y="570" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">3</text>
+
+  <!-- ④ SharedMapPage → ShareFunctions (public GET — dashed) -->
+  <line x1="1295" y1="103" x2="1320" y2="193" stroke="#2dd4bf" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#at)"/>
+  <circle cx="1307" cy="148" r="10" fill="#2dd4bf"/>
+  <text x="1307" y="152" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">4</text>
+  <text x="1350" y="140" text-anchor="start" font-size="8" fill="#2dd4bf" font-style="italic">public</text>
+
+  <!-- ⑤ ShareFunctions → PublicMapProcess (public GET path) -->
+  <line x1="1218" y1="229" x2="1075" y2="324" stroke="#2dd4bf" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#at)"/>
+  <circle cx="1146" cy="276" r="10" fill="#2dd4bf"/>
+  <text x="1146" y="280" text-anchor="middle" font-size="10" font-weight="700" fill="#0f1117">5</text>
+
+  <!-- PublicMapProcess → UserBusiness (cross-user, dashed teal) -->
+  <line x1="1075" y1="366" x2="1175" y2="469" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#at)"/>
+  <text x="1140" y="408" text-anchor="middle" font-size="8" fill="#2dd4bf" font-style="italic">cross-user</text>
+
+  <!-- PublicMapProcess → PlaceBusiness (cross-user, dashed teal) -->
+  <line x1="825" y1="375" x2="270" y2="469" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#at)"/>
+
+  <!-- PublicMapProcess → CountryBusiness (cross-user, dashed teal) -->
+  <line x1="855" y1="378" x2="530" y2="469" stroke="#2dd4bf" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#at)"/>
+
   <!-- ── VIOLET: Autocomplete ── -->
 
   <!-- AddPlaceForm → GET (CityFunctions) -->
@@ -308,18 +480,42 @@
   <line x1="726" y1="241" x2="882" y2="469" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#av)"/>
 
   <!-- GeocodingBusiness → Photon -->
-  <line x1="1022" y1="504" x2="1057" y2="559" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#av)"/>
+  <line x1="1022" y1="504" x2="1955" y2="550" stroke="#a78bfa" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#av)"/>
+
+  <!-- PlacePhotoBusiness → BlobStorage -->
+  <line x1="1630" y1="490" x2="1955" y2="620" stroke="#3fb950" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#ag)"/>
+
+  <!-- Stage 7 UGC flow arrows -->
+  <!-- PlaceDetailPanel → PhotoFunctions+CommentFunctions -->
+  <line x1="1510" y1="103" x2="1510" y2="193" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
+  <!-- PhotoFunctions → PlacePhotoBusiness -->
+  <line x1="1510" y1="241" x2="1515" y2="469" stroke="#f0883e" stroke-width="2" marker-end="url(#ao)"/>
+  <!-- PlacePhotoBusiness → PlacePhotos (DB row 2) -->
+  <line x1="1490" y1="525" x2="490" y2="694" stroke="#f0883e" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#ao)"/>
+
+  <!-- Stage 7 Gamification flow arrows -->
+  <!-- AppShell → PointsFunctions -->
+  <line x1="1730" y1="103" x2="1740" y2="193" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <!-- PointsFunctions → PointsBusiness -->
+  <line x1="1740" y1="241" x2="1748" y2="469" stroke="#e3b341" stroke-width="2" marker-end="url(#aa)"/>
+  <!-- PointsBusiness → PointEvents (DB row 2) -->
+  <line x1="1750" y1="525" x2="1400" y2="694" stroke="#e3b341" stroke-width="1.8" stroke-dasharray="5,2" marker-end="url(#aa)"/>
+  <!-- PlacesProcess.AddAsync → PointsBusiness (award on add) -->
+  <line x1="360" y1="362" x2="1650" y2="490" stroke="#e3b341" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#aa)"/>
+  <text x="1000" y="405" text-anchor="middle" font-size="8" fill="#e3b341" font-style="italic">AwardAsync (pioneer scoring)</text>
 
 </svg>
 
 <div class="leg">
   <div class="li"><div class="lc" style="background:#58a6ff"></div> Add Place — numbered steps 1–5</div>
-  <div class="li"><div class="lc" style="background:#f85149"></div> Delete Place — removes place · unsets IsVisited if last in country</div>
-  <div class="li"><div class="lc" style="background:#79c0ff; opacity:0.6"></div> Geocoding — AddAsync → GeocodingBusiness → Nominatim (step 3 — geocoding strategy under revision for Nominatim/Photon name mismatch)</div>
+  <div class="li"><div class="lc" style="background:#f85149"></div> Delete Place — removes place · unsets IsVisited if last in country · revokes points</div>
+  <div class="li"><div class="lc" style="background:#79c0ff; opacity:0.6"></div> Geocoding — AddAsync → GeocodingBusiness → Nominatim (step 3)</div>
   <div class="li"><div class="lc" style="background:#a78bfa"></div> Autocomplete — AddPlaceForm typing → CityFunctions → GeocodingBusiness → Photon API</div>
-  <div class="li"><div class="lc" style="background:#3fb950"></div> Read data — GET endpoints</div>
-  <div class="li"><div class="lc" style="background:#f0883e"></div> Update country — PUT</div>
-  <div class="li" style="color:#475569">- - - dashed arrow: conditional flow &nbsp;&nbsp; - - - dashed oval: SQL VIEW — no write API</div>
+  <div class="li"><div class="lc" style="background:#3fb950"></div> Read data / Photo upload — GET endpoints · BlobStorage</div>
+  <div class="li"><div class="lc" style="background:#f0883e"></div> UGC — photos · comments · ratings (PlaceDetailPanel → PhotoFunctions / CommentFunctions)</div>
+  <div class="li"><div class="lc" style="background:#e3b341"></div> Gamification — points award/revoke · statement · leaderboard · AwardAsync from PlacesProcess</div>
+  <div class="li"><div class="lc" style="background:#2dd4bf"></div> Public sharing — create/manage share links · public read-only map (no auth required)</div>
+  <div class="li" style="color:#475569">- - - dashed arrow: conditional or cross-user path &nbsp;&nbsp; - - - dashed oval: SQL VIEW — no write API &nbsp;&nbsp; Stage 7 does NOT have ExploreBusiness / StorageBusiness</div>
 </div>
 
 <!-- ═══════════════════ PROCESS DETAIL SECTION ═══════════════════ -->
@@ -721,7 +917,7 @@
             <div class="step-calls">
               <div class="call">
                 <span class="call-prefix">   </span>
-                <span class="call-body cond">Purpose: country colouring — IsVisited/IsHome determine map fill colour per country</span>
+                <span class="call-body cond">Purpose: country colouring — UserCountries.IsVisited/IsHome determine map fill colour per country (per-user, not global)</span>
               </div>
               <div class="call">
                 <span class="call-prefix">   </span>
@@ -825,6 +1021,269 @@
   </div>
 
 </div><!-- /proc-section -->
+
+<div class="proc-section">
+  <h3>Stage 4 — Multi-User &amp; Profiles</h3>
+  <div class="proc-grid">
+
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#2a2208; color:#e3b341">
+        <span style="width:10px;height:10px;border-radius:50%;background:#e3b341;display:inline-block"></span>
+        Get / Update User Profile
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#e3b341;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">ProfilePage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              User opens profile via avatar dropdown in AppShell nav bar<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GET /api/me</code> — loads current display name + email<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PUT /api/me</code> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">{ displayName }</code> — on save
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#e3b341;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">UserFunctions <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserBusiness.GetByEmailAsync(userContext.Email)</code><br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserBusiness.UpdateAsync(userId, UpdateUserDto)</code> — PUT only<br>
+              <span style="font-style:italic;color:#64748b">(cond) UserContext.UserId populated by JwtValidationMiddleware from JWT sub claim</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#e3b341;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">3</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">UserBusiness <span style="background:#0a1a30;color:#79c0ff;border:1px solid #1a3a5f;border-radius:3px;padding:1px 5px;font-size:0.68rem">Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> SELECT from Users WHERE Email = @email (GET)<br>
+              <span style="color:#58a6ff">→</span> ExecuteUpdateAsync SET DisplayName = @displayName (PUT)<br>
+              <span style="color:#3fb950">←</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserDto { Id, Email, DisplayName, CreatedAt }</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#261508; color:#f0883e">
+        <span style="width:10px;height:10px;border-radius:50%;background:#f0883e;display:inline-block"></span>
+        State Border Preference (PUT)
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#f0883e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountriesPage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              User toggles the Borders checkbox in the Countries table<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PUT /api/countries/{id}/borders?value=true|false</code><br>
+              <span style="font-style:italic;color:#64748b">(cond) Available countries: those with GeoJSON sub-national boundary data (BR, US today; others via geoBoundaries API — story #170)</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#f0883e;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountryFunctions → CountryBusiness <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">CountryBusiness.SetShowStateBordersAsync(userId, countryId, value)</code><br>
+              <span style="color:#58a6ff">→</span> UPSERT into UserCountries SET ShowStateBorders = @value WHERE UserId = @userId AND CountryId = @countryId<br>
+              <span style="color:#3fb950">←</span> updated UserCountry row<br>
+              <span style="font-style:italic;color:#64748b">(cond) Map immediately re-renders state layer for that country on next zoom</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="proc-section">
+  <h3>Stage 5 — Public Map Sharing</h3>
+  <div class="proc-grid">
+
+    <!-- ── CREATE / MANAGE SHARE LINKS ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a2420; color:#2dd4bf">
+        <span style="width:10px;height:10px;border-radius:50%;background:#2dd4bf;display:inline-block"></span>
+        Create / Manage Share Links
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">MapPage — ShareModal <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              User clicks Share button → ShareModal opens<br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#1e3a2a;color:#2dd4bf;padding:1px 4px;border-radius:2px;font-size:0.72rem">POST</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/share-links</code> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">{expiresAt?}</code><br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#1e3a2a;color:#2dd4bf;padding:1px 4px;border-radius:2px;font-size:0.72rem">GET</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/share-links</code> — list existing links<br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#3a1010;color:#f85149;padding:1px 4px;border-radius:2px;font-size:0.72rem">DELETE</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/share-links/{id}</code> — deactivate
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">ShareFunctions → ShareLinkBusiness <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">ShareLinkBusiness.CreateAsync(dto)</code><br>
+              token = 32-char URL-safe base64 via <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">RandomNumberGenerator.GetBytes(24)</code><br>
+              <span style="color:#2dd4bf">→</span> INSERT INTO ShareLinks → <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">ShareLinkDto</code><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GetUserLinksAsync()</code> WHERE UserId=current ORDER BY CreatedAt DESC<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">DeactivateAsync(id)</code> SET IsActive=false WHERE Id=id AND UserId=current
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW SHARED MAP (PUBLIC) ── -->
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a2420; color:#2dd4bf">
+        <span style="width:10px;height:10px;border-radius:50%;background:#2dd4bf;display:inline-block"></span>
+        View Shared Map — public, no auth
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">4</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">SharedMapPage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              Rendered at <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/#/shared/{token}</code> — unauthenticated hash route<br>
+              <span style="color:#2dd4bf">→</span> <span style="background:#1e3a2a;color:#2dd4bf;padding:1px 4px;border-radius:2px;font-size:0.72rem">GET</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">/api/shared/{token}</code> <span style="font-style:italic;color:#64748b">(no Authorization header)</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">5</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">ShareFunctions → PublicMapProcess <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Process</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              JwtValidationMiddleware skips auth (function name "GetSharedMap")<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PublicMapProcess.GetSharedMapAsync(token)</code><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">ShareLinkBusiness.GetByTokenAsync(token)</code> — IsActive AND (ExpiresAt IS NULL OR ExpiresAt &gt; now)<br>
+              <span style="font-style:italic;color:#64748b">(cond) if null → 404</span><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">IncrementViewCountAsync(token)</code> — ViewCount += 1<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GetOwnerIdAsync(token)</code> → ownerId
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">6</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">PublicMapProcess — cross-user queries <span style="background:#0a1a30;color:#79c0ff;border:1px solid #1a3a5f;border-radius:3px;padding:1px 5px;font-size:0.68rem">Process → Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserBusiness.GetByIdAsync(ownerId)</code> → display name<br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PlaceBusiness.GetAllForUserAsync(ownerId)</code> <span style="font-style:italic;color:#64748b">(bypasses IUserContext)</span><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">CountryBusiness.GetAllForUserAsync(ownerId)</code><br>
+              <span style="color:#2dd4bf">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">VisitedStateBusiness.GetAllForUserAsync(ownerId)</code><br>
+              <span style="color:#2dd4bf">←</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">PublicMapDto { OwnerDisplayName, Places, Countries, VisitedStates }</code>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#0f1117;flex-shrink:0">7</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">SharedMapPage renders <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              Header: TripsTracker brand · "<em>DisplayName</em>'s travel map"<br>
+              Stats: N places · N countries · N continents<br>
+              Read-only WorldMap with owner's places, country fills, state borders
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── STAGE 7: UGC (Photos + Comments + Ratings) ── -->
+  <div class="proc-card">
+    <div class="proc-card-header" style="background:#1a0e00; color:#f0883e">
+      <div class="dot" style="background:#f0883e"></div>
+      Upload Photo / Add Comment / Rate (Stage 7 UGC)
+    </div>
+    <div class="proc-card-body">
+      <div class="step-row">
+        <div class="step-num" style="background:#f0883e; color:#fff">1</div>
+        <div class="step-body">
+          <div class="step-who">PlaceDetailPanel <span class="layer-tag">Frontend</span></div>
+          <div class="step-calls">
+            <div class="call"><span class="call-prefix">   </span><span class="call-body">User opens place detail → sees photos, comments, ratings tabs</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <span class="http-method post">POST</span> <code>/api/places/{id}/photos</code> (multipart upload, ≤10 MB)</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <span class="http-method post">POST</span> <code>/api/places/{id}/comments</code> or <code>PUT</code> to rate</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num" style="background:#f0883e; color:#fff">2</div>
+        <div class="step-body">
+          <div class="step-who">PhotoFunctions / CommentFunctions <span class="layer-tag">Functions</span></div>
+          <div class="step-calls">
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>PlacePhotoBusiness.UploadAsync(placeId, file)</code></span></div>
+            <div class="call"><span class="call-prefix">├─ </span><span class="call-body cond">quota check: StorageUsedBytes + fileSize ≤ 100 MB → <code>BusinessRuleException</code> if exceeded</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>BlobStorageService.UploadAsync(path, stream)</code> → Azure Blob / Azurite</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>INSERT INTO PlacePhotos</code> · <code>UPDATE Users SET StorageUsedBytes</code></span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body cond">Comment flow: INSERT PlaceComments. Rating flow: UPSERT PhotoRatings / CommentRatings.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STAGE 7: GAMIFICATION ── -->
+  <div class="proc-card">
+    <div class="proc-card-header" style="background:#1a1600; color:#e3b341">
+      <div class="dot" style="background:#e3b341"></div>
+      Points Award / Revoke / Leaderboard (Stage 7 Gamification)
+    </div>
+    <div class="proc-card-body">
+      <div class="step-row">
+        <div class="step-num" style="background:#e3b341; color:#0f1117">1</div>
+        <div class="step-body">
+          <div class="step-who">PlacesProcess.AddAsync — cascade pioneer scoring <span class="layer-tag">Process</span></div>
+          <div class="step-calls">
+            <div class="call"><span class="call-prefix">   </span><span class="call-body">After place is saved, calls <code>PointsBusiness.AwardAsync(userId, placeId)</code></span></div>
+            <div class="call"><span class="call-prefix">├─ </span><span class="call-body cond">CityAdd (+50): always awarded on new place</span></div>
+            <div class="call"><span class="call-prefix">├─ </span><span class="call-body cond">CityPioneer (+200): if user is first to add a place in this city (cross-user query)</span></div>
+            <div class="call"><span class="call-prefix">├─ </span><span class="call-body cond">CountryAdd (+500) / CountryPioneer (+2000): if country newly visited / first visitor</span></div>
+            <div class="call"><span class="call-prefix">└─ </span><span class="call-body cond">ContinentAdd (+5000) / ContinentPioneer (+20000): same logic per continent</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>INSERT INTO PointEvents</code> (one row per event type) · <code>UPDATE Users SET TotalPoints</code></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num" style="background:#e3b341; color:#0f1117">2</div>
+        <div class="step-body">
+          <div class="step-who">PlacesProcess.DeleteAsync — revocation <span class="layer-tag">Process</span></div>
+          <div class="step-calls">
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>PointsBusiness.RevokeAsync(userId, placeId)</code> — inserts negative PointEvent rows with OriginalEventId</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>PointsBusiness.ReassignAsync</code> — if user was pioneer, reassigns pioneer event to next eligible user</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <code>UPDATE Users SET TotalPoints</code> — cache invalidated for affected users</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num" style="background:#e3b341; color:#0f1117">3</div>
+        <div class="step-body">
+          <div class="step-who">AppShell points badge → PointsStatementPanel / Leaderboard <span class="layer-tag">Frontend</span></div>
+          <div class="step-calls">
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <span class="http-method get">GET</span> <code>/api/me/points</code> → <code>PointsBusiness.GetStatementAsync</code> → statement rows with <code>cityName</code></span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <span class="http-method get">GET</span> <code>/api/leaderboard</code> → <code>PointsBusiness.GetLeaderboardAsync</code> → top-N by TotalPoints</span></div>
+            <div class="call"><span class="call-prefix">   </span><span class="call-body"><span class="call-arrow">→</span> <span class="http-method get">GET</span> <code>/api/users/{id}/points</code> → view another user's statement from leaderboard row</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+</div>
 
 </body>
 </html>

@@ -1,0 +1,150 @@
+.popup {
+  position: fixed;
+  top: 48px;
+  right: 8px;
+  width: 260px;
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.star {
+  color: #fbbf24;
+}
+
+.total {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  &:hover { color: #94a3b8; }
+}
+
+.list {
+  padding: 6px 0;
+}
+
+.empty {
+  padding: 12px;
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  &:hover { background: rgba(255,255,255,0.03); }
+}
+
+.labelWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.city {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.rowRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tooltipWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.helpBtn {
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  &:hover { color: #94a3b8; }
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  width: 180px;
+  background: #1e293b;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+  color: #cbd5e1;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.points {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fbbf24;
+  min-width: 52px;
+  text-align: right;
+}
+
+.fullBtn {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  color: #7dd3fc;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  &:hover {
+    background: rgba(125, 211, 252, 0.06);
+    text-decoration: underline;
+  }
+}
