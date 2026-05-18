@@ -42,6 +42,13 @@ jobs:
             --location $AZURE_LOCATION \
             --tags environment=test project=tripstracker
 
+      - name: Delete existing budget (start date is immutable — must recreate each run)
+        run: |
+          SUB_ID=$(az account show --query id -o tsv)
+          az rest --method DELETE \
+            --url "/subscriptions/$SUB_ID/resourceGroups/$AZURE_RG/providers/Microsoft.Consumption/budgets/budget-tripstracker-$ENV?api-version=2023-11-01" \
+            2>/dev/null || true
+
       - name: Deploy Bicep (incremental — idempotent)
         id: bicep
         run: |
@@ -53,9 +60,7 @@ jobs:
             --query properties.outputs \
             --output json)
           swa_token=$(echo "$output" | jq -r '.staticWebAppDeploymentToken.value')
-          function_app_principal_id=$(echo "$output" | jq -r '.functionAppPrincipalId.value')
           echo "swa_token=$swa_token" >> $GITHUB_OUTPUT
-          echo "function_app_principal_id=$function_app_principal_id" >> $GITHUB_OUTPUT
 
       # ── Database: firewall + access grants + migrations ───────────────────────
 
@@ -89,7 +94,6 @@ jobs:
             --authentication-method ActiveDirectoryDefault \
             -b \
             -v FunctionAppName="$FUNCTION_APP_NAME" \
-            -v FunctionAppPrincipalId="${{ steps.bicep.outputs.function_app_principal_id }}" \
             -i infra/sql/setup.sql
 
       - name: Setup .NET
