@@ -11,7 +11,7 @@ interface Props {
   visitedStates: VisitedState[];
   geoJson: GeoJSON.FeatureCollection;
   /** Dynamic border GeoJSON keyed by country ID. Loaded on demand by MapPage. */
-  borderGeoCache: Record<number, GeoJSON.FeatureCollection>;
+  borderGeoCache: Map<number, GeoJSON.FeatureCollection>;
   onToggleStateBorders?: (countryId: number, show: boolean) => void;
   onPlaceClick?: (placeIds: number[]) => void;
   /** Country name currently loading borders — shown in status bar while operation is in progress. */
@@ -399,12 +399,17 @@ export default function WorldMap({
     const pathGenerator = pathGeneratorRef.current;
     if (!statesG || !pathGenerator) return;
 
-    statesG.selectAll('.brs').remove();
+    // Remove paths for countries whose borders have been turned off
+    countries
+      .filter(c => !c.showStateBorders)
+      .forEach(country => {
+        statesG.selectAll(`.brs-${country.isoAlpha2.toLowerCase()}`).remove();
+      });
 
     countries
       .filter(c => c.showStateBorders)
       .forEach(country => {
-        const geo = borderGeoCache[country.id];
+        const geo = borderGeoCache.get(country.id);
         if (!geo) return;
 
         // Build visited set: GADM ISO_1 format is "{A2}-{stateAbbr}"
@@ -416,7 +421,7 @@ export default function WorldMap({
         const cssClass = `brs-${country.isoAlpha2.toLowerCase()}`;
 
         statesG.selectAll<SVGPathElement, GeoJSON.Feature>(`.${cssClass}`)
-          .data(geo.features)
+          .data(geo.features, (d: GeoJSON.Feature) => (d.properties?.['ISO_1'] as string) ?? '')
           .join('path')
           .attr('class', `brs ${cssClass}`)
           .attr('d', f => pathGenerator(f as GeoPermissibleObjects) ?? '')

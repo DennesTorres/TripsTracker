@@ -14,7 +14,7 @@ function AuthenticatedApp() {
       {(view, navigate) => {
         if (view === 'map') return <MapPage />;
         if (view === 'places') return <PlacesPage />;
-        if (view === 'profile') return <ProfilePage onClose={() => navigate('map')} onNavigateToPlaces={() => navigate('places')} />;
+        if (view === 'profile') return <ProfilePage onClose={() => navigate('map')} />;
         return <CountriesPage />;
       }}
     </AppShell>

@@ -4,8 +4,8 @@ import apiClient from '@/api/client';
 import { useMapStatus } from '@/context/MapStatusContext';
 
 export function useBorderLoader(
-  borderGeoCache: Record<number, GeoJSON.FeatureCollection>,
-  setBorderGeoCache: Dispatch<SetStateAction<Record<number, GeoJSON.FeatureCollection>>>
+  borderGeoCache: Map<number, GeoJSON.FeatureCollection>,
+  setBorderGeoCache: Dispatch<SetStateAction<Map<number, GeoJSON.FeatureCollection>>>
 ) {
   const { pushStatus, promoteStatus, dismissStatus } = useMapStatus();
   const fetchingRef = useRef<Set<number>>(new Set());
@@ -13,7 +13,7 @@ export function useBorderLoader(
   cacheRef.current = borderGeoCache;
 
   const loadBorders = useCallback(async (countryId: number, countryName: string) => {
-    if (cacheRef.current[countryId] || fetchingRef.current.has(countryId)) return;
+    if (cacheRef.current.has(countryId) || fetchingRef.current.has(countryId)) return;
     fetchingRef.current.add(countryId);
     pushStatus(countryId, `Loading borders for ${countryName}…`);
     try {
@@ -22,7 +22,7 @@ export function useBorderLoader(
       );
       if (response.data) {
         promoteStatus(countryId);
-        setBorderGeoCache(prev => ({ ...prev, [countryId]: response.data }));
+        setBorderGeoCache(prev => new Map(prev).set(countryId, response.data));
         // Dismiss happens in Effect 4 after borders are drawn
       } else {
         dismissStatus(countryId);
