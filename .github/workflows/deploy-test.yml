@@ -91,7 +91,9 @@ jobs:
           sqlcmd \
             -S $SQL_SERVER \
             -d $SQL_DATABASE \
-            --authentication-method ActiveDirectoryDefault \
+            --authentication-method ActiveDirectoryServicePrincipal \
+            -U ${{ secrets.AZURE_CLIENT_ID }} \
+            -P ${{ secrets.AZURE_CLIENT_SECRET }} \
             -b \
             -v FunctionAppName="$FUNCTION_APP_NAME" \
             -i infra/sql/setup.sql
