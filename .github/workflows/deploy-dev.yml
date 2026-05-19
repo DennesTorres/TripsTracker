@@ -59,7 +59,9 @@ jobs:
             --query properties.outputs \
             --output json)
           swa_token=$(echo "$output" | jq -r '.staticWebAppDeploymentToken.value')
+          function_app_principal_id=$(echo "$output" | jq -r '.functionAppPrincipalId.value')
           echo "swa_token=$swa_token" >> $GITHUB_OUTPUT
+          echo "function_app_principal_id=$function_app_principal_id" >> $GITHUB_OUTPUT
 
       # ── Database: firewall + access grants + migrations ───────────────────────
 
@@ -95,6 +97,7 @@ jobs:
             -P ${{ secrets.AZURE_CLIENT_SECRET }} \
             -b \
             -v FunctionAppName="$FUNCTION_APP_NAME" \
+            -v FunctionAppPrincipalId="${{ steps.bicep.outputs.function_app_principal_id }}" \
             -i infra/sql/setup.sql
 
       - name: Setup .NET
