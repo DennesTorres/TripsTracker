@@ -1,3 +1,4 @@
+using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Exceptions;
@@ -23,22 +24,66 @@ public class PlacesProcess : IPlacesProcess
         var country = await _countries.GetByIsoAlpha2Async(dto.CountryIsoAlpha2, ct)
             ?? throw new NotFoundException("Country", dto.CountryIsoAlpha2);
 
-        var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
+        if (string.Equals(dto.CityName.Trim(), country.Name, StringComparison.OrdinalIgnoreCase))
+            throw new BusinessRuleException(
+                $"'{dto.CityName}' is a country name, not a city. Please enter a specific city within {country.Name}.",
+                "CITY_IS_COUNTRY");
 
-        var place = await _places.CreateAsync(
-            new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
-            ct);
+        // GEOCODING_IS_INTERNAL: only geocode when the city is not already in global Places
+        var createDto = await _places.FindGlobalAsync(dto.CityName, country.Id, ct);
+        if (createDto == null)
+        {
+            var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
+            createDto = new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName);
+        }
+
+        var place = await _places.CreateAsync(createDto, ct);
 
         if (dto.IsHome)
-            await _countries.SetHomeAsync(country.Id, true, ct);
+        {
+            // SetVisitedAsync first to ensure UserCountry row exists for SyncHomeFlagAsync
+            await _countries.SetVisitedAsync(country.Id, true, ct);
+            await SetHomeAsync(place.Id, ct);
+        }
         else
             await _countries.SetVisitedAsync(country.Id, true, ct);
 
         return place;
     }
 
+    public async Task SetHomeAsync(int placeId, CancellationToken ct = default)
+    {
+        var place = await _places.GetByIdAsync(placeId, ct)
+            ?? throw new NotFoundException("Place", placeId);
+
+        // HOME_EXCLUSIVITY: clear all home places first, then mark the target
+        await _places.ClearAllHomePlacesAsync(ct);
+        await _places.MarkAsHomeAsync(placeId, ct);
+        // HOME_DERIVATION: sync country home flag via bulk update (no SaveChanges — avoids Ctx conflict)
+        await _countries.SyncHomeFlagAsync(place.CountryId, ct);
+    }
+
+    public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
+    {
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
+        var place = await _places.GetByIdAsync(id, ct);
+        if (place is null) return null;
+
+        var updated = await _places.UpdateAsync(id, dto, ct);
+        if (updated is null) return null;
+
+        if (dto.IsHome)
+            await _countries.SetHomeAsync(place.CountryId, true, ct);
+
+        scope.Complete();
+        return updated;
+    }
+
     public async Task<DeletePlaceResult> DeleteAsync(int placeId, CancellationToken ct = default)
     {
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
         var place = await _places.GetByIdAsync(placeId, ct)
             ?? throw new NotFoundException("Place", placeId);
 
@@ -48,13 +93,18 @@ public class PlacesProcess : IPlacesProcess
         if (!hasRemainingPlaces)
             await _countries.SetVisitedAsync(place.CountryId, false, ct);
 
+        var promptHomeCountry = false;
         if (place.IsHome)
         {
             var hasRemainingHome = await _places.HasHomeInCountryAsync(place.CountryId, ct);
             if (!hasRemainingHome)
+            {
                 await _countries.SetHomeAsync(place.CountryId, false, ct);
+                promptHomeCountry = true;
+            }
         }
 
-        return new DeletePlaceResult(false, null, null);
+        scope.Complete();
+        return new DeletePlaceResult(promptHomeCountry, promptHomeCountry ? place.CountryId : null, promptHomeCountry ? place.CountryName : null);
     }
 }

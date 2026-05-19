@@ -10,4 +10,5 @@ public class UserCountry
     public int CountryId { get; set; }
     public bool IsHome { get; set; }
     public bool IsVisited { get; set; }
+    public bool ShowStateBorders { get; set; }
 }

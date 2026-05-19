@@ -1,6 +1,8 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Transactions;
 using TripsTracker.Data;
+using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Data;
 
@@ -22,6 +24,12 @@ public class BusinessBaseTests
     {
         public TestDbContext(DbContextOptions<TestDbContext> options) : base(options) { }
         public DbSet<TripEntity> Trips => Set<TripEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<TripEntity>().Property(t => t.Id).ValueGeneratedNever();
+        }
     }
 
     private class TripBusiness : BusinessBase<TripEntity>
@@ -56,31 +64,50 @@ public class BusinessBaseTests
                 .FirstOrDefaultAsync(ct);
     }
 
-    /// <summary>
-    /// SQLite in-memory fixture — supports ExecuteUpdate/ExecuteDelete unlike the EF InMemory provider.
-    /// </summary>
+    private static DbContextOptions<TestDbContext> _options = null!;
+
+    [ClassInitialize]
+    public static async Task ClassInitialize(TestContext _)
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddJsonFile("appsettings.local.json", optional: true)
+            .Build();
+
+        var dbOpts = config.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>()!;
+        var connStr = System.Text.RegularExpressions.Regex.Replace(
+            dbOpts.ConnectionString,
+            @"(?i)(database|initial\s+catalog)\s*=\s*[^;]+",
+            "Database=TripsTracker_Test_BusinessBase");
+
+        _options = new DbContextOptionsBuilder<TestDbContext>()
+            .UseSqlServer(connStr)
+            .Options;
+
+        await using var ctx = new TestDbContext(_options);
+        await ctx.Database.EnsureCreatedAsync();
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         public TripBusiness Biz { get; }
         public TestDbContext Ctx { get; }
-        private readonly SqliteConnection _conn;
+        private readonly TransactionScope _scope;
 
         public Fixture()
         {
-            _conn = new SqliteConnection("Data Source=:memory:");
-            _conn.Open();
-            var options = new DbContextOptionsBuilder<TestDbContext>()
-                .UseSqlite(_conn)
-                .Options;
-            Ctx = new TestDbContext(options);
-            Ctx.Database.EnsureCreated();
+            _scope = new TransactionScope(
+                TransactionScopeOption.Required,
+                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                TransactionScopeAsyncFlowOption.Enabled);
+            Ctx = new TestDbContext(_options);
             Biz = new TripBusiness(Ctx);
         }
 
         public async ValueTask DisposeAsync()
         {
             await Ctx.DisposeAsync();
-            await _conn.DisposeAsync();
+            _scope.Dispose(); // no Complete() → automatic rollback
         }
     }
 

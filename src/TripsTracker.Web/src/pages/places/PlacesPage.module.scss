@@ -204,6 +204,10 @@
   }
 }
 
+.deletingRow td {
+  opacity: 0.45;
+}
+
 .loading {
   display: flex;
   align-items: center;

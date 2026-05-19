@@ -26,10 +26,10 @@ export interface Country {
   region: string;
   isHome: boolean;
   isVisited: boolean;
+  showStateBorders: boolean;
 }
 
 export interface UpdatePlace {
-  city: string;
   isHome: boolean;
 }
 
@@ -52,4 +52,15 @@ export interface VisitedState {
   countryId: number;
   stateAbbr: string;
   stateName?: string;
+}
+
+export interface UserProfile {
+  id: number;
+  email: string;
+  displayName?: string;
+  createdAt: string;
+}
+
+export interface UpdateUser {
+  displayName?: string;
 }

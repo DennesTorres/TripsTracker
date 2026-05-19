@@ -22,6 +22,11 @@ public static class IntegrationRegistrationExtensions
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         });
 
+        services.AddHttpClient<IGeoBoundariesService, GeoBoundariesService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
         return services;
     }
 }

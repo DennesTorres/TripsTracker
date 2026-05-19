@@ -34,15 +34,13 @@ namespace TripsTracker.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsHome")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsVisited")
-                        .HasColumnType("bit");
-
                     b.Property<string>("IsoAlpha2")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IsoAlpha3")
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
 
                     b.Property<int>("IsoNumeric")
                         .HasColumnType("int");
@@ -80,9 +78,6 @@ namespace TripsTracker.Data.Migrations
                     b.Property<int>("CountryId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("IsHome")
-                        .HasColumnType("bit");
-
                     b.Property<double>("Lat")
                         .HasColumnType("float");
 
@@ -96,14 +91,9 @@ namespace TripsTracker.Data.Migrations
                     b.Property<string>("StateName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CountryId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Places");
                 });
@@ -150,11 +140,34 @@ namespace TripsTracker.Data.Migrations
                     b.Property<bool>("IsVisited")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("ShowStateBorders")
+                        .HasColumnType("bit");
+
                     b.HasKey("UserId", "CountryId");
+
+                    b.HasIndex("CountryId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("UserCountries");
+                });
+
+            modelBuilder.Entity("TripsTracker.Data.Entities.UserPlace", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlaceId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsHome")
+                        .HasColumnType("bit");
+
+                    b.HasKey("UserId", "PlaceId");
+
+                    b.HasIndex("PlaceId");
+
+                    b.ToTable("UserPlaces");
                 });
 
             modelBuilder.Entity("TripsTracker.Data.Entities.VisitedState", b =>
@@ -172,7 +185,7 @@ namespace TripsTracker.Data.Migrations
                     b.Property<string>("StateName")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -180,6 +193,45 @@ namespace TripsTracker.Data.Migrations
                     b.ToTable((string)null);
 
                     b.ToView("VisitedStates", (string)null);
+                });
+
+            modelBuilder.Entity("TripsTracker.Data.Entities.Place", b =>
+                {
+                    b.HasOne("TripsTracker.Data.Entities.Country", null)
+                        .WithMany()
+                        .HasForeignKey("CountryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TripsTracker.Data.Entities.UserCountry", b =>
+                {
+                    b.HasOne("TripsTracker.Data.Entities.Country", null)
+                        .WithMany()
+                        .HasForeignKey("CountryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TripsTracker.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TripsTracker.Data.Entities.UserPlace", b =>
+                {
+                    b.HasOne("TripsTracker.Data.Entities.Place", null)
+                        .WithMany()
+                        .HasForeignKey("PlaceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TripsTracker.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

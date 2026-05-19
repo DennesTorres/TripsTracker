@@ -8,6 +8,5 @@ public class Country
     public string Flag { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Region { get; set; } = string.Empty;
-    public bool IsHome { get; set; }
-    public bool IsVisited { get; set; }
+    public string? IsoAlpha3 { get; set; }
 }
