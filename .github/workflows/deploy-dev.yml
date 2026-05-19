@@ -93,8 +93,8 @@ jobs:
             -S $SQL_SERVER \
             -d $SQL_DATABASE \
             --authentication-method ActiveDirectoryServicePrincipal \
-            -U ${{ secrets.AZURE_CLIENT_ID }} \
-            -P ${{ secrets.AZURE_CLIENT_SECRET }} \
+            -U ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }} \
+            -P ${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }} \
             -b \
             -v FunctionAppName="$FUNCTION_APP_NAME" \
             -v FunctionAppPrincipalId="${{ steps.bicep.outputs.function_app_principal_id }}" \
@@ -114,7 +114,7 @@ jobs:
           dotnet ef database update \
             --project src/TripsTracker.Data/TripsTracker.Data.csproj \
             --startup-project src/TripsTracker.Functions/TripsTracker.Functions.csproj \
-            --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ secrets.AZURE_CLIENT_ID }};Password=${{ secrets.AZURE_CLIENT_SECRET }};Encrypt=True;TrustServerCertificate=False;"
+            --connection "Server=$SQL_SERVER;Database=$SQL_DATABASE;Authentication=Active Directory Service Principal;User ID=${{ fromJSON(secrets.AZURE_CREDENTIALS).clientId }};Password=${{ fromJSON(secrets.AZURE_CREDENTIALS).clientSecret }};Encrypt=True;TrustServerCertificate=False;"
 
       - name: Close SQL firewall
         if: always()
