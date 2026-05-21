@@ -36,11 +36,9 @@ public class ShareLinkBusinessTests
             .Options;
 
         await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.EnsureDeletedAsync();
         await ctx.Database.EnsureCreatedAsync();
     }
-
-    // No ClassCleanup: TransactionScope rollback leaves the DB empty after each test.
-    // EnsureCreatedAsync in ClassInitialize is idempotent — the DB persists across runs.
 
     private sealed class Fixture : IAsyncDisposable
     {

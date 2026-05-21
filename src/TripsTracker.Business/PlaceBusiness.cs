@@ -18,6 +18,9 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<PlaceDto> CreateAsync(CreatePlaceDto dto, CancellationToken ct = default)
     {
+        if (dto.IsHome)
+            await ClearAllHomePlacesAsync(ct);
+
         var place = new Place
         {
             Lon = dto.Lon,
@@ -54,17 +57,22 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
+        if (dto.IsHome)
+            await ClearAllHomePlacesAsync(ct);
+
         var rows = await ExecuteUpdateAsync(
             p => p.Id == id && p.UserId == _userContext.UserId,
-            s =>
-            {
-                s.SetProperty(p => p.City, dto.City);
-                s.SetProperty(p => p.IsHome, dto.IsHome);
-            },
+            s => s.SetProperty(p => p.IsHome, dto.IsHome),
             ct);
         if (rows == 0) return null;
         return await GetByIdAsync(id, ct);
     }
+
+    public Task ClearAllHomePlacesAsync(CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            p => p.UserId == _userContext.UserId && p.IsHome,
+            s => s.SetProperty(p => p.IsHome, false),
+            ct);
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
