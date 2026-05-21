@@ -245,10 +245,24 @@ public class PlaceBusinessTests
         var target = SeedPlace(f.Ctx, _user1Id, _countryBId, "Target");
         var sut = f.ForUser(_user1Id);
 
-        await sut.UpdateAsync(target.Id, new UpdatePlaceDto("Target", true));
+        await sut.UpdateAsync(target.Id, new UpdatePlaceDto(true));
 
         f.Ctx.ChangeTracker.Clear();
         var oldPlace = await f.Ctx.Places.AsNoTracking().FirstAsync(p => p.Id == existing.Id);
         Assert.IsFalse(oldPlace.IsHome, "Old home place must have IsHome cleared when another place is updated to IsHome=true");
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_City_CannotBeChanged()
+    {
+        await using var f = new Fixture();
+        var place = SeedPlace(f.Ctx, _user1Id, _countryAId, "OriginalCity");
+        var sut = f.ForUser(_user1Id);
+
+        await sut.UpdateAsync(place.Id, new UpdatePlaceDto(false));
+
+        f.Ctx.ChangeTracker.Clear();
+        var reloaded = await f.Ctx.Places.AsNoTracking().FirstAsync(p => p.Id == place.Id);
+        Assert.AreEqual("OriginalCity", reloaded.City, "City must be immutable — UpdatePlaceDto must not carry City.");
     }
 }

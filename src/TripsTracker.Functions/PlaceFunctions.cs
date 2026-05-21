@@ -3,13 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using System.Text.Json;
 using TripsTracker.Domain;
-using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Exceptions;
 using TripsTracker.Interfaces.Process;
 
 namespace TripsTracker.Functions;
 
-public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
+public class PlaceFunctions(IPlacesProcess placesProcess)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -52,7 +51,7 @@ public class PlaceFunctions(IPlaceBusiness places, IPlacesProcess placesProcess)
     {
         var dto = await JsonSerializer.DeserializeAsync<UpdatePlaceDto>(req.Body, JsonOptions, ct);
         if (dto is null) return new BadRequestObjectResult("Invalid request body.");
-        var result = await places.UpdateAsync(id, dto, ct);
+        var result = await placesProcess.UpdateAsync(id, dto, ct);
         return result is null ? new NotFoundResult() : new OkObjectResult(result);
     }
 

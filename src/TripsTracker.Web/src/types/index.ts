@@ -31,7 +31,6 @@ export interface Country {
 }
 
 export interface UpdatePlace {
-  city: string;
   isHome: boolean;
 }
 
@@ -66,7 +65,6 @@ export interface UserProfile {
 
 export interface UpdateUser {
   displayName?: string;
-  homeCountryId?: number;
   isDiscoverable?: boolean;
 }
 

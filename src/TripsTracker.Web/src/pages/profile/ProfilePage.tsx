@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useEnsureUser, useUpdateUser, useCountries } from '@/api/hooks';
-import CountryCombobox from '@/components/ui/CountryCombobox';
+import { useEnsureUser, useUpdateUser, usePlaces } from '@/api/hooks';
 import FormInput from '@/components/ui/FormInput';
 import styles from './ProfilePage.module.scss';
 
@@ -10,33 +9,31 @@ interface Props {
 
 export default function ProfilePage({ onClose }: Props) {
   const { data: user } = useEnsureUser();
-  const { data: countries = [] } = useCountries();
+  const { data: places = [] } = usePlaces();
   const updateUser = useUpdateUser();
 
   const [displayName, setDisplayName] = useState('');
-  const [homeCountry, setHomeCountry] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
 
   useEffect(() => {
     if (user) setDisplayName(user.displayName ?? '');
   }, [user]);
 
-  useEffect(() => {
-    const home = countries.find(c => c.isHome);
-    setHomeCountry(home?.isoAlpha2 ?? '');
-  }, [countries]);
+  const homePlace = places.find(p => p.isHome);
+  const homePlaceLabel = homePlace
+    ? [homePlace.city, homePlace.stateName ?? homePlace.stateAbbr, homePlace.countryName].filter(Boolean).join(', ')
+    : 'Not set — mark a place as Home in the Places tab';
 
   const handleSave = () => {
-    const homeCountryId = countries.find(c => c.isoAlpha2 === homeCountry)?.id;
     updateUser.mutate(
-      { displayName: displayName || undefined, homeCountryId },
+      { displayName: displayName || undefined },
       {
         onSuccess: () => {
           setSavedMessage('Changes saved');
           setTimeout(() => setSavedMessage(''), 3000);
         },
         onError: () => {
-          setSavedMessage('Could not save — home country must be a visited country');
+          setSavedMessage('Could not save changes');
           setTimeout(() => setSavedMessage(''), 5000);
         },
       }
@@ -45,7 +42,6 @@ export default function ProfilePage({ onClose }: Props) {
 
   if (!user) return null;
 
-  const visitedCountries = countries.filter(c => c.isVisited);
   const joinedDate = new Date(user.createdAt).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
@@ -70,13 +66,8 @@ export default function ProfilePage({ onClose }: Props) {
         </div>
 
         <div className={styles.field}>
-          <label className={styles.label}>Home country</label>
-          <CountryCombobox
-            countries={visitedCountries}
-            value={homeCountry}
-            onChange={setHomeCountry}
-            allowClear
-          />
+          <label className={styles.label}>Home place</label>
+          <p className={styles.readOnly}>{homePlaceLabel}</p>
         </div>
 
         <div className={styles.field}>

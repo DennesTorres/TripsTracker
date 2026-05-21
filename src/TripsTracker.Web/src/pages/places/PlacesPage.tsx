@@ -144,7 +144,7 @@ export default function PlacesPage() {
                   {!p.isHome && (
                     <button
                       className={styles.homeBtn}
-                      onClick={() => updatePlace.mutate({ id: p.id, dto: { city: p.city, isHome: true } })}
+                      onClick={() => updatePlace.mutate({ id: p.id, dto: { isHome: true } })}
                       disabled={updatePlace.isPending}
                     >
                       Set home
