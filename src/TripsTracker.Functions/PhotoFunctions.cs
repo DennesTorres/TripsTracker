@@ -1,14 +1,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
-using System.Transactions;
-using TripsTracker.Functions.Middleware;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Integration;
+using TripsTracker.Interfaces.Process;
 
 namespace TripsTracker.Functions;
 
-public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs, UserContext userContext, IPointsBusiness points)
+public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blobs, IPhotoProcess photoProcess)
 {
     [Function("GetPlacePhotos")]
     public async Task<IActionResult> GetByPlace(
@@ -31,19 +30,10 @@ public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blob
         if (file.Length > 10 * 1024 * 1024)
             return new BadRequestObjectResult(new { error = "File too large (max 10MB)" });
 
-        var blobName = $"{userContext.UserId}/{placeId}/{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
         var caption = form.TryGetValue("caption", out var c) ? c.ToString() : null;
 
         using var stream = file.OpenReadStream();
-        await blobs.UploadAsync(blobName, stream, file.ContentType, ct);
-
-        using var scope = new TransactionScope(TransactionScopeOption.Required,
-            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-            TransactionScopeAsyncFlowOption.Enabled);
-
-        var result = await photos.CreateAsync(placeId, blobName, file.FileName, file.ContentType, file.Length, caption, ct);
-        await points.AwardAsync(result.UserId, "photo_uploaded", 5, result.Id, "Photo", ct);
-        scope.Complete();
+        var result = await photoProcess.UploadAsync(placeId, stream, file.ContentType, file.FileName, file.Length, caption, ct);
         return new OkObjectResult(result);
     }
 
@@ -71,11 +61,7 @@ public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blob
         int photoId,
         CancellationToken ct)
     {
-        var photo = await photos.GetBlobInfoAsync(photoId, ct);
-        if (photo is not null)
-            await blobs.DeleteAsync(photo.BlobName, ct);
-
-        var ok = await photos.DeleteAsync(photoId, ct);
+        var ok = await photoProcess.DeleteAsync(photoId, ct);
         return ok ? new OkResult() : new NotFoundResult();
     }
 

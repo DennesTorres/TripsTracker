@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
-using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
+using TripsTracker.Interfaces.Process;
 
 namespace TripsTracker.Functions;
 
-public class CommentFunctions(IPlaceCommentBusiness comments, IPointsBusiness points)
+public class CommentFunctions(IPlaceCommentBusiness comments, ICommentProcess commentProcess)
 {
     [Function("GetPlaceComments")]
     public async Task<IActionResult> GetByPlace(
@@ -26,13 +26,7 @@ public class CommentFunctions(IPlaceCommentBusiness comments, IPointsBusiness po
         if (dto is null || string.IsNullOrWhiteSpace(dto.Text))
             return new BadRequestObjectResult(new { error = "Comment text is required" });
 
-        using var scope = new TransactionScope(TransactionScopeOption.Required,
-            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-            TransactionScopeAsyncFlowOption.Enabled);
-
-        var result = await comments.CreateAsync(placeId, dto.Text, ct);
-        await points.AwardAsync(result.UserId, "comment_added", 3, result.Id, "Comment", ct);
-        scope.Complete();
+        var result = await commentProcess.CreateAsync(placeId, dto.Text, ct);
         return new OkObjectResult(result);
     }
 

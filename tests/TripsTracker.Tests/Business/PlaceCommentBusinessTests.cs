@@ -107,6 +107,33 @@ public class PlaceCommentBusinessTests
 
     #endregion
 
+    // ─── CreateAsync ─────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task CreateAsync_PersistsComment_WithCorrectOwner()
+    {
+        await using var f = new Fixture();
+        var result = await f.ForUser(_user1Id).CreateAsync(_placeId, "Test comment text");
+        Assert.AreEqual(_placeId, result.PlaceId);
+        Assert.AreEqual(_user1Id, result.UserId);
+        Assert.AreEqual("Test comment text", result.Text);
+        var stored = await f.Ctx.Set<PlaceComment>().FirstAsync(c => c.Id == result.Id);
+        Assert.AreEqual(_user1Id, stored.UserId);
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_OtherUsersComment_ReturnsNull()
+    {
+        await using var f = new Fixture();
+        var comment = MakeComment(_placeId, _user2Id, "Owner's comment");
+        f.Ctx.Set<PlaceComment>().Add(comment);
+        await f.Ctx.SaveChangesAsync();
+        var result = await f.ForUser(_user1Id).UpdateAsync(comment.Id, "Modified text");
+        Assert.IsNull(result, "UpdateAsync should return null when called by a non-owner.");
+        var stored = await f.Ctx.Set<PlaceComment>().FindAsync(comment.Id);
+        Assert.AreEqual("Owner's comment", stored!.Text, "Text should not be changed by non-owner.");
+    }
+
     // ─── GetByPlaceAsync ──────────────────────────────────────────────────────
 
     [TestMethod]

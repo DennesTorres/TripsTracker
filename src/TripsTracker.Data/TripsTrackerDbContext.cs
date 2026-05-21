@@ -86,8 +86,11 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         {
             e.HasIndex(p => p.UserId);
             e.HasIndex(p => p.EventType);
+            e.HasIndex(p => p.OriginalEventId);
             e.Property(p => p.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             e.HasOne<User>().WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+            // Self-referential: revocation events reference original events; restrict cascade (avoids multiple-cascade-paths)
+            e.HasOne<PointEvent>().WithMany().HasForeignKey(p => p.OriginalEventId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ShareLink>(e =>
