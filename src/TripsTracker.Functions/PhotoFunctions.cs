@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using System.Transactions;
 using TripsTracker.Functions.Middleware;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Integration;
@@ -36,8 +37,13 @@ public class PhotoFunctions(IPlacePhotoBusiness photos, IBlobStorageService blob
         using var stream = file.OpenReadStream();
         await blobs.UploadAsync(blobName, stream, file.ContentType, ct);
 
+        using var scope = new TransactionScope(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
+
         var result = await photos.CreateAsync(placeId, blobName, file.FileName, file.ContentType, file.Length, caption, ct);
         await points.AwardAsync(result.UserId, "photo_uploaded", 5, result.Id, "Photo", ct);
+        scope.Complete();
         return new OkObjectResult(result);
     }
 

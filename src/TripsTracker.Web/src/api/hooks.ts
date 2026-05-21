@@ -89,7 +89,10 @@ export function useUploadPhoto() {
       if (caption) form.append('caption', caption);
       return apiClient.post<PlacePhoto>(`/api/places/${placeId}/photos`, form).then(r => r.data);
     },
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['photos', vars.placeId] }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['photos', vars.placeId] });
+      refreshPoints(qc);
+    },
   });
 }
 
@@ -124,7 +127,10 @@ export function useCreateComment() {
   return useMutation({
     mutationFn: ({ placeId, text }: { placeId: number; text: string }) =>
       apiClient.post<PlaceComment>(`/api/places/${placeId}/comments`, { text }).then(r => r.data),
-    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['comments', vars.placeId] }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['comments', vars.placeId] });
+      refreshPoints(qc);
+    },
   });
 }
 

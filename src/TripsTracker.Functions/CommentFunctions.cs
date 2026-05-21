@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
 
@@ -25,8 +26,13 @@ public class CommentFunctions(IPlaceCommentBusiness comments, IPointsBusiness po
         if (dto is null || string.IsNullOrWhiteSpace(dto.Text))
             return new BadRequestObjectResult(new { error = "Comment text is required" });
 
+        using var scope = new TransactionScope(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
+
         var result = await comments.CreateAsync(placeId, dto.Text, ct);
         await points.AwardAsync(result.UserId, "comment_added", 3, result.Id, "Comment", ct);
+        scope.Complete();
         return new OkObjectResult(result);
     }
 
