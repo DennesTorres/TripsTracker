@@ -1,3 +1,4 @@
+using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Transactions;
@@ -5,20 +6,10 @@ using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
+using TripsTracker.Integration;
 using TripsTracker.Interfaces.Configuration;
-using TripsTracker.Interfaces.Integration;
 
 namespace TripsTracker.Tests.Business;
-
-sealed class FakeBlobStorageService : IBlobStorageService
-{
-    public IReadOnlyList<BlobSizeInfo> BlobsToReturn { get; set; } = new List<BlobSizeInfo>();
-    public Task UploadAsync(string blobName, Stream data, string contentType, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<Stream?> DownloadAsync(string blobName, CancellationToken ct = default) => Task.FromResult<Stream?>(null);
-    public Task DeleteAsync(string blobName, CancellationToken ct = default) => Task.CompletedTask;
-    public Task<IReadOnlyList<BlobSizeInfo>> GetUserBlobsAsync(int userId, CancellationToken ct = default)
-        => Task.FromResult(BlobsToReturn);
-}
 
 [TestClass]
 public class StorageBusinessTests
@@ -28,6 +19,7 @@ public class StorageBusinessTests
     private static DbContextOptions<TripsTrackerDbContext> _options = null!;
     private static int _countryId;
     private static int _userId;
+    private static BlobServiceClient _blobClient = null!;
 
     [ClassInitialize]
     public static async Task ClassInitialize(TestContext _)
@@ -59,12 +51,15 @@ public class StorageBusinessTests
 
         _countryId = country.Id;
         _userId = user.Id;
+
+        _blobClient = new BlobServiceClient("UseDevelopmentStorage=true");
     }
 
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private readonly FakeBlobStorageService _fakeBlobs = new();
+        private readonly BlobStorageService _blobs;
+        private readonly List<string> _uploadedBlobs = new();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -75,13 +70,21 @@ public class StorageBusinessTests
                 TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
             Ctx.Database.OpenConnection();
+            _blobs = new BlobStorageService(_blobClient);
         }
 
-        public void SetBlobsToReturn(IReadOnlyList<BlobSizeInfo> blobs) => _fakeBlobs.BlobsToReturn = blobs;
-        public StorageBusiness Build() => new(Ctx, _fakeBlobs);
+        public StorageBusiness Build() => new(Ctx, _blobs);
+
+        public async Task UploadBlobAsync(string blobName, int sizeBytes)
+        {
+            await _blobs.UploadAsync(blobName, new MemoryStream(new byte[sizeBytes]), "application/octet-stream");
+            _uploadedBlobs.Add(blobName);
+        }
 
         public async ValueTask DisposeAsync()
         {
+            foreach (var blob in _uploadedBlobs)
+                await _blobs.DeleteAsync(blob);
             Ctx.Database.CloseConnection();
             await Ctx.DisposeAsync();
             _scope.Dispose();
@@ -109,20 +112,20 @@ public class StorageBusinessTests
     {
         await using var f = new Fixture();
 
+        var blobA = $"{_userId}/p/a.jpg";
+        var blobB = $"{_userId}/p/b.jpg";
+
         var place = new Place { City = "RefreshCity", CountryId = _countryId, UserId = _userId, Lon = 0, Lat = 0 };
         f.Ctx.Places.Add(place);
         await f.Ctx.SaveChangesAsync();
 
-        var photo1 = new PlacePhoto { PlaceId = place.Id, UserId = _userId, BlobName = "1/p/a.jpg", ContentType = "image/jpeg", SortOrder = 1, SizeBytes = 100, UploadedAt = DateTime.UtcNow };
-        var photo2 = new PlacePhoto { PlaceId = place.Id, UserId = _userId, BlobName = "1/p/b.jpg", ContentType = "image/jpeg", SortOrder = 2, SizeBytes = 200, UploadedAt = DateTime.UtcNow };
+        var photo1 = new PlacePhoto { PlaceId = place.Id, UserId = _userId, BlobName = blobA, ContentType = "image/jpeg", SortOrder = 1, SizeBytes = 100, UploadedAt = DateTime.UtcNow };
+        var photo2 = new PlacePhoto { PlaceId = place.Id, UserId = _userId, BlobName = blobB, ContentType = "image/jpeg", SortOrder = 2, SizeBytes = 200, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().AddRange(photo1, photo2);
         await f.Ctx.SaveChangesAsync();
 
-        f.SetBlobsToReturn(new List<BlobSizeInfo>
-        {
-            new BlobSizeInfo { BlobName = "1/p/a.jpg", SizeBytes = 150L },
-            new BlobSizeInfo { BlobName = "1/p/b.jpg", SizeBytes = 250L },
-        });
+        await f.UploadBlobAsync(blobA, 150);
+        await f.UploadBlobAsync(blobB, 250);
 
         var before = DateTime.UtcNow;
         var result = await f.Build().RefreshAsync(_userId);
