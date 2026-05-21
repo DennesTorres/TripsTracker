@@ -1,9 +1,18 @@
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Microsoft.Extensions.Configuration;
 using TripsTracker.Integration;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Integration;
+
+file sealed class FakeHttpMessageHandler : HttpMessageHandler
+{
+    private readonly HttpResponseMessage _response;
+    public FakeHttpMessageHandler(HttpResponseMessage response) => _response = response;
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        => Task.FromResult(_response);
+}
 
 [TestClass]
 public class NominatimGeocodingServiceTests
@@ -108,6 +117,18 @@ public class NominatimGeocodingServiceTests
 
         Assert.IsNotNull(result);
         Assert.IsNotNull(result.StateAbbr, "StateAbbr must be populated for Gdansk");
+    }
+
+    [TestMethod]
+    public async Task SuggestCitiesAsync_WhenHttpRequestFails_ReturnsEmptyList()
+    {
+        var handler = new FakeHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.BadGateway));
+        var client = new HttpClient(handler) { BaseAddress = new Uri("https://nominatim.openstreetmap.org") };
+        var sut = new NominatimGeocodingService(client);
+
+        var results = await sut.SuggestCitiesAsync("London", limit: 5);
+
+        Assert.AreEqual(0, results.Count, "HttpRequestException from Photon (502) must return empty list.");
     }
 
     [TestMethod]

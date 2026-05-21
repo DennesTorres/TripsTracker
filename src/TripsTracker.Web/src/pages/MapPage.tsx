@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import WorldMap from '@/components/map/WorldMap';
 import StatsBar from '@/components/map/StatsBar';
 import AddPlaceForm from '@/pages/places/AddPlaceForm';
@@ -7,7 +7,7 @@ import PlaceDetailPanel from '@/pages/places/PlaceDetailPanel';
 import ExplorePanel from '@/pages/places/ExplorePanel';
 import ShareModal from '@/components/share/ShareModal';
 import DiscoverMapsModal from '@/components/share/DiscoverMapsModal';
-import { usePlaces, useCountries, useVisitedStates, useSetStateBorders, useCreatePlace, useExploreSearch } from '@/api/hooks';
+import { usePlaces, useCountries, useVisitedStates, useSetStateBorders, useCreatePlace } from '@/api/hooks';
 import type { ExploreLocation, Place } from '@/types';
 import { Share2, Compass } from 'lucide-react';
 import styles from './MapPage.module.scss';
@@ -20,12 +20,18 @@ interface DetailInfo {
   placeId?: number;
 }
 
-interface Props {
-  exploreCity?: string | null;
-  onExploreCityConsumed?: () => void;
+interface ExploreTarget {
+  city: string;
+  countryIsoAlpha2: string;
+  stateName?: string;
 }
 
-export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
+interface Props {
+  exploreTarget?: ExploreTarget | null;
+  onExploreTargetConsumed?: () => void;
+}
+
+export default function MapPage({ exploreTarget, onExploreTargetConsumed }: Props) {
   const { data: places = [], isLoading: placesLoading, isError: placesError, refetch: refetchPlaces } = usePlaces();
   const { data: countries = [], isLoading: countriesLoading, isError: countriesError, refetch: refetchCountries } = useCountries();
   const { data: visitedStates = [], isLoading: statesLoading, isError: statesError, refetch: refetchStates } = useVisitedStates();
@@ -44,53 +50,14 @@ export default function MapPage({ exploreCity, onExploreCityConsumed }: Props) {
   const [explorePin, setExplorePin] = useState<ExploreLocation | null>(null);
   const [popup, setPopup] = useState<{ places: Place[]; x: number; y: number } | null>(null);
   const [activeDetail, setActiveDetail] = useState<DetailInfo | null>(null);
-  const autoSelectRef = useRef(false);
-  const pendingExploreCityRef = useRef<string | null>(null);
-
-  const { data: exploreResults = [] } = useExploreSearch(exploreQuery);
-
   useEffect(() => {
-    if (!exploreCity) return;
-    pendingExploreCityRef.current = exploreCity;
-    autoSelectRef.current = true;
-    setExploreQuery(exploreCity);
-    onExploreCityConsumed?.();
-    // If React Query already has cached results for this query, exploreResults won't change
-    // reference → the [exploreResults] effect won't re-fire → auto-select would be blocked.
-    // Check immediately: if matching results are already present, select now.
-    if (exploreResults.length > 0) {
-      const cityLC = exploreCity.toLowerCase();
-      const first = exploreResults[0].city.toLowerCase();
-      if (first.includes(cityLC) || cityLC.includes(first)) {
-        autoSelectRef.current = false;
-        pendingExploreCityRef.current = null;
-        handleExploreSelectCity(exploreResults[0]);
-      }
-    }
+    if (!exploreTarget || !countries.length) return;
+    const country = countries.find(c => c.isoAlpha2 === exploreTarget.countryIsoAlpha2);
+    if (!country) return;
+    setActiveDetail({ city: exploreTarget.city, stateName: exploreTarget.stateName, countryName: country.name, countryId: country.id });
+    onExploreTargetConsumed?.();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreCity]);
-
-  useEffect(() => {
-    if (exploreQuery) {
-      setExplorePin(null);
-      setActiveDetail(null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exploreQuery]);
-
-  useEffect(() => {
-    if (autoSelectRef.current && exploreResults.length > 0) {
-      const expected = pendingExploreCityRef.current?.toLowerCase() ?? '';
-      const first = exploreResults[0].city.toLowerCase();
-      // Only auto-select if results match the city we're looking for (prevents stale-result races)
-      if (!expected || first.includes(expected) || expected.includes(first)) {
-        autoSelectRef.current = false;
-        pendingExploreCityRef.current = null;
-        handleExploreSelectCity(exploreResults[0]);
-        setExploreQuery('');
-      }
-    }
-  }, [exploreResults]);
+  }, [exploreTarget, countries]);
 
   useEffect(() => {
     Promise.all([

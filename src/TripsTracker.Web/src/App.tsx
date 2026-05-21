@@ -9,7 +9,7 @@ import { RequireAuth } from './auth/RequireAuth';
 import { useEnsureUser } from './api/hooks';
 
 function AuthenticatedApp() {
-  const [exploreCity, setExploreCity] = useState<string | null>(null);
+  const [exploreTarget, setExploreTarget] = useState<{ city: string; countryIsoAlpha2: string; stateName?: string } | null>(null);
   useEnsureUser();
 
   return (
@@ -17,13 +17,13 @@ function AuthenticatedApp() {
       {(view, navigate) => {
         if (view === 'map') return (
           <MapPage
-            exploreCity={exploreCity}
-            onExploreCityConsumed={() => setExploreCity(null)}
+            exploreTarget={exploreTarget}
+            onExploreTargetConsumed={() => setExploreTarget(null)}
           />
         );
         if (view === 'places') return (
           <PlacesPage
-            onExploreCity={city => { setExploreCity(city); navigate('map'); }}
+            onExploreCity={(city, countryIsoAlpha2, stateName) => { setExploreTarget({ city, countryIsoAlpha2, stateName }); navigate('map'); }}
           />
         );
         if (view === 'profile') return <ProfilePage onClose={() => navigate('map')} />;

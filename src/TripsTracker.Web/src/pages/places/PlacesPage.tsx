@@ -7,7 +7,7 @@ import PlaceDetailModal from './PlaceDetailModal';
 import styles from './PlacesPage.module.scss';
 
 interface Props {
-  onExploreCity?: (city: string) => void;
+  onExploreCity?: (city: string, countryIsoAlpha2: string, stateName?: string) => void;
 }
 
 type SortKey = 'city' | 'countryName' | 'stateAbbr' | 'lon' | 'lat';
@@ -148,7 +148,7 @@ export default function PlacesPage({ onExploreCity }: Props) {
                   {!p.isHome && (
                     <button
                       className={styles.homeBtn}
-                      onClick={() => updatePlace.mutate({ id: p.id, dto: { city: p.city, isHome: true } })}
+                      onClick={() => updatePlace.mutate({ id: p.id, dto: { isHome: true } })}
                       disabled={updatePlace.isPending}
                     >
                       Set home

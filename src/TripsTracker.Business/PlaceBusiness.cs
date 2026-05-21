@@ -27,6 +27,8 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             throw new BusinessRuleException(
                 $"You already have '{dto.City}' in your places.", "DUPLICATE_PLACE");
 
+        if (dto.IsHome) await ClearAllHomePlacesAsync(ct);
+
         var place = new Place
         {
             Lon = dto.Lon,
@@ -63,13 +65,10 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
+        if (dto.IsHome) await ClearAllHomePlacesAsync(ct);
         var rows = await ExecuteUpdateAsync(
             p => p.Id == id && p.UserId == _userContext.UserId,
-            s =>
-            {
-                s.SetProperty(p => p.City, dto.City);
-                s.SetProperty(p => p.IsHome, dto.IsHome);
-            },
+            s => s.SetProperty(p => p.IsHome, dto.IsHome),
             ct);
         if (rows == 0) return null;
         return await GetByIdAsync(id, ct);
@@ -95,4 +94,10 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
                 c => c.Id,
                 (p, c) => new PlaceDto(p.Id, p.Lon, p.Lat, p.CountryId, c.Name, c.Flag, p.City, p.StateAbbr, p.StateName, p.IsHome))
             .ToListAsync(ct);
+
+    public Task ClearAllHomePlacesAsync(CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            p => p.UserId == _userContext.UserId && p.IsHome,
+            s => s.SetProperty(p => p.IsHome, false),
+            ct);
 }

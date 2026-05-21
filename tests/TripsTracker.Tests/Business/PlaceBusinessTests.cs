@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
-using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
@@ -12,11 +10,17 @@ using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Tests.Business;
 
+file sealed class TestUserContext : IUserContext
+{
+    public int? UserId { get; }
+    public string? Email => $"user{UserId}@test.com";
+    public bool IsAuthenticated => UserId is not null;
+    public TestUserContext(int userId) { UserId = userId; }
+}
+
 [TestClass]
 public class PlaceBusinessTests
 {
-    #region Fixture
-
     private static DbContextOptions<TripsTrackerDbContext> _options = null!;
     private static int _countryId;
     private static int _userId;
@@ -53,45 +57,23 @@ public class PlaceBusinessTests
         _userId = user.Id;
     }
 
-    private sealed class Fixture : IAsyncDisposable
+    [TestCleanup]
+    public async Task TestCleanup()
     {
-        public TripsTrackerDbContext Ctx { get; }
-        private readonly Mock<IUserContext> _userContextMock = new();
-        private readonly TransactionScope _scope;
-
-        public Fixture()
-        {
-            _scope = new TransactionScope(
-                TransactionScopeOption.Required,
-                new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
-                TransactionScopeAsyncFlowOption.Enabled);
-            Ctx = new TripsTrackerDbContext(_options);
-            Ctx.Database.OpenConnection();
-        }
-
-        public PlaceBusiness ForUser(int userId)
-        {
-            _userContextMock.Setup(u => u.UserId).Returns(userId);
-            return new PlaceBusiness(Ctx, _userContextMock.Object);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            Ctx.Database.CloseConnection();
-            await Ctx.DisposeAsync();
-            _scope.Dispose(); // no Complete() → automatic rollback
-        }
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Database.ExecuteSqlRawAsync("DELETE FROM Places WHERE UserId = {0}", _userId);
     }
 
-    #endregion
+    private TripsTrackerDbContext CreateCtx() => new(_options);
+    private PlaceBusiness CreateSut(TripsTrackerDbContext ctx) => new(ctx, new TestUserContext(_userId));
 
     // ─── CreateAsync ──────────────────────────────────────────────────────────
 
     [TestMethod]
     public async Task CreateAsync_ThrowsBusinessRuleException_WhenDuplicateCityExists()
     {
-        await using var f = new Fixture();
-        var sut = f.ForUser(_userId);
+        await using var ctx = CreateCtx();
+        var sut = CreateSut(ctx);
         var dto = new CreatePlaceDto(Lon: 0, Lat: 0, CountryId: _countryId, City: "Dupeville",
             StateAbbr: null, StateName: null, IsHome: false);
 
@@ -108,8 +90,8 @@ public class PlaceBusinessTests
     [TestMethod]
     public async Task CreateAsync_IsCaseInsensitive_WhenCheckingForDuplicates()
     {
-        await using var f = new Fixture();
-        var sut = f.ForUser(_userId);
+        await using var ctx = CreateCtx();
+        var sut = CreateSut(ctx);
         var original = new CreatePlaceDto(Lon: 0, Lat: 0, CountryId: _countryId, City: "CaseCity",
             StateAbbr: null, StateName: null, IsHome: false);
         var lowerCase = new CreatePlaceDto(Lon: 0, Lat: 0, CountryId: _countryId, City: "casecity",
@@ -123,5 +105,50 @@ public class PlaceBusinessTests
 
         Assert.IsNotNull(ex, "Expected BusinessRuleException was not thrown");
         Assert.AreEqual("DUPLICATE_PLACE", ex.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task CreateAsync_WhenIsHomeTrue_ClearsExistingHomePlace()
+    {
+        await using var ctx = CreateCtx();
+        var sut = CreateSut(ctx);
+        var existing = await sut.CreateAsync(new CreatePlaceDto(0, 0, _countryId, "OldHome", null, null, IsHome: true));
+
+        await sut.CreateAsync(new CreatePlaceDto(0, 0, _countryId, "NewHome", null, null, IsHome: true));
+
+        var reloaded = await ctx.Set<Place>().FindAsync(existing.Id);
+        await ctx.Entry(reloaded!).ReloadAsync();
+        Assert.IsFalse(reloaded!.IsHome, "Existing home place must be cleared when a new home is created.");
+    }
+
+    // ─── UpdateAsync ──────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenIsHomeTrue_ClearsExistingHomePlace()
+    {
+        await using var ctx = CreateCtx();
+        var sut = CreateSut(ctx);
+        var existing = await sut.CreateAsync(new CreatePlaceDto(0, 0, _countryId, "HomeA", null, null, IsHome: true));
+        var other = await sut.CreateAsync(new CreatePlaceDto(0, 0, _countryId, "HomeB", null, null, IsHome: false));
+
+        await sut.UpdateAsync(other.Id, new UpdatePlaceDto(IsHome: true));
+
+        var reloaded = await ctx.Set<Place>().FindAsync(existing.Id);
+        await ctx.Entry(reloaded!).ReloadAsync();
+        Assert.IsFalse(reloaded!.IsHome, "Previous home place must be cleared when another place is set as home.");
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_City_CannotBeChanged()
+    {
+        await using var ctx = CreateCtx();
+        var sut = CreateSut(ctx);
+        var place = await sut.CreateAsync(new CreatePlaceDto(0, 0, _countryId, "OriginalCity", null, null, IsHome: false));
+
+        await sut.UpdateAsync(place.Id, new UpdatePlaceDto(IsHome: false));
+
+        var reloaded = await ctx.Set<Place>().FindAsync(place.Id);
+        await ctx.Entry(reloaded!).ReloadAsync();
+        Assert.AreEqual("OriginalCity", reloaded!.City, "City must be immutable — UpdatePlaceDto must not carry City.");
     }
 }
