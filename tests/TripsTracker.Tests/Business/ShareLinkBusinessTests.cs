@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
@@ -9,6 +8,14 @@ using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
+
+file sealed class ShareLinkTestUserContext : IUserContext
+{
+    public int? UserId { get; }
+    public string? Email { get; }
+    public bool IsAuthenticated => UserId is not null;
+    public ShareLinkTestUserContext(int? userId) { UserId = userId; Email = userId.HasValue ? $"user{userId}@test.com" : null; }
+}
 
 [TestClass]
 public class ShareLinkBusinessTests
@@ -53,9 +60,7 @@ public class ShareLinkBusinessTests
                 new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
                 TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
-            var userContext = new Mock<IUserContext>();
-            userContext.Setup(u => u.UserId).Returns((int?)null);
-            Biz = new ShareLinkBusiness(Ctx, userContext.Object);
+            Biz = new ShareLinkBusiness(Ctx, new ShareLinkTestUserContext(null));
         }
 
         public async ValueTask DisposeAsync()
@@ -89,9 +94,7 @@ public class ShareLinkBusinessTests
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(user.Id);
-        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+        var biz = new ShareLinkBusiness(f.Ctx, new ShareLinkTestUserContext(user.Id));
 
         var dto = await biz.CreateAsync(new TripsTracker.Domain.CreateShareLinkDto());
 
@@ -122,9 +125,7 @@ public class ShareLinkBusinessTests
         f.Ctx.ShareLinks.AddRange(older, newer, other);
         await f.Ctx.SaveChangesAsync();
 
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(user1.Id);
-        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+        var biz = new ShareLinkBusiness(f.Ctx, new ShareLinkTestUserContext(user1.Id));
 
         var results = await biz.GetUserLinksAsync();
 
@@ -146,9 +147,7 @@ public class ShareLinkBusinessTests
         await f.Ctx.SaveChangesAsync();
         var linkId = (await f.Ctx.ShareLinks.FirstAsync(l => l.Token == "tok")).Id;
 
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(user.Id);
-        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+        var biz = new ShareLinkBusiness(f.Ctx, new ShareLinkTestUserContext(user.Id));
 
         var result = await biz.DeactivateAsync(linkId);
 
@@ -169,9 +168,7 @@ public class ShareLinkBusinessTests
         await f.Ctx.SaveChangesAsync();
         var linkId = (await f.Ctx.ShareLinks.FirstAsync(l => l.Token == "tok")).Id;
 
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(other.Id);
-        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+        var biz = new ShareLinkBusiness(f.Ctx, new ShareLinkTestUserContext(other.Id));
 
         var result = await biz.DeactivateAsync(linkId);
 

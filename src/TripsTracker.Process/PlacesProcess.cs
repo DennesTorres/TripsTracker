@@ -1,3 +1,4 @@
+using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Exceptions;
@@ -20,6 +21,10 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
+        using var scope = new TransactionScope(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
+
         var place = await _places.GetByIdAsync(id, ct);
         if (place is null) return null;
 
@@ -29,6 +34,7 @@ public class PlacesProcess : IPlacesProcess
         if (dto.IsHome)
             await _countries.SetAsHomeAsync(place.CountryId, ct);
 
+        scope.Complete();
         return updated;
     }
 
