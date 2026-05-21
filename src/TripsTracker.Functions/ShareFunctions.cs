@@ -45,9 +45,6 @@ public class ShareFunctions(IShareLinkBusiness shareLinks, IPublicMapProcess pub
         string token,
         CancellationToken ct)
     {
-        var link = await shareLinks.GetByTokenAsync(token, ct);
-        if (link is null) return new NotFoundResult();
-
         var data = await publicMap.GetSharedMapAsync(token, ct);
         return data is not null ? new OkObjectResult(data) : new NotFoundResult();
     }
