@@ -19,6 +19,7 @@ file sealed class TestUserContext : IUserContext
 }
 
 [TestClass]
+[DoNotParallelize]
 public class PlaceBusinessTests
 {
     private static DbContextOptions<TripsTrackerDbContext> _options = null!;

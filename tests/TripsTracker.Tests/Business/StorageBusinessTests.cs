@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
@@ -10,6 +9,16 @@ using TripsTracker.Interfaces.Configuration;
 using TripsTracker.Interfaces.Integration;
 
 namespace TripsTracker.Tests.Business;
+
+sealed class FakeBlobStorageService : IBlobStorageService
+{
+    public IReadOnlyList<BlobSizeInfo> BlobsToReturn { get; set; } = new List<BlobSizeInfo>();
+    public Task UploadAsync(string blobName, Stream data, string contentType, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<Stream?> DownloadAsync(string blobName, CancellationToken ct = default) => Task.FromResult<Stream?>(null);
+    public Task DeleteAsync(string blobName, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<IReadOnlyList<BlobSizeInfo>> GetUserBlobsAsync(int userId, CancellationToken ct = default)
+        => Task.FromResult(BlobsToReturn);
+}
 
 [TestClass]
 public class StorageBusinessTests
@@ -55,7 +64,7 @@ public class StorageBusinessTests
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        public Mock<IBlobStorageService> BlobsMock { get; } = new();
+        private readonly FakeBlobStorageService _fakeBlobs = new();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -68,7 +77,8 @@ public class StorageBusinessTests
             Ctx.Database.OpenConnection();
         }
 
-        public StorageBusiness Build() => new(Ctx, BlobsMock.Object);
+        public void SetBlobsToReturn(IReadOnlyList<BlobSizeInfo> blobs) => _fakeBlobs.BlobsToReturn = blobs;
+        public StorageBusiness Build() => new(Ctx, _fakeBlobs);
 
         public async ValueTask DisposeAsync()
         {
@@ -108,12 +118,11 @@ public class StorageBusinessTests
         f.Ctx.Set<PlacePhoto>().AddRange(photo1, photo2);
         await f.Ctx.SaveChangesAsync();
 
-        f.BlobsMock.Setup(b => b.GetUserBlobsAsync(_userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<BlobSizeInfo>
-            {
-                new BlobSizeInfo { BlobName = "1/p/a.jpg", SizeBytes = 150L },
-                new BlobSizeInfo { BlobName = "1/p/b.jpg", SizeBytes = 250L },
-            });
+        f.SetBlobsToReturn(new List<BlobSizeInfo>
+        {
+            new BlobSizeInfo { BlobName = "1/p/a.jpg", SizeBytes = 150L },
+            new BlobSizeInfo { BlobName = "1/p/b.jpg", SizeBytes = 250L },
+        });
 
         var before = DateTime.UtcNow;
         var result = await f.Build().RefreshAsync(_userId);

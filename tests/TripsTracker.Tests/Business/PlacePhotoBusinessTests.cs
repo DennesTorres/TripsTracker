@@ -1,16 +1,22 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Interfaces;
-using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Configuration;
 using TripsTracker.Interfaces.Exceptions;
 
 namespace TripsTracker.Tests.Business;
+
+file sealed class PhotoTestUserContext : IUserContext
+{
+    public int? UserId { get; }
+    public string? Email { get; }
+    public bool IsAuthenticated => UserId is not null;
+    public PhotoTestUserContext(int userId) { UserId = userId; Email = $"user{userId}@test.com"; }
+}
 
 [TestClass]
 public class PlacePhotoBusinessTests
@@ -69,8 +75,6 @@ public class PlacePhotoBusinessTests
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        public Mock<IUserBusiness> UserBizMock { get; } = new Mock<IUserBusiness>();
-        private readonly Mock<IUserContext> _userContextMock = new Mock<IUserContext>();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -83,15 +87,12 @@ public class PlacePhotoBusinessTests
             Ctx.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
         }
 
-        public PlacePhotoBusiness ForUser(int userId, long storageUsedBytes = 0)
-        {
-            _userContextMock.Setup(u => u.UserId).Returns(userId);
-            UserBizMock.Setup(u => u.GetStorageUsedAsync(userId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(storageUsedBytes);
-            UserBizMock.Setup(u => u.AddStorageUsedAsync(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.CompletedTask);
-            return new PlacePhotoBusiness(Ctx, _userContextMock.Object, UserBizMock.Object);
-        }
+        public PlacePhotoBusiness ForUser(int userId)
+            => new PlacePhotoBusiness(Ctx, new PhotoTestUserContext(userId), new UserBusiness(Ctx));
+
+        public async Task SeedStorageAsync(int userId, long bytes)
+            => await Ctx.Set<User>().Where(u => u.Id == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.StorageUsedBytes, bytes));
 
         public async ValueTask DisposeAsync()
         {
@@ -245,7 +246,8 @@ public class PlacePhotoBusinessTests
         await f.Ctx.SaveChangesAsync();
 
         const long maxBytes = 100L * 1024 * 1024;
-        var biz = f.ForUser(_user1Id, storageUsedBytes: maxBytes);
+        await f.SeedStorageAsync(_user1Id, maxBytes);
+        var biz = f.ForUser(_user1Id);
 
         await Assert.ThrowsExactlyAsync<BusinessRuleException>(
             () => biz.CreateAsync(place.Id, "blob", "a.jpg", "image/jpeg", 1, null));
@@ -261,23 +263,22 @@ public class PlacePhotoBusinessTests
 
         await f.ForUser(_user1Id).CreateAsync(place.Id, "blob", "a.jpg", "image/jpeg", 5000, null);
 
-        f.UserBizMock.Verify(
-            u => u.AddStorageUsedAsync(_user1Id, 5000, It.IsAny<CancellationToken>()),
-            Times.Once);
+        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == _user1Id);
+        Assert.AreEqual(5000L, user.StorageUsedBytes);
     }
 
     [TestMethod]
     public async Task DeleteAsync_DecreasesStorageUsed_WhenPhotoDeleted()
     {
         await using var f = new Fixture();
+        await f.SeedStorageAsync(_user1Id, 5000L);
         var photo = new PlacePhoto { PlaceId = _placeId, UserId = _user1Id, BlobName = "x.jpg", ContentType = "image/jpeg", SortOrder = 1, SizeBytes = 5000, UploadedAt = DateTime.UtcNow };
         f.Ctx.Set<PlacePhoto>().Add(photo);
         await f.Ctx.SaveChangesAsync();
 
         await f.ForUser(_user1Id).DeleteAsync(photo.Id);
 
-        f.UserBizMock.Verify(
-            u => u.AddStorageUsedAsync(_user1Id, -5000, It.IsAny<CancellationToken>()),
-            Times.Once);
+        var user = await f.Ctx.Set<User>().AsNoTracking().FirstAsync(u => u.Id == _user1Id);
+        Assert.AreEqual(0L, user.StorageUsedBytes);
     }
 }
