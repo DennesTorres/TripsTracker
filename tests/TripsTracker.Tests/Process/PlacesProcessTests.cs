@@ -365,4 +365,30 @@ public class PlacesProcessTests
         Assert.AreEqual(_brazilId, result.CountryId);
         Assert.AreEqual("Brazil", result.CountryName);
     }
+
+    // ─── UpdateAsync ──────────────────────────────────────────────────────────
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenIsHomeTrue_SetsCountryHomeFlag()
+    {
+        await using var f = new Fixture();
+        var place = SeedPlace(f.Ctx, _user1Id, _brazilId, "Brasília");
+        f.Ctx.Set<UserCountry>().Add(new UserCountry { UserId = _user1Id, CountryId = _brazilId, IsVisited = true });
+        f.Ctx.SaveChanges();
+
+        await f.Sut.UpdateAsync(place.Id, new UpdatePlaceDto(IsHome: true));
+
+        f.Ctx.ChangeTracker.Clear();
+        var uc = await f.Ctx.Set<UserCountry>().AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == _user1Id && u.CountryId == _brazilId);
+        Assert.IsTrue(uc?.IsHome, "Country.IsHome should be set when place is updated to IsHome=true");
+    }
+
+    [TestMethod]
+    public async Task UpdateAsync_WhenNotFound_ReturnsNull()
+    {
+        await using var f = new Fixture();
+        var result = await f.Sut.UpdateAsync(99999, new UpdatePlaceDto(IsHome: false));
+        Assert.IsNull(result);
+    }
 }

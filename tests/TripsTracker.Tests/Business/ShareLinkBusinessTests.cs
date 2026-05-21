@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
@@ -9,6 +8,14 @@ using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
+
+file sealed class ShareLinkTestUserContext : IUserContext
+{
+    public int? UserId { get; }
+    public string? Email { get; }
+    public bool IsAuthenticated => UserId is not null;
+    public ShareLinkTestUserContext(int? userId) { UserId = userId; Email = userId.HasValue ? $"user{userId}@test.com" : null; }
+}
 
 [TestClass]
 public class ShareLinkBusinessTests
@@ -54,9 +61,7 @@ public class ShareLinkBusinessTests
                 TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
             Ctx.Database.OpenConnection(); // keep single connection enlisted — prevents DTC escalation
-            var userContext = new Mock<IUserContext>();
-            userContext.Setup(u => u.UserId).Returns((int?)null);
-            Biz = new ShareLinkBusiness(Ctx, userContext.Object);
+            Biz = new ShareLinkBusiness(Ctx, new ShareLinkTestUserContext(null));
         }
 
         public async ValueTask DisposeAsync()
@@ -91,9 +96,7 @@ public class ShareLinkBusinessTests
         f.Ctx.Users.Add(user);
         await f.Ctx.SaveChangesAsync();
 
-        var userContext = new Mock<IUserContext>();
-        userContext.Setup(u => u.UserId).Returns(user.Id);
-        var biz = new ShareLinkBusiness(f.Ctx, userContext.Object);
+        var biz = new ShareLinkBusiness(f.Ctx, new ShareLinkTestUserContext(user.Id));
 
         var dto = await biz.CreateAsync(new TripsTracker.Domain.CreateShareLinkDto());
 

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
@@ -9,6 +8,14 @@ using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
+
+file sealed class CountryTestUserContext : IUserContext
+{
+    public int? UserId { get; }
+    public string? Email { get; }
+    public bool IsAuthenticated => UserId is not null;
+    public CountryTestUserContext(int userId) { UserId = userId; Email = $"user{userId}@test.com"; }
+}
 
 [TestClass]
 [DoNotParallelize]
@@ -55,7 +62,6 @@ public class CountryBusinessTests
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private readonly Mock<IUserContext> _userContextMock = new();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -68,10 +74,7 @@ public class CountryBusinessTests
         }
 
         public CountryBusiness ForUser(int userId)
-        {
-            _userContextMock.Setup(u => u.UserId).Returns(userId);
-            return new CountryBusiness(Ctx, _userContextMock.Object);
-        }
+            => new CountryBusiness(Ctx, new CountryTestUserContext(userId));
 
         public async ValueTask DisposeAsync()
         {
