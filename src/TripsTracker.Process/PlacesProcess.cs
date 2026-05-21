@@ -45,6 +45,10 @@ public class PlacesProcess : IPlacesProcess
 
         var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
 
+        using var scope = new TransactionScope(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
+
         var place = await _places.CreateAsync(
             new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName, dto.IsHome),
             ct);
@@ -54,6 +58,7 @@ public class PlacesProcess : IPlacesProcess
         else
             await _countries.SetAsVisitedAsync(country.Id, ct);
 
+        scope.Complete();
         return place;
     }
 
@@ -61,6 +66,10 @@ public class PlacesProcess : IPlacesProcess
     {
         var place = await _places.GetByIdAsync(placeId, ct)
             ?? throw new NotFoundException("Place", placeId);
+
+        using var scope = new TransactionScope(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled);
 
         await _places.DeleteAsync(placeId, ct);
 
@@ -79,6 +88,7 @@ public class PlacesProcess : IPlacesProcess
             }
         }
 
+        scope.Complete();
         return new DeletePlaceResult(promptHomeCountry, promptHomeCountry ? place.CountryId : null, promptHomeCountry ? place.CountryName : null);
     }
 }
