@@ -112,4 +112,17 @@ public class PlacePhotoBusiness : BusinessBase<PlacePhoto>, IPlacePhotoBusiness
             .Where(p => p.Id == photoId)
             .Select(p => new PlacePhotoBlobInfo { Id = p.Id, BlobName = p.BlobName, ContentType = p.ContentType })
             .FirstOrDefaultAsync(ct);
+
+    public Task<List<PhotoStorageSummary>> GetUserStorageSummaryAsync(int userId, CancellationToken ct = default)
+        => BuildBaseQuery()
+            .AsNoTracking()
+            .Where(p => p.UserId == userId)
+            .Select(p => new PhotoStorageSummary { Id = p.Id, BlobName = p.BlobName, SizeBytes = p.SizeBytes })
+            .ToListAsync(ct);
+
+    public Task UpdateSizeAsync(int photoId, long sizeBytes, CancellationToken ct = default)
+        => ExecuteUpdateAsync(
+            p => p.Id == photoId,
+            s => s.SetProperty(p => p.SizeBytes, sizeBytes),
+            ct);
 }

@@ -1,12 +1,9 @@
-using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Transactions;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
-using TripsTracker.Domain;
-using TripsTracker.Integration;
 using TripsTracker.Interfaces.Configuration;
 
 namespace TripsTracker.Tests.Business;
@@ -17,9 +14,7 @@ public class StorageBusinessTests
     #region Fixture
 
     private static DbContextOptions<TripsTrackerDbContext> _options = null!;
-    private static int _countryId;
     private static int _userId;
-    private static BlobServiceClient _blobClient = null!;
 
     [ClassInitialize]
     public static async Task ClassInitialize(TestContext _)
@@ -43,23 +38,16 @@ public class StorageBusinessTests
         await ctx.Database.EnsureDeletedAsync();
         await ctx.Database.EnsureCreatedAsync();
 
-        var country = new Country { IsoNumeric = 9005, IsoAlpha2 = "ZV", Flag = "🏳", Name = "StorageTestCountry", Region = "Test" };
-        ctx.Countries.Add(country);
         var user = new User { Email = "seed@storage.test", CreatedAt = DateTime.UtcNow };
         ctx.Users.Add(user);
         await ctx.SaveChangesAsync();
 
-        _countryId = country.Id;
         _userId = user.Id;
-
-        _blobClient = new BlobServiceClient("UseDevelopmentStorage=true");
     }
 
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
-        private readonly BlobStorageService _blobs;
-        private readonly List<string> _uploadedBlobs = new();
         private readonly TransactionScope _scope;
 
         public Fixture()
@@ -70,21 +58,12 @@ public class StorageBusinessTests
                 TransactionScopeAsyncFlowOption.Enabled);
             Ctx = new TripsTrackerDbContext(_options);
             Ctx.Database.OpenConnection();
-            _blobs = new BlobStorageService(_blobClient);
         }
 
-        public StorageBusiness Build() => new(Ctx, _blobs);
-
-        public async Task UploadBlobAsync(string blobName, int sizeBytes)
-        {
-            await _blobs.UploadAsync(blobName, new MemoryStream(new byte[sizeBytes]), "application/octet-stream");
-            _uploadedBlobs.Add(blobName);
-        }
+        public StorageBusiness Build() => new(Ctx);
 
         public async ValueTask DisposeAsync()
         {
-            foreach (var blob in _uploadedBlobs)
-                await _blobs.DeleteAsync(blob);
             Ctx.Database.CloseConnection();
             await Ctx.DisposeAsync();
             _scope.Dispose();
@@ -108,36 +87,16 @@ public class StorageBusinessTests
     }
 
     [TestMethod]
-    public async Task RefreshAsync_UpdatesStorageUsedBytes_FromBlobSizes_AndSetsLastRefreshedAt()
+    public async Task UpdateStorageAsync_PersistsUsedBytesAndRefreshedAt()
     {
         await using var f = new Fixture();
+        var now = DateTime.UtcNow;
 
-        var blobA = $"{_userId}/p/a.jpg";
-        var blobB = $"{_userId}/p/b.jpg";
-
-        var place = new Place { City = "RefreshCity", CountryId = _countryId, UserId = _userId, Lon = 0, Lat = 0 };
-        f.Ctx.Places.Add(place);
-        await f.Ctx.SaveChangesAsync();
-
-        var photo1 = new PlacePhoto { PlaceId = place.Id, UserId = _userId, BlobName = blobA, ContentType = "image/jpeg", SortOrder = 1, SizeBytes = 100, UploadedAt = DateTime.UtcNow };
-        var photo2 = new PlacePhoto { PlaceId = place.Id, UserId = _userId, BlobName = blobB, ContentType = "image/jpeg", SortOrder = 2, SizeBytes = 200, UploadedAt = DateTime.UtcNow };
-        f.Ctx.Set<PlacePhoto>().AddRange(photo1, photo2);
-        await f.Ctx.SaveChangesAsync();
-
-        await f.UploadBlobAsync(blobA, 150);
-        await f.UploadBlobAsync(blobB, 250);
-
-        var before = DateTime.UtcNow;
-        var result = await f.Build().RefreshAsync(_userId);
-        var after = DateTime.UtcNow;
-
-        Assert.AreEqual(400L, result.UsedBytes, "Should sum actual blob sizes");
-        Assert.AreEqual(10L * 1024 * 1024 * 1024, result.LimitBytes);
-        Assert.IsNotNull(result.LastRefreshedAt, "LastRefreshedAt should be set");
-        Assert.IsTrue(result.LastRefreshedAt >= before && result.LastRefreshedAt <= after);
+        await f.Build().UpdateStorageAsync(_userId, 750_000L, now);
 
         var user = await f.Ctx.Users.AsNoTracking().FirstAsync(u => u.Id == _userId);
-        Assert.AreEqual(400L, user.StorageUsedBytes, "StorageUsedBytes should be persisted");
+        Assert.AreEqual(750_000L, user.StorageUsedBytes);
         Assert.IsNotNull(user.StorageLastRefreshedAt);
+        Assert.IsTrue(Math.Abs((user.StorageLastRefreshedAt!.Value - now).TotalMilliseconds) < 1000);
     }
 }

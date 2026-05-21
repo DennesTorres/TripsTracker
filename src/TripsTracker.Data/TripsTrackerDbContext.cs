@@ -60,9 +60,12 @@ public class TripsTrackerDbContext : BaseContext<TripsTrackerDbContext>
         {
             e.HasIndex(c => c.PlaceId);
             e.HasIndex(c => c.UserId);
+            e.HasIndex(c => c.ParentCommentId);
             e.Property(c => c.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
             e.HasOne<Place>().WithMany().HasForeignKey(c => c.PlaceId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<User>().WithMany().HasForeignKey(c => c.UserId).OnDelete(DeleteBehavior.Restrict);
+            // Self-referential: restrict DB cascade (avoid multiple cascade paths in SQL Server); replies deleted in code
+            e.HasOne<PlaceComment>().WithMany().HasForeignKey(c => c.ParentCommentId).IsRequired(false).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PhotoRating>(e =>

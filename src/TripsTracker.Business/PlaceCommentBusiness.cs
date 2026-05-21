@@ -92,6 +92,8 @@ public class PlaceCommentBusiness : BusinessBase<PlaceComment>, IPlaceCommentBus
 
     public async Task<bool> DeleteAsync(int commentId, CancellationToken ct = default)
     {
+        // Delete replies first (FK restricts DB cascade; orphan prevention is done in code)
+        await ExecuteDeleteAsync(c => c.ParentCommentId == commentId, ct);
         var rows = await ExecuteDeleteAsync(c => c.Id == commentId && c.UserId == _userContext.UserId, ct);
         return rows > 0;
     }
