@@ -143,6 +143,8 @@ public class GeoBoundariesService : IGeoBoundariesService
         writer.WriteEndObject();
     }
 
+    private const double SimplificationTolerance = 0.01;
+
     private static void WriteRewindedPolygon(Utf8JsonWriter writer, JsonElement polygon)
     {
         writer.WriteStartArray();
@@ -150,12 +152,55 @@ public class GeoBoundariesService : IGeoBoundariesService
         {
             var positions = ring.EnumerateArray().ToList();
             positions.Reverse();
+            var simplified = RdpSimplify(positions, SimplificationTolerance);
+            if (simplified.Count < 4) simplified = positions;
             writer.WriteStartArray();
-            foreach (var pos in positions)
+            foreach (var pos in simplified)
                 pos.WriteTo(writer);
             writer.WriteEndArray();
         }
         writer.WriteEndArray();
+    }
+
+    private static List<JsonElement> RdpSimplify(List<JsonElement> points, double tolerance)
+    {
+        if (points.Count < 3) return points;
+        var keep = new bool[points.Count];
+        keep[0] = true;
+        keep[points.Count - 1] = true;
+        RdpRecurse(points, 0, points.Count - 1, tolerance, keep);
+        return points.Where((_, i) => keep[i]).ToList();
+    }
+
+    private static void RdpRecurse(List<JsonElement> points, int start, int end, double tolerance, bool[] keep)
+    {
+        if (end <= start + 1) return;
+        double maxDist = 0;
+        int maxIdx = start;
+        for (int i = start + 1; i < end; i++)
+        {
+            var d = PerpendicularDistance(points[i], points[start], points[end]);
+            if (d > maxDist) { maxDist = d; maxIdx = i; }
+        }
+        if (maxDist > tolerance)
+        {
+            keep[maxIdx] = true;
+            RdpRecurse(points, start, maxIdx, tolerance, keep);
+            RdpRecurse(points, maxIdx, end, tolerance, keep);
+        }
+    }
+
+    private static double PerpendicularDistance(JsonElement point, JsonElement lineStart, JsonElement lineEnd)
+    {
+        double x = point[0].GetDouble(), y = point[1].GetDouble();
+        double x1 = lineStart[0].GetDouble(), y1 = lineStart[1].GetDouble();
+        double x2 = lineEnd[0].GetDouble(), y2 = lineEnd[1].GetDouble();
+        double dx = x2 - x1, dy = y2 - y1;
+        if (dx == 0 && dy == 0)
+            return Math.Sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));
+        double t = ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy);
+        double px = x1 + t * dx - x, py = y1 + t * dy - y;
+        return Math.Sqrt(px * px + py * py);
     }
 
     private sealed class GeoBoundariesMetadata

@@ -1,3 +1,5 @@
+using Azure.Storage.Blobs;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TripsTracker.Interfaces.Configuration;
@@ -27,6 +29,18 @@ public static class IntegrationRegistrationExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers BlobServiceClient and IBorderCacheService for the server-side border GeoJSON cache.
+    /// Must be called before Scrutor's AddScopedApplicationServices so TryAdd skips these.
+    /// </summary>
+    public static IServiceCollection AddBorderCacheService(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration["BlobStorage:ConnectionString"];
+        services.AddSingleton(new BlobServiceClient(connectionString));
+        services.AddScoped<IBorderCacheService, BlobBorderCacheService>();
         return services;
     }
 }

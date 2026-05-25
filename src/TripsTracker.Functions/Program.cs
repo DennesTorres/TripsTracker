@@ -28,6 +28,7 @@ builder.Services.AddDatabaseContext<TripsTrackerDbContext>(dbOptions);
 
 // Register typed HTTP clients for integration services (before Scrutor so TryAdd skips them)
 builder.Services.AddIntegrationHttpClients();
+builder.Services.AddBorderCacheService(builder.Configuration);
 
 // IHttpContextAccessor — required by JwtValidationMiddleware to read the Bearer token
 builder.Services.AddHttpContextAccessor();
