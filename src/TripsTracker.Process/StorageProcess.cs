@@ -1,3 +1,4 @@
+using System.Transactions;
 using TripsTracker.Domain;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Integration;
@@ -25,17 +26,23 @@ public class StorageProcess : IStorageProcess
 
         var photoSummaries = await _photos.GetUserStorageSummaryAsync(userId, ct);
 
-        foreach (var photo in photoSummaries)
+        using (var scope = new TransactionScope(TransactionScopeOption.Required,
+            new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+            TransactionScopeAsyncFlowOption.Enabled))
         {
-            if (blobSizes.TryGetValue(photo.BlobName, out var actualSize) && photo.SizeBytes != actualSize)
-                await _photos.UpdateSizeAsync(photo.Id, actualSize, ct);
+            foreach (var photo in photoSummaries)
+            {
+                if (blobSizes.TryGetValue(photo.BlobName, out var actualSize) && photo.SizeBytes != actualSize)
+                    await _photos.UpdateSizeAsync(photo.Id, actualSize, ct);
+            }
+
+            var totalBytes = photoSummaries.Sum(p =>
+                blobSizes.TryGetValue(p.BlobName, out var sz) ? sz : p.SizeBytes);
+
+            var now = DateTime.UtcNow;
+            await _storage.UpdateStorageAsync(userId, totalBytes, now, ct);
+            scope.Complete();
         }
-
-        var totalBytes = photoSummaries.Sum(p =>
-            blobSizes.TryGetValue(p.BlobName, out var sz) ? sz : p.SizeBytes);
-
-        var now = DateTime.UtcNow;
-        await _storage.UpdateStorageAsync(userId, totalBytes, now, ct);
 
         return await _storage.GetUsageAsync(userId, ct);
     }
