@@ -1,6 +1,7 @@
 using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Net;
 using TripsTracker.Business;
 using TripsTracker.Data;
@@ -19,7 +20,7 @@ public class CountriesProcessTests
     private static BlobServiceClient _blobClient = null!;
 
     [ClassInitialize]
-    public static void ClassInitialize(TestContext _)
+    public static async Task ClassInitialize(TestContext _)
     {
         var config = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json", optional: false)
@@ -32,6 +33,10 @@ public class CountriesProcessTests
             .Options;
 
         _blobClient = new BlobServiceClient("UseDevelopmentStorage=true");
+
+        // Clean up any leftover test countries from prior failed runs
+        await using var ctx = new TripsTrackerDbContext(_options);
+        await ctx.Set<Country>().Where(c => c.IsoNumeric >= 90000).ExecuteDeleteAsync();
     }
 
     private sealed class FakeUserContext(int userId) : TripsTracker.Interfaces.IUserContext
@@ -50,6 +55,8 @@ public class CountriesProcessTests
     private const string SampleGeoJson = """{"type":"FeatureCollection","features":[]}""";
     private const string MetadataJson = """{"gjDownloadURL":"https://cdn.example.com/test.geojson"}""";
 
+    private static int _isoNumericSeed = 90000;
+
     private sealed class Fixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
@@ -64,14 +71,14 @@ public class CountriesProcessTests
             var http = new HttpClient(new FakeHandler(respond));
             var geoBoundaries = new GeoBoundariesService(http);
             var borderCache = new BlobBorderCacheService(_blobClient);
-            return new CountriesProcess(countries, geoBoundaries, borderCache);
+            return new CountriesProcess(countries, geoBoundaries, borderCache, NullLogger<CountriesProcess>.Instance);
         }
 
         public async Task<Country> AddCountryAsync(string? isoAlpha3)
         {
             var country = new Country
             {
-                IsoNumeric = 99999,
+                IsoNumeric = Interlocked.Increment(ref _isoNumericSeed),
                 IsoAlpha2 = "XX",
                 IsoAlpha3 = isoAlpha3,
                 Flag = "🏳",
@@ -159,5 +166,35 @@ public class CountriesProcessTests
         Assert.IsNotNull(result);
         Assert.IsTrue(result.Contains("FeatureCollection"));
         Assert.IsFalse(geoBoundariesCalled, "GeoBoundaries must not be called when cache is populated");
+    }
+
+    [TestMethod]
+    public async Task GetBordersAsync_SimplifiesPolygon_WhenRingHasCollinearPoints()
+    {
+        // Ring has 6 points; (0.5,0) is collinear with (0,0) and (1,0).
+        // RDP simplification (epsilon=0.01) should remove it → output ring has 5 points.
+        const string collinearGeoJson = """
+            {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"shapeISO":"XR1-01","shapeName":"Test Region"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[0.5,0],[1,0],[1,1],[0,1],[0,0]]]}}]}
+            """;
+
+        await using var f = new Fixture();
+        var country = await f.AddCountryAsync("XR1");
+        f.TrackBlob("XR1.json");
+        var sut = f.Build(req =>
+            req.RequestUri!.AbsoluteUri.Contains("geoboundaries.org")
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(MetadataJson) }
+                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(collinearGeoJson) });
+
+        var result = await sut.GetBordersAsync(country.Id);
+
+        Assert.IsNotNull(result);
+        using var doc = System.Text.Json.JsonDocument.Parse(result);
+        var ring = doc.RootElement
+            .GetProperty("features")[0]
+            .GetProperty("geometry")
+            .GetProperty("coordinates")[0];
+
+        Assert.IsTrue(ring.GetArrayLength() < 6,
+            $"Expected RDP to reduce collinear ring below 6 points, got {ring.GetArrayLength()}");
     }
 }
