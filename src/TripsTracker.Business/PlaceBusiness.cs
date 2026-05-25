@@ -144,4 +144,10 @@ public class PlaceBusiness : BusinessBase<Place>, IPlaceBusiness
             .Where(p => p.City == city && p.CountryId == countryId)
             .Select(p => new CreatePlaceDto(p.Lon, p.Lat, p.CountryId, p.City, p.StateAbbr, p.StateName))
             .FirstOrDefaultAsync(ct);
+
+    public Task<List<VisitedStateDto>> GetVisitedStatesAsync(CancellationToken ct = default)
+        => Context.Set<VisitedState>().AsNoTracking()
+            .Where(vs => vs.UserId == _userContext.UserId)
+            .Select(vs => new VisitedStateDto(vs.Id, vs.CountryId, vs.StateAbbr, vs.StateName))
+            .ToListAsync(ct);
 }

@@ -19,6 +19,8 @@ public class PlacesProcess : IPlacesProcess
         _geocoding = geocoding;
     }
 
+    private static readonly TransactionOptions _readCommitted = new() { IsolationLevel = IsolationLevel.ReadCommitted };
+
     public async Task<PlaceDto> AddAsync(AddPlaceDto dto, CancellationToken ct = default)
     {
         var country = await _countries.GetByIsoAlpha2Async(dto.CountryIsoAlpha2, ct)
@@ -30,12 +32,15 @@ public class PlacesProcess : IPlacesProcess
                 "CITY_IS_COUNTRY");
 
         // GEOCODING_IS_INTERNAL: only geocode when the city is not already in global Places
+        // Geocoding is an external HTTP call — must complete before opening the transaction
         var createDto = await _places.FindGlobalAsync(dto.CityName, country.Id, ct);
         if (createDto == null)
         {
             var geocoded = await _geocoding.GeocodeAsync(dto.CityName, country, ct);
             createDto = new CreatePlaceDto(geocoded.Lon, geocoded.Lat, country.Id, geocoded.City, geocoded.StateAbbr, geocoded.StateName);
         }
+
+        using var scope = new TransactionScope(TransactionScopeOption.Required, _readCommitted, TransactionScopeAsyncFlowOption.Enabled);
 
         var place = await _places.CreateAsync(createDto, ct);
 
@@ -48,6 +53,7 @@ public class PlacesProcess : IPlacesProcess
         else
             await _countries.SetVisitedAsync(country.Id, true, ct);
 
+        scope.Complete();
         return place;
     }
 
@@ -65,7 +71,7 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<PlaceDto?> UpdateAsync(int id, UpdatePlaceDto dto, CancellationToken ct = default)
     {
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        using var scope = new TransactionScope(TransactionScopeOption.Required, _readCommitted, TransactionScopeAsyncFlowOption.Enabled);
 
         var place = await _places.GetByIdAsync(id, ct);
         if (place is null) return null;
@@ -82,7 +88,7 @@ public class PlacesProcess : IPlacesProcess
 
     public async Task<DeletePlaceResult> DeleteAsync(int placeId, CancellationToken ct = default)
     {
-        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        using var scope = new TransactionScope(TransactionScopeOption.Required, _readCommitted, TransactionScopeAsyncFlowOption.Enabled);
 
         var place = await _places.GetByIdAsync(placeId, ct)
             ?? throw new NotFoundException("Place", placeId);

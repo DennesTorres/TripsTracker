@@ -19,17 +19,6 @@ public class CountryFunctions(ICountryBusiness countries, ICountriesProcess coun
         return new ContentResult { Content = geoJson, ContentType = "application/json", StatusCode = 200 };
     }
 
-    [Function("SetCountryHome")]
-    public async Task<IActionResult> SetHome(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "countries/{id:int}/home")] HttpRequest req,
-        int id,
-        CancellationToken ct)
-    {
-        var value = req.Query.ContainsKey("value") && req.Query["value"] == "false" ? false : true;
-        var result = await countries.SetHomeAsync(id, value, ct);
-        return result is not null ? new OkObjectResult(result) : new NotFoundResult();
-    }
-
     [Function("SetCountryStateBorders")]
     public async Task<IActionResult> SetShowStateBorders(
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "countries/{id:int}/state-borders")] HttpRequest req,

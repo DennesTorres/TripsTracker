@@ -4,6 +4,7 @@ namespace TripsTracker.Interfaces.Business;
 
 public interface IPlaceBusiness
 {
+    Task<List<VisitedStateDto>> GetVisitedStatesAsync(CancellationToken ct = default);
     Task<List<PlaceDto>> GetAllAsync(CancellationToken ct = default);
     Task<PlaceDto> CreateAsync(CreatePlaceDto dto, CancellationToken ct = default);
     Task<PlaceDto?> GetByIdAsync(int id, CancellationToken ct = default);

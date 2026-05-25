@@ -5,7 +5,7 @@ using TripsTracker.Interfaces.Business;
 
 namespace TripsTracker.Functions;
 
-public class MapFunctions(IPlaceBusiness places, ICountryBusiness countries, IVisitedStateBusiness states)
+public class MapFunctions(IPlaceBusiness places, ICountryBusiness countries)
 {
     [Function("GetPlaces")]
     public async Task<IActionResult> GetPlaces(
@@ -23,5 +23,5 @@ public class MapFunctions(IPlaceBusiness places, ICountryBusiness countries, IVi
     public async Task<IActionResult> GetVisitedStates(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "visited-states")] HttpRequest req,
         CancellationToken ct)
-        => new OkObjectResult(await states.GetAllAsync(ct));
+        => new OkObjectResult(await places.GetVisitedStatesAsync(ct));
 }

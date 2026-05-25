@@ -41,7 +41,6 @@ public class RealDatabaseTests
         public TripsTrackerDbContext Context { get; }
         public PlaceBusiness Places { get; }
         public CountryBusiness Countries { get; }
-        public VisitedStateBusiness States { get; }
         public int OwnerUserId { get; }
         private TransactionScope? _scope;
 
@@ -69,7 +68,6 @@ public class RealDatabaseTests
 
             Places = new PlaceBusiness(Context, userContext);
             Countries = new CountryBusiness(Context, userContext);
-            States = new VisitedStateBusiness(Context, userContext);
         }
 
         public void BeginScope()
@@ -175,11 +173,11 @@ public class RealDatabaseTests
     #region VisitedStates view
 
     [TestMethod]
-    public async Task VisitedStateBusiness_GetAllAsync_ViewReturnsStatesFromPlaces()
+    public async Task PlaceBusiness_GetVisitedStatesAsync_ViewReturnsStatesFromPlaces()
     {
         await using var f = new Fixture();
 
-        var states = await f.States.GetAllAsync();
+        var states = await f.Places.GetVisitedStatesAsync();
         var places = await f.Places.GetAllAsync();
 
         var placesWithState = places.Where(p => !string.IsNullOrEmpty(p.StateAbbr)).ToList();
@@ -201,14 +199,14 @@ public class RealDatabaseTests
     }
 
     [TestMethod]
-    public async Task VisitedStateBusiness_GetAllAsync_BrazilHasStates()
+    public async Task PlaceBusiness_GetVisitedStatesAsync_BrazilHasStates()
     {
         await using var f = new Fixture();
 
         var brazil = f.Context.Set<TripsTracker.Data.Entities.Country>()
             .First(c => c.IsoAlpha2 == "BR");
 
-        var states = await f.States.GetAllAsync();
+        var states = await f.Places.GetVisitedStatesAsync();
         var brazilStates = states.Where(s => s.CountryId == brazil.Id).ToList();
 
         Assert.IsNotEmpty(brazilStates,

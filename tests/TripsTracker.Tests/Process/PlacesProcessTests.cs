@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using TripsTracker.Business;
 using TripsTracker.Data;
 using TripsTracker.Data.Entities;
 using TripsTracker.Domain;
+using TripsTracker.Interfaces;
 using TripsTracker.Interfaces.Business;
 using TripsTracker.Interfaces.Configuration;
 using TripsTracker.Interfaces.Exceptions;
@@ -36,8 +36,8 @@ public class PlacesProcessTests
 
     private const int UserId = 1;
 
-    // Real-DB fixture: wires actual PlaceBusiness + CountryBusiness so DeleteAsync tests
-    // verify real orchestration outcomes instead of mock call expectations.
+    // Real-DB fixture: wires actual PlaceBusiness + CountryBusiness so all tests
+    // verify real orchestration outcomes against the actual schema.
     private sealed class ProcessFixture : IAsyncDisposable
     {
         public TripsTrackerDbContext Ctx { get; }
@@ -46,13 +46,13 @@ public class PlacesProcessTests
         public PlacesProcess Process { get; }
         private readonly List<int> _trackedCountryIds = [];
 
-        public ProcessFixture()
+        public ProcessFixture(IGeocodingBusiness? geocoding = null)
         {
             Ctx = new TripsTrackerDbContext(_options);
             var userCtx = new FakeUserContext(UserId);
             PlaceBiz = new PlaceBusiness(Ctx, userCtx);
             CountryBiz = new CountryBusiness(Ctx, userCtx);
-            Process = new PlacesProcess(PlaceBiz, CountryBiz, null!); // geocoding not used in DeleteAsync
+            Process = new PlacesProcess(PlaceBiz, CountryBiz, geocoding!);
         }
 
         public async Task<Country> AddCountryAsync(string isoAlpha2)
@@ -85,6 +85,15 @@ public class PlacesProcessTests
             return place;
         }
 
+        /// <summary>Creates a global Place without a UserPlaces link (not yet visited by any user).</summary>
+        public async Task<Place> AddGlobalPlaceAsync(int countryId, string city)
+        {
+            var place = new Place { Lon = -1, Lat = -1, CountryId = countryId, City = city };
+            Ctx.Set<Place>().Add(place);
+            await Ctx.SaveChangesAsync();
+            return place;
+        }
+
         public async ValueTask DisposeAsync()
         {
             foreach (var cid in _trackedCountryIds)
@@ -98,88 +107,77 @@ public class PlacesProcessTests
         }
     }
 
-    private sealed class FakeUserContext(int userId) : TripsTracker.Interfaces.IUserContext
+    private sealed class FakeUserContext(int userId) : IUserContext
     {
         public int? UserId => userId;
         public string? Email => null;
         public bool IsAuthenticated => true;
     }
 
-    // Helpers for Moq-based orchestration tests (AddAsync only — these test call sequencing,
-    // not database state, so mocking is appropriate here).
-    private static CountryDto Brazil() => new CountryDto
+    private sealed class FakeGeocodingBusiness(GeocodingResult result) : IGeocodingBusiness
     {
-        Id = 1, IsoNumeric = 76, IsoAlpha2 = "BR", Flag = "🇧🇷",
-        Name = "Brazil", Region = "Americas"
-    };
+        public bool WasCalled { get; private set; }
 
-    private static PlaceDto AnyPlace() => new(
-        Id: 1, Lon: -43.9, Lat: -22.9, CountryId: 1, CountryName: "Brazil",
-        CountryFlag: "🇧🇷", City: "Itacuruça", StateAbbr: "RJ",
-        StateName: "Rio de Janeiro", IsHome: false);
+        public Task<GeocodingResult> GeocodeAsync(string cityName, CountryDto country, CancellationToken ct = default)
+        {
+            WasCalled = true;
+            return Task.FromResult(result);
+        }
+
+        public Task<IReadOnlyList<CitySuggestion>> SuggestCitiesAsync(string query, string countryCode = "", CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<CitySuggestion>>(Array.Empty<CitySuggestion>());
+    }
 
     #endregion
 
-    // ─── UpdateAsync — orchestration (Moq) ────────────────────────────────────
+    // ─── UpdateAsync (real-DB) ────────────────────────────────────────────────
 
     [TestMethod]
-    public async Task UpdateAsync_WhenIsHome_CallsSetHomeAsync()
+    public async Task UpdateAsync_WhenIsHome_SetsCountryHome()
     {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        await using var f = new ProcessFixture();
+        var country = await f.AddCountryAsync("R1");
+        await f.CountryBiz.SetVisitedAsync(country.Id, true); // ensure UserCountry row exists
+        var place = await f.AddPlaceAsync(country.Id, isHome: false);
 
-        var existing = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, false);
-        var updated = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, true);
+        await f.Process.UpdateAsync(place.Id, new UpdatePlaceDto(true));
 
-        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
-        places.Setup(p => p.UpdateAsync(1, It.IsAny<UpdatePlaceDto>(), It.IsAny<CancellationToken>())).ReturnsAsync(updated);
-        countries.Setup(c => c.SetHomeAsync(42, true, It.IsAny<CancellationToken>())).ReturnsAsync((CountryDto?)null);
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
-
-        await sut.UpdateAsync(1, new UpdatePlaceDto(true));
-
-        countries.Verify(c => c.SetHomeAsync(42, true, It.IsAny<CancellationToken>()), Times.Once,
-            "UpdateAsync must sync UserCountry.IsHome when IsHome is true");
+        var uc = await f.Ctx.Set<UserCountry>().AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == UserId && u.CountryId == country.Id);
+        Assert.IsNotNull(uc);
+        Assert.IsTrue(uc.IsHome, "UpdateAsync with IsHome=true must call SetHomeAsync on the country");
     }
 
     [TestMethod]
-    public async Task UpdateAsync_WhenNotIsHome_DoesNotCallSetHomeAsync()
+    public async Task UpdateAsync_WhenNotIsHome_DoesNotSyncCountryHome()
     {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        await using var f = new ProcessFixture();
+        var country = await f.AddCountryAsync("R2");
+        await f.CountryBiz.SetVisitedAsync(country.Id, true); // create UserCountry row
+        // Set IsHome=true directly — avoids clearing other countries via CountryBusiness.SetHomeAsync
+        var ucRow = await f.Ctx.Set<UserCountry>()
+            .FirstAsync(u => u.UserId == UserId && u.CountryId == country.Id);
+        ucRow.IsHome = true;
+        await f.Ctx.SaveChangesAsync();
+        var place = await f.AddPlaceAsync(country.Id, isHome: false);
 
-        var existing = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, true);
-        var updated = new PlaceDto(1, 0, 0, 42, "France", "🇫🇷", "Paris", null, null, false);
+        await f.Process.UpdateAsync(place.Id, new UpdatePlaceDto(false));
 
-        places.Setup(p => p.GetByIdAsync(1, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
-        places.Setup(p => p.UpdateAsync(1, It.IsAny<UpdatePlaceDto>(), It.IsAny<CancellationToken>())).ReturnsAsync(updated);
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
-
-        await sut.UpdateAsync(1, new UpdatePlaceDto(false));
-
-        countries.Verify(c => c.SetHomeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never,
-            "SetHomeAsync must not be called when IsHome is false");
+        var ucAfter = await f.Ctx.Set<UserCountry>().AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserId == UserId && u.CountryId == country.Id);
+        Assert.IsNotNull(ucAfter);
+        Assert.IsTrue(ucAfter.IsHome,
+            "UpdateAsync with IsHome=false must not call SetHomeAsync — country home flag must stay unchanged");
     }
 
     [TestMethod]
     public async Task UpdateAsync_WhenPlaceNotFound_ReturnsNull()
     {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        await using var f = new ProcessFixture();
 
-        places.Setup(p => p.GetByIdAsync(999, It.IsAny<CancellationToken>())).ReturnsAsync((PlaceDto?)null);
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
-
-        var result = await sut.UpdateAsync(999, new UpdatePlaceDto(false));
+        var result = await f.Process.UpdateAsync(999999, new UpdatePlaceDto(false));
 
         Assert.IsNull(result);
-        countries.Verify(c => c.SetHomeAsync(It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ─── DeleteAsync (real-DB) ─────────────────────────────────────────────────
@@ -248,79 +246,50 @@ public class PlacesProcessTests
         Assert.IsTrue(uc == null || !uc.IsVisited);
     }
 
-    // ─── AddAsync — validation (R13 #1) ───────────────────────────────────────
+    // ─── AddAsync — validation ────────────────────────────────────────────────
 
     [TestMethod]
     public async Task AddAsync_CityNameEqualsCountryName_ThrowsBusinessRuleException()
     {
-        var countries = new Mock<ICountryBusiness>();
-        var places = new Mock<IPlaceBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
-
-        countries.Setup(c => c.GetByIsoAlpha2Async("MT", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CountryDto { Id = 10, IsoNumeric = 470, IsoAlpha2 = "MT", Flag = "🇲🇹", Name = "Malta", Region = "Europe" });
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        // Uses seeded Malta ("MT") — exception thrown before any DB write
+        await using var f = new ProcessFixture();
 
         var ex = await Assert.ThrowsExactlyAsync<BusinessRuleException>(
-            () => sut.AddAsync(new AddPlaceDto("Malta", "MT")));
+            () => f.Process.AddAsync(new AddPlaceDto("Malta", "MT")));
 
         Assert.AreEqual("CITY_IS_COUNTRY", ex.ErrorCode);
     }
 
-    // ─── AddAsync — GEOCODING_IS_INTERNAL (Moq) ──────────────────────────────
+    // ─── AddAsync — GEOCODING_IS_INTERNAL (real-DB + FakeGeocodingBusiness) ──
 
     [TestMethod]
     public async Task AddAsync_WhenGlobalPlaceNotFound_CallsGeocoding()
     {
         // GEOCODING_IS_INTERNAL: geocode only when city is not in global Places
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        var fakeGeocoding = new FakeGeocodingBusiness(
+            new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
+        await using var f = new ProcessFixture(fakeGeocoding);
+        var country = await f.AddCountryAsync("S1");
 
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        places.Setup(p => p.FindGlobalAsync("Itacuruça", Brazil().Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePlaceDto?)null);
-        geocoding.Setup(g => g.GeocodeAsync("Itacuruça", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
-        places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
+        await f.Process.AddAsync(new AddPlaceDto("Itacuruça", country.IsoAlpha2));
 
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
-
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
-
-        geocoding.Verify(
-            g => g.GeocodeAsync("Itacuruça", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()),
-            Times.Once,
-            "GeocodeAsync must be called when city is not in global Places");
+        Assert.IsTrue(fakeGeocoding.WasCalled,
+            "GeocodeAsync must be called when the city is not in global Places");
     }
 
     [TestMethod]
     public async Task AddAsync_WhenGlobalPlaceExists_SkipsGeocoding()
     {
         // GEOCODING_IS_INTERNAL: skip geocoding when city already has a global Place
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        var fakeGeocoding = new FakeGeocodingBusiness(
+            new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
+        await using var f = new ProcessFixture(fakeGeocoding);
+        var country = await f.AddCountryAsync("S2");
+        await f.AddGlobalPlaceAsync(country.Id, "Itacuruça"); // pre-exist in global Places
 
-        var existingDto = new CreatePlaceDto(-22.93, -43.90, Brazil().Id, "Itacuruça", "RJ", "Rio de Janeiro");
+        await f.Process.AddAsync(new AddPlaceDto("Itacuruça", country.IsoAlpha2));
 
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        places.Setup(p => p.FindGlobalAsync("Itacuruça", Brazil().Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingDto);
-        places.Setup(p => p.CreateAsync(existingDto, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
-
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
-
-        geocoding.Verify(
-            g => g.GeocodeAsync(It.IsAny<string>(), It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()),
-            Times.Never,
+        Assert.IsFalse(fakeGeocoding.WasCalled,
             "GeocodeAsync must NOT be called when city already exists in global Places");
     }
 
@@ -328,30 +297,20 @@ public class PlacesProcessTests
     public async Task AddAsync_StoresCityNameFromGeocodingResult()
     {
         // The city name stored must come from the geocoding result (Photon canonical name),
-        // not directly from the DTO — only when geocoding is performed.
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        // not directly from the raw DTO input — only when geocoding is performed.
+        const string canonicalName = "Itacuruça";
+        var fakeGeocoding = new FakeGeocodingBusiness(
+            new GeocodingResult(-22.93, -43.90, canonicalName, "RJ", "Rio de Janeiro", "BR"));
+        await using var f = new ProcessFixture(fakeGeocoding);
+        var country = await f.AddCountryAsync("S3");
 
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        places.Setup(p => p.FindGlobalAsync("Itacuruça", Brazil().Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePlaceDto?)null);
-        geocoding.Setup(g => g.GeocodeAsync("Itacuruça", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodingResult(-22.93, -43.90, "Itacuruça", "RJ", "Rio de Janeiro", "BR"));
-        places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
+        await f.Process.AddAsync(new AddPlaceDto("itacuruca", country.IsoAlpha2)); // raw input differs
 
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
-
-        await sut.AddAsync(new AddPlaceDto("Itacuruça", "BR"));
-
-        places.Verify(
-            p => p.CreateAsync(
-                It.Is<CreatePlaceDto>(c => c.City == "Itacuruça"),
-                It.IsAny<CancellationToken>()),
-            Times.Once,
-            "City name must come from geocoding result");
+        var place = await f.Ctx.Set<Place>().AsNoTracking()
+            .FirstOrDefaultAsync(p => p.CountryId == country.Id);
+        Assert.IsNotNull(place);
+        Assert.AreEqual(canonicalName, place.City,
+            "City name must come from geocoding result, not from the raw DTO input");
     }
 
     // ─── SetHomeAsync (real-DB) ────────────────────────────────────────────────
@@ -389,37 +348,35 @@ public class PlacesProcessTests
         Assert.IsFalse(oldHomeUserPlace.IsHome, "SetHomeAsync must clear IsHome on all other UserPlaces rows");
     }
 
-    // ─── AddAsync — IsHome=true path (Moq) ────────────────────────────────────
+    // ─── AddAsync — IsHome=true path (real-DB) ────────────────────────────────
 
     [TestMethod]
     public async Task AddAsync_WhenIsHomeTrue_ClearsHomesAndMarksAsHome()
     {
-        var places = new Mock<IPlaceBusiness>();
-        var countries = new Mock<ICountryBusiness>();
-        var geocoding = new Mock<IGeocodingBusiness>();
+        var fakeGeocoding = new FakeGeocodingBusiness(
+            new GeocodingResult(-23.55, -46.63, "NewCity", null, null, "BR"));
+        await using var f = new ProcessFixture(fakeGeocoding);
+        var country = await f.AddCountryAsync("S4");
+        await f.CountryBiz.SetVisitedAsync(country.Id, true); // UserCountry row must exist for SyncHomeFlagAsync
+        var existingHome = await f.AddPlaceAsync(country.Id, isHome: true);
 
-        countries.Setup(c => c.GetByIsoAlpha2Async("BR", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Brazil());
-        places.Setup(p => p.FindGlobalAsync("São Paulo", Brazil().Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CreatePlaceDto?)null);
-        geocoding.Setup(g => g.GeocodeAsync("São Paulo", It.IsAny<CountryDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GeocodingResult(-23.55, -46.63, "São Paulo", "SP", "São Paulo", "BR"));
-        places.Setup(p => p.CreateAsync(It.IsAny<CreatePlaceDto>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-        // SetHomeAsync calls GetByIdAsync to retrieve countryId for SyncHomeFlagAsync
-        places.Setup(p => p.GetByIdAsync(AnyPlace().Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(AnyPlace());
-        // AddAsync calls SetVisitedAsync before SetHomeAsync to create UserCountry row
-        countries.Setup(c => c.SetVisitedAsync(It.IsAny<int>(), true, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((CountryDto?)null);
+        await f.Process.AddAsync(new AddPlaceDto("NewCity", country.IsoAlpha2, IsHome: true));
 
-        var sut = new PlacesProcess(places.Object, countries.Object, geocoding.Object);
+        // Existing home place must be cleared
+        var oldHomeUp = await f.Ctx.Set<UserPlace>().AsNoTracking()
+            .FirstOrDefaultAsync(up => up.UserId == UserId && up.PlaceId == existingHome.Id);
+        Assert.IsNotNull(oldHomeUp);
+        Assert.IsFalse(oldHomeUp.IsHome,
+            "AddAsync with IsHome=true must clear all existing home places (ClearAllHomePlacesAsync)");
 
-        await sut.AddAsync(new AddPlaceDto("São Paulo", "BR", IsHome: true));
-
-        places.Verify(p => p.ClearAllHomePlacesAsync(It.IsAny<CancellationToken>()), Times.Once,
-            "AddAsync with IsHome=true must clear all existing home places first");
-        places.Verify(p => p.MarkAsHomeAsync(AnyPlace().Id, It.IsAny<CancellationToken>()), Times.Once,
-            "AddAsync with IsHome=true must mark the new place as home");
+        // Newly created place must be marked as home
+        var newPlace = await f.Ctx.Set<Place>().AsNoTracking()
+            .FirstOrDefaultAsync(p => p.City == "NewCity" && p.CountryId == country.Id);
+        Assert.IsNotNull(newPlace);
+        var newHomeUp = await f.Ctx.Set<UserPlace>().AsNoTracking()
+            .FirstOrDefaultAsync(up => up.UserId == UserId && up.PlaceId == newPlace.Id);
+        Assert.IsNotNull(newHomeUp);
+        Assert.IsTrue(newHomeUp.IsHome,
+            "AddAsync with IsHome=true must mark the new place as home (MarkAsHomeAsync)");
     }
 }
