@@ -83,7 +83,7 @@
 </head>
 <body>
 <h1>TripsTracker — Architecture Overview</h1>
-<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-04-30 (Stage 4 — stories #47, #48, #84 — multi-user · profiles · state borders)</h2>
+<h2>Layers · components · operation flows &nbsp;·&nbsp; 2026-05-26 (Stage 4 + Stage 7.5 — multi-user · profiles · state borders · RDP simplification · blob border cache)</h2>
 
 <svg viewBox="0 0 1560 810" xmlns="http://www.w3.org/2000/svg"
      font-family="'Segoe UI', Consolas, sans-serif">
@@ -358,6 +358,7 @@
   <div class="li"><div class="lc" style="background:#3fb950"></div> Read data — GET endpoints</div>
   <div class="li"><div class="lc" style="background:#f0883e"></div> Update country — PUT</div>
   <div class="li"><div class="lc" style="background:#e3b341"></div>User profile — GET/PUT /api/me · display name · home country · state border prefs</div>
+  <div class="li"><div class="lc" style="background:#2dd4bf"></div>Get State Borders GeoJSON — cache-first (Stage 7.5): blob cache check → geoBoundaries fetch + normalise + RDP simplify → cache write (silent fail)</div>
   <div class="li" style="color:#475569">- - - dashed arrow: conditional flow &nbsp;&nbsp; - - - dashed oval: SQL VIEW — no write API</div>
 </div>
 
@@ -905,6 +906,75 @@
               <span style="color:#58a6ff">→</span> SELECT from Users WHERE Email = @email (GET)<br>
               <span style="color:#58a6ff">→</span> ExecuteUpdateAsync SET DisplayName = @displayName (PUT)<br>
               <span style="color:#3fb950">←</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">UserDto { Id, Email, DisplayName, CreatedAt }</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="proc-card">
+      <div class="proc-card-header" style="background:#0a2222; color:#2dd4bf">
+        <span style="width:10px;height:10px;border-radius:50%;background:#2dd4bf;display:inline-block"></span>
+        Get State Borders GeoJSON (Stage 4 / Stage 7.5 cache-first)
+      </div>
+      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">1</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">WorldMap / MapPage <span style="background:#261408;color:#f0883e;border:1px solid #3a2010;border-radius:3px;padding:1px 5px;font-size:0.68rem">Frontend</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              On mount or border toggle — <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">useBorderLoader</code> hook fires per country with ShowStateBorders=true<br>
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">GET /api/countries/{id}/borders</code>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">2</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountryFunctions → CountriesProcess <span style="background:#19122a;color:#d2a8ff;border:1px solid #2d1f4a;border-radius:3px;padding:1px 5px;font-size:0.68rem">Functions / Process</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">CountriesProcess.GetBordersAsync(countryId)</code>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">3</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountriesProcess — IsoAlpha3 lookup <span style="background:#0a1a30;color:#79c0ff;border:1px solid #1a3a5f;border-radius:3px;padding:1px 5px;font-size:0.68rem">Process → Business</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">CountryBusiness.GetIsoAlpha3Async(countryId)</code> ← isoAlpha3<br>
+              <span style="font-style:italic;color:#64748b">(cond) null isoAlpha3 → return null immediately (no GeoJSON available)</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">3b</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountriesProcess — blob cache check <span style="background:#131924;color:#94a3b8;border:1px solid #1e2533;border-radius:3px;padding:1px 5px;font-size:0.68rem">Stage 7.5</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">IBorderCacheService.GetAsync(isoAlpha3)</code><br>
+              <span style="font-style:italic;color:#64748b">(cond) cache hit → return json immediately; skip steps 4–5</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">4</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">GeoBoundariesService <span style="background:#131924;color:#94a3b8;border:1px solid #1e2533;border-radius:3px;padding:1px 5px;font-size:0.68rem">Integration</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="color:#58a6ff">→</span> GET geoboundaries.org metadata → download GeoJSON bytes<br>
+              → NormaliseGeoJson: remap shapeISO→ISO_1, shapeName→NAME_1; reverse ring order CW→CCW; RDP simplify (ε=0.01)<br>
+              <span style="color:#3fb950">←</span> GADM-format GeoJSON string
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="min-width:22px;height:22px;border-radius:50%;background:#2dd4bf;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#000;flex-shrink:0">5b</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;color:#e2e8f0">CountriesProcess — blob cache write <span style="background:#131924;color:#94a3b8;border:1px solid #1e2533;border-radius:3px;padding:1px 5px;font-size:0.68rem">Stage 7.5</span></div>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;line-height:1.6">
+              <span style="font-style:italic;color:#64748b">(cond) if json not null:</span> <code style="background:#1a2236;padding:1px 4px;border-radius:3px;font-size:0.72rem">IBorderCacheService.SetAsync(isoAlpha3, json)</code><br>
+              <span style="font-style:italic;color:#64748b">blob write failure is caught and logged silently — json returned regardless</span>
             </div>
           </div>
         </div>
